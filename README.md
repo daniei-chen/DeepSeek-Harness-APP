@@ -83,6 +83,7 @@ for the client bundle.
 
 - [Self-hosting](docs/SELF_HOSTING.md)
 - [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
+- [Release 0.9.16](docs/RELEASE.md)
 - [Connections](docs/CONNECTIONS.md)
 - [Notifications and self-hosted push](docs/NOTIFICATIONS.md)
 - [File operations](docs/FILE_OPERATIONS.md)
