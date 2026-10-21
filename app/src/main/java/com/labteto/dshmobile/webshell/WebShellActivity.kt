@@ -55,6 +55,8 @@ import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.notify.DshNotifications
+import com.labteto.dshmobile.notify.NtfyConfig
+import com.labteto.dshmobile.notify.NtfySubscriberService
 import com.labteto.dshmobile.update.UpdateChecker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
@@ -109,6 +111,9 @@ class WebShellActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pageReady = AtomicBoolean(false)
     private val backAvailable = AtomicBoolean(false)
+    private val failoverTried = mutableSetOf<String>()
+    private var failoverInProgress = false
+    private var pageHadError = false
     private val prefetchClient by lazy { newPrefetchClient() }
     private val chrome by lazy { WebShellChrome(this) }
     private val shellDevices by lazy { ShellDevices(this) }
@@ -181,6 +186,7 @@ class WebShellActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         notifications.ensureChannels()
+        if (NtfyConfig.load(this) != null) startNtfyService()
         buildContentView()
         configureWebView()
         installJavascriptInterfaces()
@@ -428,6 +434,11 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            if (!pageHadError) {
+                failoverTried.clear()
+                failoverInProgress = false
+            }
+            pageHadError = false
             markPageReady()
             hideError()
             injectPageScripts()
@@ -449,6 +460,8 @@ class WebShellActivity : AppCompatActivity() {
             error: WebResourceError,
         ) {
             if (request.isForMainFrame) {
+                pageHadError = true
+                if (tryFailover()) return
                 showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_network))
             }
         }
@@ -656,6 +669,9 @@ class WebShellActivity : AppCompatActivity() {
     // ---- navigation and recovery -------------------------------------------
 
     private fun reloadPage() {
+        failoverTried.clear()
+        failoverInProgress = false
+        pageHadError = false
         hideError()
         interceptPrefetch = false
         webView.loadUrl(targetUrl)
@@ -708,6 +724,31 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * A dead current device should not strand the user when another profile is known. Try the
+     * remaining profiles once per failed load; a successful page resets the tried set.
+     */
+    private fun tryFailover(): Boolean {
+        if (failoverInProgress) return false
+        val devices = shellDevices.load()
+        if (devices.size <= 1) return false
+        val currentUrl = targetUrl.trimEnd('/')
+        val currentIndex = devices.indexOfFirst {
+            it.id == shellDevices.currentId() || it.url.trimEnd('/') == currentUrl
+        }
+        if (currentIndex < 0) return false
+        for (step in 1 until devices.size) {
+            val next = devices[(currentIndex + step) % devices.size]
+            if (!failoverTried.add(next.url.trimEnd('/'))) continue
+            failoverInProgress = true
+            Toast.makeText(this, R.string.shell_settings_failover, Toast.LENGTH_SHORT).show()
+            shellDevices.setCurrent(next.id)
+            applyServerUrl(next.url)
+            return true
+        }
+        return false
+    }
+
     /** The back-button surface: connection, notifications, background and about. */
     private fun showSettings() {
         val devices = shellDevices.load()
@@ -724,10 +765,12 @@ class WebShellActivity : AppCompatActivity() {
             backgroundEnabled = runCatching {
                 runBlocking { hostsStore.settings.first().keepConnectedInBackground }
             }.getOrDefault(false),
+            ntfyEnabled = NtfyConfig.load(this) != null,
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
+            onConfigureNtfy = { configureNtfy() },
             onBackgroundToggle = { toggleBackground() },
             onBatterySettings = { openBatterySettings() },
             onAutostart = { openAutostartSettings() },
@@ -772,6 +815,35 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    private fun configureNtfy() {
+        chrome.showTextDialog(
+            dark = pageDark,
+            title = getString(R.string.shell_settings_ntfy_title),
+            description = getString(R.string.shell_settings_ntfy_description),
+            initial = NtfyConfig.raw(this).orEmpty(),
+            hint = "https://ntfy.example.com/topic",
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI,
+            errorText = getString(R.string.shell_settings_ntfy_invalid),
+            onSubmit = { raw ->
+                if (raw.trim().isEmpty()) {
+                    NtfyConfig.clear(this)
+                    stopService(Intent(this, NtfySubscriberService::class.java))
+                    true
+                } else {
+                    val endpoint = NtfyConfig.save(this, raw) ?: return@showTextDialog false
+                    startNtfyService()
+                    true
+                }
+            },
+        )
+    }
+
+    private fun startNtfyService() {
+        runCatching {
+            ContextCompat.startForegroundService(this, Intent(this, NtfySubscriberService::class.java))
+        }
     }
 
     private fun toggleBackground() {

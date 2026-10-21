@@ -764,6 +764,14 @@
     <string name="shell_settings_scanning">正在扫描局域网…</string>
     <string name="shell_settings_scan_empty">当前网络没有发现 DSH 主机</string>
     <string name="shell_settings_scan_found">发现 %1$d 台主机，已加入设备列表</string>
+    <string name="shell_settings_failover">当前设备不可用，正在尝试备用设备…</string>
+    <string name="shell_settings_ntfy">自建 ntfy 推送</string>
+    <string name="shell_settings_ntfy_hint">输入自己的 ntfy topic 地址；留空表示关闭</string>
+    <string name="shell_settings_ntfy_title">自建 ntfy 推送</string>
+    <string name="shell_settings_ntfy_description">输入你自己的 ntfy topic 地址，例如 https://ntfy.example.com/dsh-alerts。不经过本项目的任何云服务。</string>
+    <string name="shell_settings_ntfy_invalid">请输入有效的 http(s) ntfy topic 地址</string>
+    <string name="ntfy_service_channel">ntfy 推送服务</string>
+    <string name="ntfy_service_title">自建 ntfy 推送</string>
     <string name="shell_settings_current_device">当前：%1$s</string>
     <string name="shell_settings_notification_settings">通知设置</string>
     <string name="shell_settings_notification_enabled">通知已开启</string>

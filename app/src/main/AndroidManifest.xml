@@ -86,6 +86,11 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <service
+            android:name=".notify.NtfySubscriberService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- Fork: hands the system camera app a private cache URI for in-app photo capture. -->
         <provider
             android:name="androidx.core.content.FileProvider"

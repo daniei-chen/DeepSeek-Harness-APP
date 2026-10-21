@@ -42,10 +42,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         versionName: String,
         notificationsEnabled: Boolean,
         backgroundEnabled: Boolean,
+        ntfyEnabled: Boolean,
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
+        onConfigureNtfy: () -> Unit,
         onBackgroundToggle: () -> Unit,
         onBatterySettings: () -> Unit,
         onAutostart: () -> Unit,
@@ -150,6 +152,21 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onTestNotification()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_settings_ntfy),
+                subtitle = if (ntfyEnabled) {
+                    activity.getString(R.string.shell_settings_notification_enabled)
+                } else {
+                    activity.getString(R.string.shell_settings_ntfy_hint)
+                },
+            ) {
+                dialog.dismiss()
+                onConfigureNtfy()
             },
         )
 

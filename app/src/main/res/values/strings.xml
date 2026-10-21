@@ -766,6 +766,14 @@
     <string name="shell_settings_scanning">Scanning the local network…</string>
     <string name="shell_settings_scan_empty">No DSH host found on this network</string>
     <string name="shell_settings_scan_found">Found %1$d host(s); added to devices</string>
+    <string name="shell_settings_failover">Current device unavailable; trying the next one…</string>
+    <string name="shell_settings_ntfy">Self-hosted ntfy push</string>
+    <string name="shell_settings_ntfy_hint">Enter your own ntfy topic URL, or leave empty to disable</string>
+    <string name="shell_settings_ntfy_title">Self-hosted ntfy push</string>
+    <string name="shell_settings_ntfy_description">Enter your own ntfy topic URL, for example https://ntfy.example.com/dsh-alerts. No project cloud is used.</string>
+    <string name="shell_settings_ntfy_invalid">Enter a valid http(s) ntfy topic URL</string>
+    <string name="ntfy_service_channel">ntfy push service</string>
+    <string name="ntfy_service_title">Self-hosted ntfy push</string>
     <string name="shell_settings_current_device">Current: %1$s</string>
     <string name="shell_settings_notification_settings">Notification settings</string>
     <string name="shell_settings_notification_enabled">Notifications are enabled</string>
