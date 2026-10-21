@@ -862,6 +862,15 @@
     <string name="shell_settings_scan_relay_unpaired">发现 %1$d 个中继，但配对没有完成。</string>
     <string name="shell_settings_scan_help">查看手机访问设置</string>
     <string name="shell_settings_scan_unknown_subnet">未知</string>
+    <string name="shell_device_health">设备健康</string>
+    <string name="shell_device_health_hint">检查所有已保存设备</string>
+    <string name="shell_device_health_title">设备健康</string>
+    <string name="shell_device_health_empty">还没有保存设备</string>
+    <string name="shell_device_health_checking">正在检查设备…</string>
+    <string name="shell_device_health_refresh">重新检查</string>
+    <string name="shell_device_health_online">在线 · HTTP %1$d · %2$d ms</string>
+    <string name="shell_device_health_offline">离线</string>
+    <string name="shell_device_health_tls">证书尚未信任</string>
     <string name="shell_settings_network_info">本机网络</string>
     <string name="shell_settings_network_info_hint">查看 Wi-Fi 地址、网段与扫描端口</string>
     <string name="shell_settings_network_info_title">本机网络</string>

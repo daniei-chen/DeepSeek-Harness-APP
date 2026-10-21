@@ -79,6 +79,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -1127,6 +1129,7 @@ class WebShellActivity : AppCompatActivity() {
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
             onNetworkInfo = { showNetworkInfoDialog() },
+            onDeviceHealth = { checkDeviceHealth() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
         )
@@ -1413,6 +1416,66 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    private fun checkDeviceHealth() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_device_health_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_device_health_checking)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { probeDeviceHealth(device) } }.awaitAll()
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showDeviceHealthPage(
+                dark = pageDark,
+                rows = rows,
+                onSelect = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { checkDeviceHealth() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun probeDeviceHealth(device: ShellDevice): ShellDeviceHealth {
+        val started = System.nanoTime()
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val request = okhttp3.Request.Builder().url(device.url).head().build()
+                client.newCall(request).execute().use { it.code }
+            }
+        }
+        val elapsed = ((System.nanoTime() - started) / 1_000_000).toInt()
+        return result.fold(
+            onSuccess = { code ->
+                ShellDeviceHealth(device, true, getString(R.string.shell_device_health_online, code, elapsed))
+            },
+            onFailure = { error ->
+                val message = error.message.orEmpty()
+                if (message.contains("SSL", ignoreCase = true) ||
+                    message.contains("certificate", ignoreCase = true)
+                ) {
+                    ShellDeviceHealth(device, null, getString(R.string.shell_device_health_tls))
+                } else {
+                    ShellDeviceHealth(device, false, getString(R.string.shell_device_health_offline))
+                }
+            },
+        )
     }
 
     private fun testConnection() {

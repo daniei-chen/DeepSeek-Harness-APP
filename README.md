@@ -39,6 +39,8 @@ pieces a browser cannot provide.
 - Android notification channels and test notification; native DSH event connection for
   approval/question notifications while the app is alive, including inline **Approve**/**Reject**
   actions on approval notifications.
+- Device health: probe every saved device in parallel and see HTTP status/latency, offline, or
+  a certificate that still needs first-use trust.
 - Native inbox for the current host: waiting approvals/questions, running and recent sessions,
   with tap-through to the WebView session.
 - Session cockpit from an inbox row: model, token accounting, cache hit, decode speed, TTFT,

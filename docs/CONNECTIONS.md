@@ -24,6 +24,10 @@ the harness on loopback, and terminates TLS with a self-signed certificate by de
 once before trusting that certificate for the exact `host:port`; it never disables certificate
 checks globally.
 
+**Device health** probes every saved shell device in parallel and reports HTTP status and latency,
+offline, or a certificate that still needs first-use trust. It is a diagnostic surface, not a
+second connection: tapping a row only switches the shell to that address.
+
 ## Profiles
 
 The app stores connection profiles (name + URL) so you can switch between a home LAN address and

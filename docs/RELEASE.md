@@ -1,4 +1,4 @@
-# Release 0.9.28
+# Release 0.9.29
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.28-personal.88.apk`
-- SHA-256: `63B5FAA3EAB6AABB2589C296F8E207A6B15E58EB62F90078B714E65FF9AD402B`
+- APK: `dist/DeepSeek-Harness-0.9.29-personal.89.apk`
+- SHA-256: `9CD11AB7E434170B7F1C159F492A9C078CBD650BDFFA6A64E1019F50E3723AEA`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -28,10 +28,11 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
 - empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
-- Settings → 手机访问 (host plugin 0.1.4) shows the real bind address, LAN candidates and relay health
+- **Device health**: probe every saved device in parallel; show HTTP status/latency, offline, or a certificate that still needs first-use trust; tap a row to switch.
+- Settings → 手机访问 (host plugin 0.1.5) shows the real bind address, LAN candidates and relay health
 - relay URLs can be added from the scan; the first self-signed certificate is trusted per host:port only after an explicit prompt
 - WebView shell with drawer gestures, custom back handling, in-app document preview
-- workspace file panel: download files/folders, zip folders, recursive delete (`host-plugin/`)
+- workspace file panel: download files/folders, zip folders, recursive delete, upload, rename and new folder (`host plugin 0.1.5`)
 - Android notification channels and permission flow
 - approval notifications carry inline **Approve** / **Reject** actions; the answer resolves the pending Remote Event directly while the app process owns the live connection
 - approvals are keyed per request, so two waiting tool calls in one session cannot replace each other

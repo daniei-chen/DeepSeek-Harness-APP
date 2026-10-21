@@ -22,6 +22,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.labteto.dshmobile.R
 import kotlin.math.roundToInt
 
+/** One saved shell device and the result of the last health probe. */
+internal data class ShellDeviceHealth(
+    val device: ShellDevice,
+    val online: Boolean?,
+    val detail: String,
+)
+
 /** One row in the native inbox. */
 internal data class ShellInboxRow(
     val sessionId: String,
@@ -458,6 +465,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
         onNetworkInfo: () -> Unit,
+        onDeviceHealth: () -> Unit,
         onTestConnection: () -> Unit,
         onBack: () -> Unit,
     ) {
@@ -489,9 +497,66 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
         card.addView(
+            settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_device_health), activity.getString(R.string.shell_device_health_hint)) {
+                dialog.dismiss()
+                onDeviceHealth()
+            },
+        )
+        card.addView(
             settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
                 dialog.dismiss()
                 onTestConnection()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showDeviceHealthPage(
+        dark: Boolean,
+        rows: List<ShellDeviceHealth>,
+        onSelect: (ShellDeviceHealth) -> Unit,
+        onRefresh: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_device_health_title)) { dialog.dismiss(); onBack() })
+        if (rows.isEmpty()) {
+            card.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_device_health_empty)
+                    textSize = 13f
+                    setTextColor(colors.secondary)
+                    setPadding(dp(14), dp(14), dp(14), dp(18))
+                },
+            )
+        } else {
+            rows.forEach { row ->
+                card.addView(
+                    settingsRow(
+                        colors = colors,
+                        iconRes = R.drawable.ic_shell_device,
+                        title = row.device.name,
+                        subtitle = row.detail + " · " + row.device.url,
+                    ) {
+                        dialog.dismiss()
+                        onSelect(row)
+                    },
+                )
+            }
+        }
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_device_health_refresh)) {
+                dialog.dismiss()
+                onRefresh()
             },
         )
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))

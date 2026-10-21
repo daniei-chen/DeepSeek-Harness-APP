@@ -864,6 +864,15 @@
     <string name="shell_settings_scan_relay_unpaired">%1$d relay(s) were found but pairing did not complete.</string>
     <string name="shell_settings_scan_help">Phone access setup</string>
     <string name="shell_settings_scan_unknown_subnet">unknown</string>
+    <string name="shell_device_health">Device health</string>
+    <string name="shell_device_health_hint">Check every saved device</string>
+    <string name="shell_device_health_title">Device health</string>
+    <string name="shell_device_health_empty">No saved devices</string>
+    <string name="shell_device_health_checking">Checking devices…</string>
+    <string name="shell_device_health_refresh">Check again</string>
+    <string name="shell_device_health_online">Online · HTTP %1$d · %2$d ms</string>
+    <string name="shell_device_health_offline">Offline</string>
+    <string name="shell_device_health_tls">Certificate not trusted yet</string>
     <string name="shell_settings_network_info">This phone\'s network</string>
     <string name="shell_settings_network_info_hint">Wi-Fi address, subnet and scan ports</string>
     <string name="shell_settings_network_info_title">This phone\'s network</string>
