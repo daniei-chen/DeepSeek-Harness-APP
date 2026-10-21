@@ -54,6 +54,7 @@ import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
+import com.labteto.dshmobile.connection.AppSettings
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.notify.NtfyConfig
 import com.labteto.dshmobile.notify.NtfySubscriberService
@@ -760,12 +761,16 @@ class WebShellActivity : AppCompatActivity() {
         val versionName = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull() ?: "0.0.0"
+        val appSettings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
         chrome.showSettings(
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            turnNotifications = appSettings.notifyTurnComplete,
+            actionNotifications = appSettings.notifyNeedsAction,
+            goalNotifications = appSettings.notifyGoal,
             backgroundEnabled = runCatching {
                 runBlocking { hostsStore.settings.first().keepConnectedInBackground }
             }.getOrDefault(false),
@@ -774,6 +779,15 @@ class WebShellActivity : AppCompatActivity() {
             onScanLan = { scanLan() },
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
+            onToggleTurnNotifications = {
+                toggleNotificationSetting { it.copy(notifyTurnComplete = !it.notifyTurnComplete) }
+            },
+            onToggleActionNotifications = {
+                toggleNotificationSetting { it.copy(notifyNeedsAction = !it.notifyNeedsAction) }
+            },
+            onToggleGoalNotifications = {
+                toggleNotificationSetting { it.copy(notifyGoal = !it.notifyGoal) }
+            },
             onConfigureNtfy = { configureNtfy() },
             onBackgroundToggle = { toggleBackground() },
             onBatterySettings = { openBatterySettings() },
@@ -847,6 +861,13 @@ class WebShellActivity : AppCompatActivity() {
     private fun startNtfyService() {
         runCatching {
             ContextCompat.startForegroundService(this, Intent(this, NtfySubscriberService::class.java))
+        }
+    }
+
+    private fun toggleNotificationSetting(transform: (AppSettings) -> AppSettings) {
+        lifecycleScope.launch {
+            hostsStore.setSetting(transform)
+            showSettings()
         }
     }
 

@@ -772,6 +772,11 @@
     <string name="shell_settings_ntfy_invalid">请输入有效的 http(s) ntfy topic 地址</string>
     <string name="ntfy_service_channel">ntfy 推送服务</string>
     <string name="ntfy_service_title">自建 ntfy 推送</string>
+    <string name="shell_settings_enabled">已开启</string>
+    <string name="shell_settings_disabled">已关闭</string>
+    <string name="shell_settings_notify_turn">任务完成通知</string>
+    <string name="shell_settings_notify_action">审批/提问通知</string>
+    <string name="shell_settings_notify_goal">目标通知</string>
     <string name="shell_settings_current_device">当前：%1$s</string>
     <string name="shell_settings_notification_settings">通知设置</string>
     <string name="shell_settings_notification_enabled">通知已开启</string>

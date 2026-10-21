@@ -41,12 +41,18 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         currentDeviceName: String?,
         versionName: String,
         notificationsEnabled: Boolean,
+        turnNotifications: Boolean,
+        actionNotifications: Boolean,
+        goalNotifications: Boolean,
         backgroundEnabled: Boolean,
         ntfyEnabled: Boolean,
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
+        onToggleTurnNotifications: () -> Unit,
+        onToggleActionNotifications: () -> Unit,
+        onToggleGoalNotifications: () -> Unit,
         onConfigureNtfy: () -> Unit,
         onBackgroundToggle: () -> Unit,
         onBatterySettings: () -> Unit,
@@ -152,6 +158,39 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onTestNotification()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_check,
+                title = activity.getString(R.string.shell_settings_notify_turn),
+                subtitle = enabledLabel(turnNotifications),
+            ) {
+                dialog.dismiss()
+                onToggleTurnNotifications()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_settings_notify_action),
+                subtitle = enabledLabel(actionNotifications),
+            ) {
+                dialog.dismiss()
+                onToggleActionNotifications()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_check,
+                title = activity.getString(R.string.shell_settings_notify_goal),
+                subtitle = enabledLabel(goalNotifications),
+            ) {
+                dialog.dismiss()
+                onToggleGoalNotifications()
             },
         )
         card.addView(
@@ -723,6 +762,10 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             rightMargin = dp(14)
         }
     }
+
+    private fun enabledLabel(enabled: Boolean): String = activity.getString(
+        if (enabled) R.string.shell_settings_enabled else R.string.shell_settings_disabled,
+    )
 
     private fun settingsRow(
         colors: Colors,

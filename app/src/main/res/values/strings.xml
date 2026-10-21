@@ -774,6 +774,11 @@
     <string name="shell_settings_ntfy_invalid">Enter a valid http(s) ntfy topic URL</string>
     <string name="ntfy_service_channel">ntfy push service</string>
     <string name="ntfy_service_title">Self-hosted ntfy push</string>
+    <string name="shell_settings_enabled">Enabled</string>
+    <string name="shell_settings_disabled">Disabled</string>
+    <string name="shell_settings_notify_turn">Task complete notifications</string>
+    <string name="shell_settings_notify_action">Approval / question notifications</string>
+    <string name="shell_settings_notify_goal">Goal notifications</string>
     <string name="shell_settings_current_device">Current: %1$s</string>
     <string name="shell_settings_notification_settings">Notification settings</string>
     <string name="shell_settings_notification_enabled">Notifications are enabled</string>
