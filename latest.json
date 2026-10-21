@@ -1,10 +1,10 @@
 {
-  "version": "0.10.0",
-  "versionCode": 32000,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v0.10.0/DeepSeek-Harness-0.10.0-personal.100.apk",
-  "sha256": "2BAD4E020E7B24BE74E25AAE4346AA73176DFDDC39085D8DA1618D3F71791A74",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.10.0",
-  "minPluginVersion": "0.1.8",
-  "notes": "Connection onboarding: pair by code, setup pair command, scan all-added feedback",
-  "generatedAt": "2026-10-21T18:02:44.333Z"
+  "version": "0.10.1",
+  "versionCode": 32001,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v0.10.1/DeepSeek-Harness-0.10.1-personal.101.apk",
+  "sha256": "48D436151266BCBF6699BAFE05D3378DBABD6DC759686336F86FAE40E78D94AA",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.10.1",
+  "minPluginVersion": "0.1.9",
+  "notes": "Quiet layout repair, inbox search, file preview",
+  "generatedAt": "2026-10-21T18:18:39.896Z"
 }

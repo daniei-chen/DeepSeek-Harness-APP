@@ -99,6 +99,52 @@ test("file actions append an audit entry when auditLog is configured", async () 
     assert.equal(JSON.parse(lines[0]).action, "mkdir");
 });
 
+test("preview returns text, images and a binary marker", async () => {
+    const { root, route } = await harness();
+    await fs.writeFile(path.join(root, "note.md"), "# hello\n");
+    await fs.writeFile(
+        path.join(root, "pixel.png"),
+        Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489", "hex"),
+    );
+    await fs.writeFile(path.join(root, "blob.bin"), Buffer.from([0, 1, 2, 0, 3]));
+
+    const text = response();
+    await route.handler(
+        request("GET", null, `/dsh-file-ops?action=preview&path=${encodeURIComponent(path.join(root, "note.md"))}`),
+        text,
+    );
+    const textBody = JSON.parse(text.body);
+    assert.equal(text.status, 200);
+    assert.equal(textBody.kind, "text");
+    assert.match(textBody.content, /# hello/);
+
+    const image = response();
+    await route.handler(
+        request("GET", null, `/dsh-file-ops?action=preview&path=${encodeURIComponent(path.join(root, "pixel.png"))}`),
+        image,
+    );
+    const imageBody = JSON.parse(image.body);
+    assert.equal(imageBody.kind, "image");
+    assert.match(imageBody.data, /^data:image\/png;base64,/);
+
+    const binary = response();
+    await route.handler(
+        request("GET", null, `/dsh-file-ops?action=preview&path=${encodeURIComponent(path.join(root, "blob.bin"))}`),
+        binary,
+    );
+    assert.equal(JSON.parse(binary.body).kind, "binary");
+});
+
+test("preview refuses a path outside the workspace roots", async () => {
+    const { route } = await harness();
+    const result = response();
+    await route.handler(
+        request("GET", null, `/dsh-file-ops?action=preview&path=${encodeURIComponent(path.join(os.tmpdir(), "outside.txt"))}`),
+        result,
+    );
+    assert.equal(result.status, 403);
+});
+
 test("delete still refuses to remove a workspace root", async () => {
     const { root, route } = await harness();
     const remove = response();

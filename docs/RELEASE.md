@@ -1,4 +1,4 @@
-# Release 0.10.0
+# Release 0.10.1
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.10.0-personal.100.apk`
-- SHA-256: `2BAD4E020E7B24BE74E25AAE4346AA73176DFDDC39085D8DA1618D3F71791A74`
+- APK: `dist/DeepSeek-Harness-0.10.1-personal.101.apk`
+- SHA-256: `48D436151266BCBF6699BAFE05D3378DBABD6DC759686336F86FAE40E78D94AA`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,12 +27,15 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Quiet layout repair:** the automatic repair pass only writes when a value really changed and no longer dispatches a synthetic `resize`; repeated identical inset writes are skipped too. That churn was making the harness remount the composer and re-read its model list on its own. The speed pill now keeps its last reading for 6 s across stream gaps.
+- **Inbox search:** filter the native inbox by title or status, with a clear action and a proper empty state.
+- **File preview:** text and images open in a phone-sized sheet from the file panel (256 KB text, 6 MB images); other types keep the download path. Requires host plugin 0.1.9.
 - **Connection doctor:** `设置 → 连接 → 连接体检` walks the same path the WebView walks — address shape, loopback trap, DNS, TCP, TLS certificate, HTTP/gate, host plugin, relay and the live page connection — and prints the fix next to every failing step. Reports can be copied as text.
 - **Glass-theme compatibility:** the shell detects `backdrop-filter`/`filter`/`contain`/`perspective` on the app shell (the Bloom regression) and drops only the frosted layer, so the theme keeps its palette and fixed drawers stop drifting. Three modes in `设置 → 诊断`: auto-detect, always off, leave the page alone.
 - **Self-hosted update manifest:** the app reads `latest.json` from the repository first and only falls back to the GitHub API, so release ordering and API rate limits cannot hide an update.
 - **Update check:** reads the release list and keeps only app-shaped tags (`v0.9.36`), so a host-plugin release published after an app release can no longer become GitHub's "latest" and make the app report "up to date" while an update exists. Plugin releases are also published as pre-releases so older clients keep working.
 - **Layout recovery:** back to `adjustResize`, plus a real 1px view-resize nudge (the only thing that makes the renderer re-read the viewport), a `min-height` repair pass, and an automatic repair on resume, after the keyboard closes and after page load. `Settings → Diagnostics → Repair page layout` forces a full repaint.
-- **Settings → 远控 (Remote access):** the relay pairing QR is drawn inside the app from the live invitation, with the 8-digit code, remaining validity, copy pairing link/code, relay addresses and a shortcut to the paired-device page. Requires host plugin **0.1.8**; on an older host the page says which side to update.
+- **Settings → 远控 (Remote access):** the relay pairing QR is drawn inside the app from the live invitation, with the 8-digit code, remaining validity, copy pairing link/code, relay addresses and a shortcut to the paired-device page. Requires host plugin **0.1.9**; on an older host the page says which side to update.
 - Bloom theme note: `dsh-bloom-theme` can leave the WebView painting only part of the page. 0.9.35 repairs it automatically; if it recurs, either disable Bloom for the phone or tap `修复界面排版`.
 - Native diagnostics and update-progress dialogs now use the same card/typography language as the shell.
 - QR scan now asks for confirmation and shows the decoded URL before adding a device; non-root paths such as `/relay/pair` are kept exact (no trailing-slash 404).

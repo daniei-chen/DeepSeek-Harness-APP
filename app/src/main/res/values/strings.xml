@@ -847,6 +847,11 @@
     <string name="shell_inbox_count">%1$d waiting</string>
     <string name="shell_inbox_empty">No sessions on this host yet.</string>
     <string name="shell_inbox_refresh">Refresh inbox</string>
+    <string name="shell_inbox_search">Search sessions</string>
+    <string name="shell_inbox_search_hint">Filter by title or status</string>
+    <string name="shell_inbox_search_active">Search: %1$s</string>
+    <string name="shell_inbox_search_clear">Clear search</string>
+    <string name="shell_inbox_no_match">No session matches “%1$s”.</string>
     <string name="shell_inbox_status_approval">Approval waiting</string>
     <string name="shell_inbox_status_question">Answer waiting</string>
     <string name="shell_inbox_status_plan">Plan waiting</string>

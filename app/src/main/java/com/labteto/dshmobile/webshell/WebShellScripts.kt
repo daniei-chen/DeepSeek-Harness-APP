@@ -207,16 +207,25 @@ internal object WebShellScripts {
             var root = document.documentElement;
             var body = document.body;
             if (!root || !body || !viewport) { return; }
-            root.style.minHeight = viewport + 'px';
-            body.style.minHeight = viewport + 'px';
-            root.style.setProperty('--dsh-android-viewport-height', viewport + 'px');
+            // Everything below is conditional on a real difference. Dispatching `resize` when
+            // nothing changed makes the harness remount the composer and re-read the model list,
+            // which is what "it refreshes by itself" looks like from the outside.
+            var changed = false;
+            var desired = viewport + 'px';
+            if (root.style.minHeight !== desired) { root.style.minHeight = desired; changed = true; }
+            if (body.style.minHeight !== desired) { body.style.minHeight = desired; changed = true; }
+            if (root.style.getPropertyValue('--dsh-android-viewport-height') !== desired) {
+              root.style.setProperty('--dsh-android-viewport-height', desired);
+            }
             var app = document.getElementById('root');
             if (app) {
               var height = app.getBoundingClientRect().height;
               if (height > 0 && height < viewport * 0.6) {
-                app.style.height = viewport + 'px';
+                app.style.height = desired;
+                changed = true;
               }
             }
+            if (!changed) { return; }
             void body.offsetHeight;
             window.dispatchEvent(new Event('resize'));
             if (window.visualViewport) {
@@ -241,6 +250,13 @@ internal object WebShellScripts {
           try {
             var root = document.documentElement;
             if (!root) { return; }
+            var mode = '${mode}';
+            // `injectPageScripts` runs on start, commit and finish. Re-arming four timers on each
+            // of those passes makes the page look like it is reloading; one pass per document is
+            // enough, and a mode change re-arms it explicitly.
+            if (window.__dshGlassReady === true && window.__dshGlassMode === mode) { return; }
+            window.__dshGlassReady = true;
+            window.__dshGlassMode = mode;
             // Ship the rule with the shell, not only with the host plugin: the layout must be
             // repairable even when the host still runs an older plugin build.
             if (!document.getElementById('dsh-shell-glass')) {
@@ -254,7 +270,6 @@ internal object WebShellScripts {
               (document.head || root).appendChild(style);
             }
             var decide = function () {
-              var mode = '${mode}';
               var off = mode === 'force';
               if (mode === 'auto') {
                 var seeds = [document.getElementById('root')];
@@ -282,12 +297,15 @@ internal object WebShellScripts {
                   }
                 }
               }
-              root.setAttribute('data-dsh-glass', off ? 'off' : 'on');
+              var next = off ? 'off' : 'on';
+              // Attribute writes are mutations too: the harness observes the document, so only
+              // the actual transition is published.
+              if (root.getAttribute('data-dsh-glass') !== next) {
+                root.setAttribute('data-dsh-glass', next);
+              }
             };
             decide();
-            setTimeout(decide, 800);
-            setTimeout(decide, 2400);
-            setTimeout(decide, 5000);
+            setTimeout(decide, 1200);
           } catch (e) {}
         })();
     """.trimIndent()
@@ -309,9 +327,17 @@ internal object WebShellScripts {
               try {
                 var root = document.documentElement;
                 if (!root) { return; }
-                root.style.setProperty('--dsh-android-system-top', '${top}px');
-                root.style.setProperty('--dsh-android-system-bottom', '${bottom}px');
-                root.style.setProperty('--dsh-android-ime-bottom', '${ime}px');
+                // Only publish a value that actually changed. Every style write mutates the
+                // document's style attribute, and the harness observes it: re-writing identical
+                // insets on each resize pass is churn the page pays for with a re-render.
+                var set = function (name, value) {
+                  if (root.style.getPropertyValue(name) !== value) {
+                    root.style.setProperty(name, value);
+                  }
+                };
+                set('--dsh-android-system-top', '${top}px');
+                set('--dsh-android-system-bottom', '${bottom}px');
+                set('--dsh-android-ime-bottom', '${ime}px');
               } catch (e) {}
             })();
         """.trimIndent()
