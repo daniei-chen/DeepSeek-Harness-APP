@@ -66,7 +66,9 @@ import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
+import com.labteto.dshmobile.connection.HarnessClientFactory
 import com.labteto.dshmobile.connection.AppSettings
+import com.labteto.dshmobile.core.wire.RpcResult
 import com.labteto.dshmobile.data.SessionRow
 import com.labteto.dshmobile.data.SessionStore
 import com.labteto.dshmobile.notify.DshNotifications
@@ -124,6 +126,7 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var discoveryEngine: DiscoveryEngine
+    @Inject lateinit var harnessClientFactory: HarnessClientFactory
     @Inject lateinit var sessionStore: SessionStore
     @Inject lateinit var updateChecker: UpdateChecker
 
@@ -1129,6 +1132,7 @@ class WebShellActivity : AppCompatActivity() {
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
             onNetworkInfo = { showNetworkInfoDialog() },
+            onFleet = { showFleet() },
             onDeviceHealth = { checkDeviceHealth() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
@@ -1416,6 +1420,81 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    /**
+     * Multi-host overview: one `sessionList` read per saved device, in parallel. This is a
+     * read-only fleet view; the active WebView connection is not touched until a row is tapped.
+     */
+    private fun showFleet() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_fleet_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_fleet_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { queryFleetHost(device) } }.awaitAll()
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showFleetPage(
+                dark = pageDark,
+                rows = rows,
+                onSelect = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { showFleet() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun queryFleetHost(device: ShellDevice): ShellFleetHost {
+        if (device.url.contains("/relay/")) {
+            return ShellFleetHost(device, null, getString(R.string.shell_fleet_relay))
+        }
+        val hosts = runCatching { hostsStore.hosts.first() }.getOrDefault(emptyList())
+        val base = device.url.substringBefore("/relay/").trimEnd('/')
+        val host = hosts.firstOrNull {
+            it.baseUrl.trimEnd('/') == device.url.trimEnd('/') || it.baseUrl.trimEnd('/') == base
+        } ?: return ShellFleetHost(device, null, getString(R.string.shell_fleet_not_configured))
+        if (host.isRelay) {
+            return ShellFleetHost(device, null, getString(R.string.shell_fleet_relay))
+        }
+        val result = withTimeoutOrNull(6_000) {
+            runCatching {
+                val client = harnessClientFactory.clientFor(host)
+                when (val list = client.sessionList()) {
+                    is RpcResult.Ok -> {
+                        val items = list.value.items
+                        ShellFleetHost(
+                            device = device,
+                            online = true,
+                            detail = getString(
+                                R.string.shell_fleet_online,
+                                items.size,
+                                items.count { it.running },
+                            ),
+                            sessionCount = items.size,
+                            runningCount = items.count { it.running },
+                        )
+                    }
+                    is RpcResult.Err -> ShellFleetHost(
+                        device,
+                        false,
+                        getString(R.string.shell_fleet_error, list.error.code),
+                    )
+                }
+            }.getOrNull()
+        }
+        return result ?: ShellFleetHost(device, false, getString(R.string.shell_fleet_timeout))
     }
 
     private fun checkDeviceHealth() {

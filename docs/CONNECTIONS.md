@@ -24,6 +24,10 @@ the harness on loopback, and terminates TLS with a self-signed certificate by de
 once before trusting that certificate for the exact `host:port`; it never disables certificate
 checks globally.
 
+**Fleet overview** reads one `sessionList` per saved host in parallel and shows the host's session
+count and running count. It is read-only: the active WebView connection is untouched until a host
+row is selected.
+
 **Device health** probes every saved shell device in parallel and reports HTTP status and latency,
 offline, or a certificate that still needs first-use trust. It is a diagnostic surface, not a
 second connection: tapping a row only switches the shell to that address.

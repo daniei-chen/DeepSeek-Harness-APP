@@ -29,6 +29,15 @@ internal data class ShellDeviceHealth(
     val detail: String,
 )
 
+/** One host in the multi-host overview. Session counts are null when the query failed. */
+internal data class ShellFleetHost(
+    val device: ShellDevice,
+    val online: Boolean?,
+    val detail: String,
+    val sessionCount: Int? = null,
+    val runningCount: Int? = null,
+)
+
 /** One row in the native inbox. */
 internal data class ShellInboxRow(
     val sessionId: String,
@@ -465,6 +474,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
         onNetworkInfo: () -> Unit,
+        onFleet: () -> Unit,
         onDeviceHealth: () -> Unit,
         onTestConnection: () -> Unit,
         onBack: () -> Unit,
@@ -497,6 +507,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
         card.addView(
+            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_fleet), activity.getString(R.string.shell_fleet_hint)) {
+                dialog.dismiss()
+                onFleet()
+            },
+        )
+        card.addView(
             settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_device_health), activity.getString(R.string.shell_device_health_hint)) {
                 dialog.dismiss()
                 onDeviceHealth()
@@ -506,6 +522,57 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
                 dialog.dismiss()
                 onTestConnection()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showFleetPage(
+        dark: Boolean,
+        rows: List<ShellFleetHost>,
+        onSelect: (ShellFleetHost) -> Unit,
+        onRefresh: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_fleet_title)) { dialog.dismiss(); onBack() })
+        if (rows.isEmpty()) {
+            card.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_fleet_empty)
+                    textSize = 13f
+                    setTextColor(colors.secondary)
+                    setPadding(dp(14), dp(14), dp(14), dp(18))
+                },
+            )
+        } else {
+            rows.forEach { row ->
+                card.addView(
+                    settingsRow(
+                        colors = colors,
+                        iconRes = R.drawable.ic_shell_device,
+                        title = row.device.name,
+                        subtitle = row.detail + " · " + row.device.url,
+                    ) {
+                        dialog.dismiss()
+                        onSelect(row)
+                    },
+                )
+            }
+        }
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_fleet_refresh)) {
+                dialog.dismiss()
+                onRefresh()
             },
         )
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))

@@ -864,6 +864,17 @@
     <string name="shell_settings_scan_relay_unpaired">%1$d relay(s) were found but pairing did not complete.</string>
     <string name="shell_settings_scan_help">Phone access setup</string>
     <string name="shell_settings_scan_unknown_subnet">unknown</string>
+    <string name="shell_fleet">Fleet overview</string>
+    <string name="shell_fleet_hint">Session counts and running state across saved hosts</string>
+    <string name="shell_fleet_title">Fleet overview</string>
+    <string name="shell_fleet_empty">No saved hosts</string>
+    <string name="shell_fleet_loading">Reading hosts…</string>
+    <string name="shell_fleet_refresh">Refresh fleet</string>
+    <string name="shell_fleet_online">Online · %1$d sessions · %2$d running</string>
+    <string name="shell_fleet_error">Query failed: %1$s</string>
+    <string name="shell_fleet_timeout">Connection timed out</string>
+    <string name="shell_fleet_relay">Relay · pairing required</string>
+    <string name="shell_fleet_not_configured">No native connection profile</string>
     <string name="shell_device_health">Device health</string>
     <string name="shell_device_health_hint">Check every saved device</string>
     <string name="shell_device_health_title">Device health</string>

@@ -1,4 +1,4 @@
-# Release 0.9.29
+# Release 0.9.30
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.29-personal.89.apk`
-- SHA-256: `9CD11AB7E434170B7F1C159F492A9C078CBD650BDFFA6A64E1019F50E3723AEA`
+- APK: `dist/DeepSeek-Harness-0.9.30-personal.90.apk`
+- SHA-256: `53E09FC51C9BA827F8072ADC8F28A0C8A51E965391E0A4B7844D96950D50A772`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -28,6 +28,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
 - empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
+- **Fleet overview**: one parallel `sessionList` per saved host, showing session and running counts; read-only until a host is selected.
 - **Device health**: probe every saved device in parallel; show HTTP status/latency, offline, or a certificate that still needs first-use trust; tap a row to switch.
 - Settings → 手机访问 (host plugin 0.1.5) shows the real bind address, LAN candidates and relay health
 - relay URLs can be added from the scan; the first self-signed certificate is trusted per host:port only after an explicit prompt
