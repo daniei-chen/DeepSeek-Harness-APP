@@ -859,11 +859,14 @@
     <string name="shell_scan_qr_too_new">This QR code is too new; update the app</string>
     <string name="shell_scan_qr_device">Scanned device</string>
     <string name="shell_scan_qr_added">Scanned device added</string>
+    <string name="shell_scan_qr_confirm_title">Connect to this address?</string>
+    <string name="shell_scan_qr_confirm">Add and connect</string>
     <string name="shell_settings_scan_lan">Scan local network</string>
     <string name="shell_settings_scan_lan_hint">Find a DSH host on the same Wi-Fi</string>
     <string name="shell_settings_scanning">Scanning the local network…</string>
     <string name="shell_settings_scan_progress">Scanning… %1$d / %2$d</string>
     <string name="shell_settings_scan_empty">No DSH host found on this network</string>
+    <string name="shell_settings_scan_failed">Scan failed: %1$s</string>
     <string name="shell_settings_scan_found_count">Added %1$d device(s)</string>
     <string name="shell_settings_scan_empty_title">No reachable DSH host</string>
     <string name="shell_settings_scan_empty_detail">Phone subnet: %1$s\nPorts scanned: %2$s\n\nCommon causes: DSH Desktop only listens on 127.0.0.1; the computer firewall is blocking the port; guest Wi-Fi isolates clients.</string>

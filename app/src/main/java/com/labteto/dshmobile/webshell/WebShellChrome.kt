@@ -553,6 +553,44 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         show(dialog, root, gravity = Gravity.CENTER)
     }
 
+    fun showDiagnosticsPage(
+        dark: Boolean,
+        message: String,
+        onCopy: () -> Unit,
+        onClearCache: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_diagnostics_title)) { dialog.dismiss(); onBack() })
+        card.addView(
+            TextView(activity).apply {
+                text = message
+                textSize = 12f
+                setTextColor(colors.secondary)
+                setPadding(dp(14), dp(8), dp(14), dp(14))
+                typeface = android.graphics.Typeface.MONOSPACE
+            },
+        )
+        card.addView(divider(colors))
+        card.addView(menuRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_diagnostics_copy)) {
+            dialog.dismiss()
+            onCopy()
+        })
+        card.addView(menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_diagnostics_clear_cache)) {
+            dialog.dismiss()
+            onClearCache()
+        })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
     fun showFleetInboxPage(
         dark: Boolean,
         rows: List<ShellFleetSession>,

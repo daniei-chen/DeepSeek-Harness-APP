@@ -1,4 +1,4 @@
-# Release 0.9.33
+# Release 0.9.34
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.33-personal.93.apk`
-- SHA-256: `BF07ADF2C40B9CAAABF0D7F61A5A35288B6A30336E28ECC74EA9406755A5CE66`
+- APK: `dist/DeepSeek-Harness-0.9.34-personal.94.apk`
+- SHA-256: `E62C4E6D09AB4144CED0C70F66E713AD2B3619367E4B8BD60969BD3820021C0C`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,6 +27,9 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **IME/layout fix:** `adjustNothing` + full-height WebView, with a post-keyboard re-layout, so closing the keyboard no longer leaves a blank strip below the page.
+- Native diagnostics and update-progress dialogs now use the same card/typography language as the shell.
+- QR scan now asks for confirmation and shows the decoded URL before adding a device; non-root paths such as `/relay/pair` are kept exact (no trailing-slash 404).
 - Settings → Connection → **Scan QR code**: accepts a plain `http(s)` DSH URL or a `dsh-relay-pair` payload and opens the relay pairing page; adding a device immediately switches the WebView.
 - Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
 - empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
