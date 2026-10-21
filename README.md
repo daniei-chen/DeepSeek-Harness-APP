@@ -12,7 +12,7 @@ Android pieces a browser cannot provide.
 
 ## Latest
 
-- **APK 0.9.35** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
+- **APK 0.9.36** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
   expiry and paired-device entry; layout recovery for pages left at a stale height (auto on
   resume / keyboard close, plus 设置 → 诊断 → 修复界面排版); QR scan, mDNS + subnet LAN discovery,
   device health, fleet overview, cross-host inbox, session cockpit and actionable notifications.
@@ -24,7 +24,7 @@ Android pieces a browser cannot provide.
 
 Downloads:
 
-- [APK v0.9.35](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.35)
+- [APK v0.9.36](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.36)
 - [Host plugin 0.1.8](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.8)
 
 ## What is inside
