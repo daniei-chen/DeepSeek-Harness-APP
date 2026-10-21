@@ -1,0 +1,9 @@
+{
+  "upstreamCommit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+  "release": "0.2.1-alpha.2",
+  "sequenced": {"kind":"sequenced","asOfSeq":7,"values":{"workingDirectory":"/work/tree"}},
+  "migration": {"kind":"migration-required","values":{"title":"Older session"}},
+  "coldSession": {"sessionId":"cold","updatedAt":10,"running":false,"blank":false,"agentAvailable":false,"formatStatus":"migration-required","projections":{"kind":"cached","asOfSeq":900,"values":{"agentPreset":"standard"}}},
+  "externalCatalog": [{"id":"external-run","createdAt":20,"mode":"external","label":"Codex"}],
+  "officialBundle": {"name":"@deepseek-ai/dsh-subagent-codex","enabled":false,"installed":false,"official":true,"availability":"missing","installTarget":{"spec":"@deepseek-ai/dsh-subagent-codex@0.2.1-alpha.2","version":"0.2.1-alpha.2"},"rows":[]}
+}

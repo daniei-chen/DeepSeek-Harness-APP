@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ux_a_refresh">刷新</string>
+    <string name="ux_a_details">技术详情</string>
+    <string name="ux_a_every">每 %1$s</string>
+    <string name="ux_a_daily">每天 %1$s · %2$s</string>
+    <string name="ux_a_daily_clock">每天 %1$s</string>
+    <string name="ux_a_weekly">%1$s %2$s · %3$s</string>
+    <string name="ux_a_cron">%1$s · %2$s</string>
+    <string name="ux_a_cron_expression">Cron 规则：%1$s</string>
+    <string name="ux_a_next_run">下次运行：%1$s（%2$s）</string>
+    <string name="ux_a_due_now">现在到期</string>
+    <string name="ux_a_in">%1$s后</string>
+    <string name="ux_a_overdue">已逾期 %1$s</string>
+    <string name="ux_a_retention">历史最多保留 %1$s 和 %2$s。</string>
+    <string name="ux_a_load_error">无法加载列表，请重试。</string>
+    <string name="ux_a_action_error">操作未能完成，请刷新后重试。</string>
+    <string name="ux_a_session_archived">此会话已归档。</string>
+    <string name="ux_a_session_unavailable">此会话已不可用。</string>
+    <string name="ux_a_date">日期</string>
+    <string name="ux_a_precise_time">时间（HH:mm:ss，可含小数秒）</string>
+    <string name="ux_a_time_error">请选择此日期和时区内有效的本地时间。</string>
+    <string name="ux_a_interval_amount">间隔数值</string>
+    <string name="ux_a_interval_error">请输入整数，间隔至少为 60 秒。</string>
+    <string name="ux_a_weekdays_error">请至少选择一天。</string>
+    <string name="ux_a_cron_advanced">Cron（高级）</string>
+    <string name="ux_a_cron_error">请输入五个有效的 cron 字段：分、时、日、月、星期。</string>
+    <string name="ux_a_zone_search">搜索时区</string>
+    <string name="ux_a_manage_plugins">管理插件</string>
+    <string name="ux_a_update">更新</string>
+    <string name="ux_a_installed">已安装</string>
+    <string name="ux_a_available">可用</string>
+    <string name="ux_a_installed_version">已安装版本：%1$s</string>
+    <string name="ux_a_previous_install">先前的安装（未记录包名）</string>
+    <string name="ux_a_unknown">安装结果未知。重试前请检查状态或刷新已安装列表。关闭此提示不会撤销安装。</string>
+    <string name="ux_a_check_status">检查状态</string>
+    <string name="ux_a_approve_retry">批准并重试</string>
+    <string name="ux_a_inspected">已检查软件包，安装前请核对版本。</string>
+    <string name="ux_a_inspect_notice">安装前请检查软件包详情。</string>
+    <string name="ux_a_phase_starting">正在准备安装…</string>
+    <string name="ux_a_phase_installing">正在安装软件包…</string>
+    <string name="ux_a_phase_applying">正在应用更改…</string>
+    <string name="ux_a_phase_cancelling">正在取消安装…</string>
+    <string name="ux_a_reason_required">插件管理需要此组件，无法禁用或卸载。</string>
+    <string name="ux_a_reason_unaddressable">主机配置无法唯一定位此条目。</string>
+    <string name="ux_a_reason_missing">此插件已不可用，请刷新列表。</string>
+    <string name="ux_a_reason_spec">请输入有效的包名或地址。</string>
+    <string name="ux_a_reason_ambiguous">无法识别已安装的软件包，请刷新已安装列表。</string>
+    <string name="ux_a_reason_bundle">此软件包未声明插件组合包，无法在此管理。</string>
+    <string name="ux_a_reason_removable">此软件包属于其他配置，或为插件管理所必需。</string>
+    <string name="ux_a_reason_stop">请停止此主机配置，再使用 dsh plugin 卸载软件包。</string>
+    <string name="ux_a_reason_in_use">其他配置仍在使用此组合包，请先禁用相关组件。</string>
+    <string name="ux_a_reason_approval">待批准的脚本已变化，请重新安装以查看新的审批列表。</string>
+    <string name="ux_a_reason_version">此插件与当前 DSH 版本不兼容，请安装兼容的插件版本。</string>
+    <plurals name="ux_a_days">
+        <item quantity="other">%1$s 天</item>
+    </plurals>
+    <plurals name="ux_a_hours">
+        <item quantity="other">%1$s 小时</item>
+    </plurals>
+    <plurals name="ux_a_minutes">
+        <item quantity="other">%1$s 分钟</item>
+    </plurals>
+    <plurals name="ux_a_seconds">
+        <item quantity="other">%1$s 秒</item>
+    </plurals>
+    <plurals name="ux_a_records">
+        <item quantity="other">%1$s 次发送</item>
+    </plurals>
+    <string name="ux_a_reason_installed">此软件包已安装，请在其条目中选择更新。</string>
+    <string name="ux_a_reason_network">无法访问软件包来源，请检查连接后重试。</string>
+    <string name="ux_a_reason_package">此地址不包含软件包，请检查包名或路径。</string>
+    <string name="ux_a_time">时间</string>
+    <string name="ux_a_zone">时区</string>
+    <string name="ux_a_save_error">无法保存此自动任务，请刷新规则后重试。</string>
+    <string name="ux_a_delete_error">无法删除此自动任务，请刷新列表后重试。</string>
+    <string name="ux_a_last_run">上次运行：%1$s</string>
+</resources>

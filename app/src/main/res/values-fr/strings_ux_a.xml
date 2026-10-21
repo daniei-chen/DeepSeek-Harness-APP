@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ux_a_refresh">Actualiser</string>
+    <string name="ux_a_details">Détails techniques</string>
+    <string name="ux_a_every">Intervalle : %1$s</string>
+    <string name="ux_a_daily">Chaque jour à %1$s · %2$s</string>
+    <string name="ux_a_daily_clock">Chaque jour à %1$s</string>
+    <string name="ux_a_weekly">%1$s à %2$s · %3$s</string>
+    <string name="ux_a_cron">%1$s · %2$s</string>
+    <string name="ux_a_cron_expression">Cron : %1$s</string>
+    <string name="ux_a_next_run">Prochaine exécution : %1$s (%2$s)</string>
+    <string name="ux_a_due_now">maintenant</string>
+    <string name="ux_a_in">dans %1$s</string>
+    <string name="ux_a_overdue">%1$s de retard</string>
+    <string name="ux_a_retention">Historique conservé dans la limite de %1$s et %2$s.</string>
+    <string name="ux_a_load_error">Impossible de charger la liste. Réessayez.</string>
+    <string name="ux_a_action_error">Action impossible. Actualisez puis réessayez.</string>
+    <string name="ux_a_session_archived">Cette discussion est archivée.</string>
+    <string name="ux_a_session_unavailable">Cette discussion est indisponible.</string>
+    <string name="ux_a_date">Date</string>
+    <string name="ux_a_precise_time">Heure (HH:mm:ss, fractions facultatives)</string>
+    <string name="ux_a_time_error">Choisissez une heure locale valide pour cette date et ce fuseau.</string>
+    <string name="ux_a_interval_amount">Durée de l’intervalle</string>
+    <string name="ux_a_interval_error">Saisissez un entier pour un intervalle d’au moins 60 secondes.</string>
+    <string name="ux_a_weekdays_error">Choisissez au moins un jour.</string>
+    <string name="ux_a_cron_advanced">Cron (avancé)</string>
+    <string name="ux_a_cron_error">Saisissez cinq champs cron valides : minute, heure, jour, mois, jour de semaine.</string>
+    <string name="ux_a_zone_search">Rechercher un fuseau horaire</string>
+    <string name="ux_a_manage_plugins">Gérer les extensions</string>
+    <string name="ux_a_update">Mettre à jour</string>
+    <string name="ux_a_installed">Installées</string>
+    <string name="ux_a_available">Disponibles</string>
+    <string name="ux_a_installed_version">Version installée : %1$s</string>
+    <string name="ux_a_previous_install">Installation précédente (paquet non enregistré)</string>
+    <string name="ux_a_unknown">Résultat de l’installation inconnu. Vérifiez son état ou actualisez la liste avant de réessayer. Masquer cet avis n’annule pas l’installation.</string>
+    <string name="ux_a_check_status">Vérifier l’état</string>
+    <string name="ux_a_approve_retry">Autoriser et réessayer</string>
+    <string name="ux_a_inspected">Paquet inspecté. Vérifiez la version avant l’installation.</string>
+    <string name="ux_a_inspect_notice">Vérifiez les détails du paquet avant l’installation.</string>
+    <string name="ux_a_phase_starting">Préparation de l’installation…</string>
+    <string name="ux_a_phase_installing">Installation du paquet…</string>
+    <string name="ux_a_phase_applying">Application des modifications…</string>
+    <string name="ux_a_phase_cancelling">Annulation de l’installation…</string>
+    <string name="ux_a_reason_required">La gestion des extensions nécessite ce composant. Il ne peut être désactivé ni supprimé.</string>
+    <string name="ux_a_reason_unaddressable">La configuration de l’hôte ne permet pas d’identifier cette entrée de façon unique.</string>
+    <string name="ux_a_reason_missing">Cette extension n’est plus disponible. Actualisez la liste.</string>
+    <string name="ux_a_reason_spec">Saisissez un nom de paquet ou une adresse valide.</string>
+    <string name="ux_a_reason_ambiguous">Le paquet installé n’a pas pu être identifié. Actualisez la liste.</string>
+    <string name="ux_a_reason_bundle">Ce paquet ne déclare aucun ensemble d’extensions et ne peut être géré ici.</string>
+    <string name="ux_a_reason_removable">Ce paquet appartient à un autre profil ou est nécessaire à la gestion des extensions.</string>
+    <string name="ux_a_reason_stop">Arrêtez ce profil hôte puis désinstallez le paquet avec dsh plugin.</string>
+    <string name="ux_a_reason_in_use">Une autre configuration utilise cet ensemble. Désactivez d’abord ces composants.</string>
+    <string name="ux_a_reason_approval">Les scripts en attente ont changé. Relancez l’installation pour vérifier les autorisations.</string>
+    <string name="ux_a_reason_version">Cette extension est incompatible avec cette version de DSH. Installez une version compatible.</string>
+    <plurals name="ux_a_days">
+        <item quantity="one">%1$s jour</item>
+        <item quantity="many">%1$s jours</item>
+        <item quantity="other">%1$s jours</item>
+    </plurals>
+    <plurals name="ux_a_hours">
+        <item quantity="one">%1$s heure</item>
+        <item quantity="many">%1$s heures</item>
+        <item quantity="other">%1$s heures</item>
+    </plurals>
+    <plurals name="ux_a_minutes">
+        <item quantity="one">%1$s minute</item>
+        <item quantity="many">%1$s minutes</item>
+        <item quantity="other">%1$s minutes</item>
+    </plurals>
+    <plurals name="ux_a_seconds">
+        <item quantity="one">%1$s seconde</item>
+        <item quantity="many">%1$s secondes</item>
+        <item quantity="other">%1$s secondes</item>
+    </plurals>
+    <plurals name="ux_a_records">
+        <item quantity="one">%1$s envoi</item>
+        <item quantity="many">%1$s envois</item>
+        <item quantity="other">%1$s envois</item>
+    </plurals>
+    <string name="ux_a_reason_installed">Ce paquet est déjà installé. Utilisez Mettre à jour dans sa ligne.</string>
+    <string name="ux_a_reason_network">Source du paquet inaccessible. Vérifiez la connexion puis réessayez.</string>
+    <string name="ux_a_reason_package">Cette adresse ne contient aucun paquet. Vérifiez le nom ou le chemin.</string>
+    <string name="ux_a_time">Heure</string>
+    <string name="ux_a_zone">Fuseau horaire</string>
+    <string name="ux_a_save_error">Impossible d’enregistrer cette automatisation. Actualisez la règle puis réessayez.</string>
+    <string name="ux_a_delete_error">Impossible de supprimer cette automatisation. Actualisez la liste puis réessayez.</string>
+    <string name="ux_a_last_run">Dernière exécution : %1$s</string>
+</resources>

@@ -1,0 +1,6 @@
+<resources>
+    <string name="alpha2_translate">%1$s سے ترجمہ کریں</string>
+    <string name="alpha2_original">اصل دکھائیں</string>
+    <string name="alpha2_external">بیرونی اجرا (مقامی گفتگو موجود نہیں)</string>
+    <string name="alpha2_migration">منتقلی مکمل کرنے کے لیے اصل سیشن کھولیں، پھر دوبارہ کوشش کریں۔</string>
+</resources>

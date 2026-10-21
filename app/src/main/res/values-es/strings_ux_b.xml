@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ux_b_clear_search">Borrar búsqueda</string>
+    <string name="ux_b_no_models">No hay modelos coincidentes</string>
+    <string name="ux_b_no_references">No hay referencias disponibles</string>
+    <string name="ux_b_no_matches">No hay referencias coincidentes</string>
+    <string name="ux_b_reference_error">No se pudieron cargar algunas referencias. Inténtalo de nuevo.</string>
+    <string name="ux_b_file">Archivo</string>
+    <string name="ux_b_folder">Carpeta</string>
+    <string name="ux_b_session">Conversación</string>
+    <string name="ux_b_browse_folder">Explorar carpeta %1$s</string>
+    <string name="ux_b_open_reference">Abrir %1$s: %2$s</string>
+    <string name="ux_b_remove_reference">Quitar referencia %1$s</string>
+    <string name="ux_b_paused">En pausa mientras editas</string>
+    <string name="ux_b_held">Esperando tu respuesta</string>
+    <string name="ux_b_continued">El trabajo continuó; aún puedes responder</string>
+    <string name="ux_b_countdown_description">Cuenta atrás de respuesta en curso</string>
+    <string name="ux_b_view_questions">Ver preguntas</string>
+    <string name="ux_b_view_answers">Ver respuestas</string>
+    <string name="ux_b_skipped">Omitida</string>
+    <string name="ux_b_answer">Respuesta</string>
+    <string name="ux_b_automation_unavailable">Este host no admite automatizaciones.</string>
+    <plurals name="ux_b_countdown_seconds">
+        <item quantity="one">Continuará en %1$s segundo</item>
+        <item quantity="other">Continuará en %1$s segundos</item>
+        <item quantity="many">Continuará en %1$s segundos</item>
+    </plurals>
+    <string name="ux_b_select_reference">Añadir referencia de %1$s: %2$s</string>
+    <string name="ux_b_expanded">Expandido</string>
+    <string name="ux_b_collapsed">Contraído</string>
+</resources>

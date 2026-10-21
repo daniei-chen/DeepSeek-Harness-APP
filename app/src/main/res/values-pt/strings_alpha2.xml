@@ -1,0 +1,6 @@
+<resources>
+    <string name="alpha2_translate">Traduzir com %1$s</string>
+    <string name="alpha2_original">Mostrar original</string>
+    <string name="alpha2_external">Execução externa (sem transcrição local)</string>
+    <string name="alpha2_migration">Abra a sessão original para concluir a migração e tente novamente.</string>
+</resources>

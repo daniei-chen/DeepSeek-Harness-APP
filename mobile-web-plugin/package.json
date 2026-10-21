@@ -1,0 +1,36 @@
+{
+  "name": "@dsh-android/dsh-client-ui-responsive-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Android mobile adaptation layer for the WebView shell (drawer, safe areas, keyboard insets, back-button layer stack, phone-only composer tweaks)",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json",
+    "./locale/en.json": "./locale/en.json",
+    "./locale/zh.json": "./locale/zh.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  }
+}

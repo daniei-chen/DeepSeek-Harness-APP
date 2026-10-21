@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- WebView shell: the harness voice-input plugin records through getUserMedia. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        Only ever used to scan a relay's pairing QR, and requested at the moment Scan is tapped.
+        Declared `required="false"` so a device without a camera can still install: typing the
+        pairing code is a complete alternative, not a degraded one.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!--
+        Defined by Termux, not by Android: it lets this app run a command inside Termux, which is
+        how "this phone" mode starts and stops a harness on the device. Termux declares it
+        `dangerous`, so the system asks the user, and the app only asks at the moment Start,
+        Stop or Install is tapped — never on launch. Meaningless on a phone without Termux.
+    -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <!--
+        Package visibility (API 30+): without this the app cannot see whether Termux is installed,
+        cannot resolve its command service, and "this phone" mode would look broken only on real
+        devices. Termux is the only package named; nothing else is queried.
+    -->
+    <queries>
+        <package android:name="com.termux" />
+        <!-- API 30+: the system recognizer is a bound service, not a package we can name. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".DshApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DshMobile"
+        tools:targetApi="35">
+
+        <!--
+            The product surface: the deployment's own web client in one WebView.
+
+            The mobile adaptation plugin already lives on the host, so this activity carries only
+            the pieces a browser cannot provide (preload, gate-cookie hand-off, uploads, downloads,
+            back-stack bridge, insets). `configChanges` keeps the WebView and its scroll state
+            across rotation/locale/theme/font changes instead of tearing the activity down.
+        -->
+        <activity
+            android:name=".webshell.WebShellActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density|fontScale|locale|layoutDirection"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.DshMobile.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Long-press launcher shortcut: open the app. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <service
+            android:name=".connection.ConnectionService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Fork: hands the system camera app a private cache URI for in-app photo capture. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!--
+            Where Termux reports a command's exit code and output. Not exported: the result travels
+            in a PendingIntent this app minted, which executes with this app's own identity, so the
+            receiver never has to be reachable from outside. Declared here rather than registered
+            at runtime so a result arriving after the process was killed still lands — and a
+            harness the app started can still be signed in to.
+        -->
+        <receiver
+            android:name=".termux.TermuxResultReceiver"
+            android:exported="false" />
+
+        <!--
+            Opts into AppCompat's own storage for the per-app language. Below API 33 the framework
+            has no LocaleManager to remember the choice, and without this the library only holds it
+            in memory: the app re-applies its saved tag on launch, but any AppCompat-managed context
+            created before that read — including the windows dialogs and bottom sheets are drawn in
+            — comes up in the device language instead. Disabled on purpose: it is a metadata holder,
+            never started.
+        -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <!-- Fork: home-screen widget and Quick Settings tile. -->
+        <receiver
+            android:name=".widget.DshWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/dsh_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".quick.DshTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_notification_whale"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
+
+

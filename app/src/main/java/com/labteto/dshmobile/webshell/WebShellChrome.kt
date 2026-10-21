@@ -1,0 +1,488 @@
+package com.labteto.dshmobile.webshell
+
+import android.app.Dialog
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.text.InputType
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.labteto.dshmobile.R
+import kotlin.math.roundToInt
+
+/**
+ * The shell's own chrome: the device manager and its small text-input dialogs.
+ *
+ * Drawn by hand instead of `AlertDialog`/`BottomSheet` so it follows the harness web client's visual
+ * language: a centred rounded card over a dim scrim, 15sp rows, quiet secondary text and one blue
+ * accent. It also follows the page's dark/light fact.
+ */
+internal class WebShellChrome(private val activity: AppCompatActivity) {
+
+    private val density = activity.resources.displayMetrics.density
+    private fun dp(value: Int): Int = (value * density).roundToInt()
+
+    // ---- device manager -----------------------------------------------------
+
+    fun showDeviceManager(
+        dark: Boolean,
+        devices: List<ShellDevice>,
+        currentId: String?,
+        onSelect: (ShellDevice) -> Unit,
+        onRename: (ShellDevice) -> Unit,
+        onDelete: (ShellDevice) -> Unit,
+        onAdd: () -> Unit,
+        onRefresh: () -> Unit,
+        onExit: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(4), dp(8), dp(2))
+        }
+        val titleColumn = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        titleColumn.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_manager_title)
+                textSize = 18f
+                setTextColor(colors.primary)
+            },
+        )
+        titleColumn.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_manager_subtitle)
+                textSize = 12f
+                setPadding(0, dp(3), 0, 0)
+                setTextColor(colors.secondary)
+            },
+        )
+        header.addView(titleColumn)
+        header.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_close)
+                textSize = 13f
+                setTextColor(colors.secondary)
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                isClickable = true
+                setOnClickListener { dialog.dismiss() }
+            },
+        )
+        card.addView(header, matchWidth())
+
+        val listColumn = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        devices.forEach { device ->
+            listColumn.addView(
+                deviceRow(
+                    colors = colors,
+                    device = device,
+                    selected = device.id == currentId,
+                    onlyOne = devices.size <= 1,
+                    onSelect = {
+                        dialog.dismiss()
+                        onSelect(device)
+                    },
+                    onRename = {
+                        dialog.dismiss()
+                        onRename(device)
+                    },
+                    onDelete = {
+                        dialog.dismiss()
+                        onDelete(device)
+                    },
+                ),
+            )
+        }
+        listColumn.addView(
+            addDeviceRow(colors) {
+                dialog.dismiss()
+                onAdd()
+            },
+        )
+        val listHeight = dp((devices.size * 66 + 48).coerceIn(96, 300))
+        val scroll = ScrollView(activity).apply {
+            isFillViewport = false
+            addView(
+                listColumn,
+                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight)
+        }
+        card.addView(scroll, matchWidth())
+
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
+                dialog.dismiss()
+                onRefresh()
+            },
+        )
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
+                dialog.dismiss()
+                onExit()
+            },
+        )
+
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    private fun deviceRow(
+        colors: Colors,
+        device: ShellDevice,
+        selected: Boolean,
+        onlyOne: Boolean,
+        onSelect: () -> Unit,
+        onRename: () -> Unit,
+        onDelete: () -> Unit,
+    ): View {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(62)
+            setPadding(dp(12), dp(6), dp(8), dp(6))
+            background = rowRipple(colors)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onSelect() }
+        }
+        row.addView(
+            ImageView(activity).apply {
+                setImageResource(R.drawable.ic_shell_device)
+                setColorFilter(if (selected) ACCENT else colors.secondary)
+                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+            },
+        )
+        val copy = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, dp(8), 0)
+        }
+        copy.addView(
+            TextView(activity).apply {
+                text = device.name
+                textSize = 15f
+                setTextColor(if (selected) ACCENT else colors.primary)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+        )
+        copy.addView(
+            TextView(activity).apply {
+                text = device.url
+                textSize = 11f
+                setTextColor(colors.secondary)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+                setPadding(0, dp(2), 0, 0)
+            },
+        )
+        row.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        if (selected) {
+            row.addView(
+                ImageView(activity).apply {
+                    setImageResource(R.drawable.ic_shell_check)
+                    setColorFilter(ACCENT)
+                    contentDescription = activity.getString(R.string.device_current)
+                    layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
+                },
+            )
+        }
+        row.addView(
+            iconButton(colors, R.drawable.ic_shell_edit, R.string.device_rename) { onRename() },
+        )
+        row.addView(
+            iconButton(
+                colors,
+                R.drawable.ic_shell_delete,
+                R.string.device_delete,
+                danger = true,
+                enabled = !onlyOne,
+            ) { onDelete() },
+        )
+        return row
+    }
+
+    private fun addDeviceRow(colors: Colors, action: () -> Unit): View = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(48)
+        setPadding(dp(14), 0, dp(14), 0)
+        background = rowRipple(colors)
+        isClickable = true
+        setOnClickListener { action() }
+        addView(
+            ImageView(activity).apply {
+                setImageResource(R.drawable.ic_shell_add)
+                setColorFilter(ACCENT)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
+            },
+        )
+        addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_add)
+                textSize = 15f
+                setTextColor(ACCENT)
+                setPadding(dp(12), 0, 0, 0)
+            },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+        )
+    }
+
+    private fun iconButton(
+        colors: Colors,
+        iconRes: Int,
+        descriptionRes: Int,
+        danger: Boolean = false,
+        enabled: Boolean = true,
+        action: () -> Unit,
+    ): ImageView = ImageView(activity).apply {
+        setImageResource(iconRes)
+        setColorFilter(if (danger) colors.danger else colors.secondary)
+        contentDescription = activity.getString(descriptionRes)
+        alpha = if (enabled) 1f else 0.35f
+        isEnabled = enabled
+        isClickable = true
+        setPadding(dp(7), dp(7), dp(7), dp(7))
+        layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
+        setOnClickListener { if (enabled) action() }
+    }
+
+    // ---- generic text dialog ------------------------------------------------
+
+    fun showTextDialog(
+        dark: Boolean,
+        title: String,
+        description: String,
+        initial: String,
+        hint: String,
+        inputType: Int,
+        errorText: String,
+        onSubmit: (String) -> Boolean,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(18), dp(18), dp(18), dp(18)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(20), dp(18), dp(20), dp(16))
+        }
+        card.addView(
+            TextView(activity).apply {
+                text = title
+                textSize = 17f
+                setTextColor(colors.primary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = description
+                textSize = 13f
+                setPadding(0, dp(6), 0, dp(14))
+                setTextColor(colors.secondary)
+            },
+        )
+        val field = EditText(activity).apply {
+            setText(initial)
+            setSelection(text.length)
+            textSize = 14f
+            this.inputType = inputType
+            imeOptions = EditorInfo.IME_ACTION_DONE
+            maxLines = 1
+            setSingleLine(true)
+            setTextColor(colors.primary)
+            setHintTextColor(colors.secondary)
+            this.hint = hint
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            background = fieldBackground(colors)
+        }
+        val error = TextView(activity).apply {
+            text = errorText
+            textSize = 12f
+            setTextColor(colors.danger)
+            setPadding(0, dp(8), 0, 0)
+            visibility = View.GONE
+        }
+        card.addView(field, matchWidth())
+        card.addView(error, matchWidth())
+
+        val buttons = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            setPadding(0, dp(16), 0, 0)
+        }
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(android.R.string.cancel)
+                textSize = 14f
+                setTextColor(colors.secondary)
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+                isClickable = true
+                setOnClickListener { dialog.dismiss() }
+            },
+        )
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_save)
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                setPadding(dp(18), dp(10), dp(18), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(ACCENT)
+                }
+                isClickable = true
+                setOnClickListener {
+                    val accepted = runCatching { onSubmit(field.text.toString()) }.getOrDefault(false)
+                    if (accepted) {
+                        dialog.dismiss()
+                    } else {
+                        error.visibility = View.VISIBLE
+                        field.requestFocus()
+                    }
+                }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                leftMargin = dp(6)
+            },
+        )
+        card.addView(buttons, matchWidth())
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        dialog.setOnShowListener {
+            field.requestFocus()
+            dialog.window?.setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+            )
+        }
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    // ---- shared building blocks --------------------------------------------
+
+    private fun show(dialog: Dialog, content: View, gravity: Int) {
+        dialog.setContentView(content)
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setGravity(gravity)
+            setDimAmount(0.35f)
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
+        dialog.show()
+    }
+
+    private fun cardBackground(colors: Colors, radiusDp: Int): GradientDrawable = GradientDrawable().apply {
+        cornerRadius = dp(radiusDp).toFloat()
+        setColor(colors.card)
+    }
+
+    private fun fieldBackground(colors: Colors): GradientDrawable = GradientDrawable().apply {
+        cornerRadius = dp(12).toFloat()
+        setColor(colors.field)
+        setStroke(dp(1), colors.divider)
+    }
+
+    private fun rowRipple(colors: Colors): RippleDrawable {
+        val mask = GradientDrawable().apply {
+            cornerRadius = dp(12).toFloat()
+            setColor(Color.WHITE)
+        }
+        return RippleDrawable(ColorStateList.valueOf(colors.ripple), null, mask)
+    }
+
+    private fun divider(colors: Colors): View = View(activity).apply {
+        setBackgroundColor(colors.divider)
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            leftMargin = dp(14)
+            rightMargin = dp(14)
+        }
+    }
+
+    private fun menuRow(
+        colors: Colors,
+        iconRes: Int,
+        label: String,
+        destructive: Boolean = false,
+        action: () -> Unit,
+    ): View {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), 0, dp(14), 0)
+            minimumHeight = dp(52)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            background = rowRipple(colors)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { action() }
+        }
+        row.addView(
+            ImageView(activity).apply {
+                setImageResource(iconRes)
+                setColorFilter(if (destructive) colors.danger else colors.primary)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
+            },
+        )
+        row.addView(
+            TextView(activity).apply {
+                text = label
+                textSize = 15f
+                setTextColor(if (destructive) colors.danger else colors.primary)
+                setPadding(dp(14), 0, 0, 0)
+            },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        return row
+    }
+
+    private fun matchWidth(topMarginDp: Int = 0, bottomMarginDp: Int = 0): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(topMarginDp)
+            bottomMargin = dp(bottomMarginDp)
+        }
+
+    /** The two palettes the shell chrome needs, mirroring the web client's light/dark surfaces. */
+    private class Colors(dark: Boolean) {
+        val card: Int = if (dark) Color.parseColor("#1C1C1E") else Color.WHITE
+        val field: Int = if (dark) Color.parseColor("#2A2A2C") else Color.parseColor("#F5F6F7")
+        val primary: Int = if (dark) Color.parseColor("#F5F5F5") else Color.parseColor("#0F1115")
+        val secondary: Int = if (dark) Color.parseColor("#A9AEB5") else Color.parseColor("#61666B")
+        val divider: Int = if (dark) Color.parseColor("#33FFFFFF") else Color.parseColor("#14000000")
+        val ripple: Int = if (dark) Color.parseColor("#33FFFFFF") else Color.parseColor("#14000000")
+        val danger: Int = if (dark) Color.parseColor("#F2555A") else Color.parseColor("#E5484D")
+    }
+
+    private companion object {
+        val ACCENT: Int = Color.parseColor("#3964FE")
+    }
+}

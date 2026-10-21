@@ -1,0 +1,325 @@
+package com.labteto.dshmobile.connection
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.labteto.dshmobile.DshApplication
+import com.labteto.dshmobile.core.wire.WireJson
+import com.labteto.dshmobile.core.wire.dto.HostDescription
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/** Persists remembered hosts and app settings. */
+@Singleton
+class HostsStore @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
+    private val credentials: RelayCredentialStore,
+    @ApplicationContext private val context: Context,
+) {
+    private object Keys {
+        val HOSTS = stringPreferencesKey("hosts_json")
+        val AUTO_LAST = booleanPreferencesKey("auto_last")
+        val AUTO_LAN = booleanPreferencesKey("auto_lan")
+        val AUTO_LOOPBACK = booleanPreferencesKey("auto_loopback")
+        val AUTO_START_LOOPBACK = booleanPreferencesKey("auto_start_loopback")
+        val AUTO_RELAY = booleanPreferencesKey("auto_relay")
+        val CONNECT_MODE = stringPreferencesKey("connect_mode")
+        val BACKGROUND = booleanPreferencesKey("background")
+        val NOTIFY_TURN = booleanPreferencesKey("notify_turn")
+        val NOTIFY_GOAL = booleanPreferencesKey("notify_goal")
+        val NOTIFY_ACTION = booleanPreferencesKey("notify_action")
+        val THEME = stringPreferencesKey("theme")
+        val LOCALE = stringPreferencesKey("locale")
+        val PORTS = stringPreferencesKey("ports_json")
+        val LAST_SESSIONS = stringPreferencesKey("last_sessions_json")
+        val SESSION_SORT = stringPreferencesKey("session_sort")
+        val UPDATE_CHECK = booleanPreferencesKey("update_check")
+        val DISMISSED_UPDATE = stringPreferencesKey("dismissed_update")
+        /** Fork: the WebView shell's address, separate from the native connection modes. */
+        val SHELL_URL = stringPreferencesKey("shell_url")
+    }
+
+    private val hostsSerializer = ListSerializer(HostConfig.serializer())
+    private val lastSessionsSerializer = MapSerializer(String.serializer(), String.serializer())
+
+    val hosts: Flow<List<HostConfig>> = dataStore.data.map { prefs ->
+        val raw = prefs[Keys.HOSTS] ?: return@map emptyList()
+        runCatching {
+            WireJson.decodeFromString(hostsSerializer, raw).sortedByDescending { it.lastConnectedAt }
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Fork: the address the WebView shell last loaded, or null for the default gateway endpoint.
+     *
+     * Kept apart from [hosts] on purpose: "where the web surface points" is a shell fact and must
+     * survive switches to a plain LAN harness without changing the native connection mode.
+     */
+    val shellUrl: Flow<String?> = dataStore.data.map { prefs -> prefs[Keys.SHELL_URL] }
+
+    /** Remember (or clear) the WebView shell's address after "change address". */
+    suspend fun setShellUrl(value: String?) {
+        dataStore.edit { prefs ->
+            if (value.isNullOrBlank()) prefs.remove(Keys.SHELL_URL) else prefs[Keys.SHELL_URL] = value
+        }
+    }
+
+    val settings: Flow<AppSettings> = dataStore.data.map { prefs ->
+        val ports = prefs[Keys.PORTS]
+            ?.split(',')
+            ?.mapNotNull { it.trim().toIntOrNull() }
+            ?.takeIf { it.isNotEmpty() }
+            ?: listOf(3080)
+        AppSettings(
+            autoConnectLast = prefs[Keys.AUTO_LAST] ?: true,
+            autoConnectLan = prefs[Keys.AUTO_LAN] ?: false,
+            autoConnectLoopback = prefs[Keys.AUTO_LOOPBACK] ?: true,
+            autoStartLoopbackHarness = prefs[Keys.AUTO_START_LOOPBACK] ?: false,
+            autoConnectRelay = prefs[Keys.AUTO_RELAY] ?: false,
+            connectMode = ConnectMode.of(prefs[Keys.CONNECT_MODE]),
+            keepConnectedInBackground = prefs[Keys.BACKGROUND] ?: false,
+            notifyTurnComplete = prefs[Keys.NOTIFY_TURN] ?: true,
+            notifyGoal = prefs[Keys.NOTIFY_GOAL] ?: true,
+            notifyNeedsAction = prefs[Keys.NOTIFY_ACTION] ?: true,
+            themePreference = prefs[Keys.THEME] ?: "system",
+            localeOverride = prefs[Keys.LOCALE],
+            knownPorts = ports,
+            // Fork: match AppSettings' default and the fork's "no upstream update checks" policy.
+            // Reading `?: true` here re-enabled the GitHub check on every device that had never
+            // touched the switch, even though the data class default says false.
+            updateCheckEnabled = prefs[Keys.UPDATE_CHECK] ?: false,
+            dismissedUpdate = prefs[Keys.DISMISSED_UPDATE],
+        )
+    }
+
+    suspend fun settingsOnce(): AppSettings = settings.first()
+
+    suspend fun upsertHost(config: HostConfig) {
+        val current = hosts.first().toMutableList()
+        current.removeAll { it.id == config.id || it.baseUrl == config.baseUrl }
+        current.add(0, config)
+        persist(current)
+    }
+
+    suspend fun touchHost(id: String) {
+        val current = hosts.first().map {
+            if (it.id == id) it.copy(lastConnectedAt = System.currentTimeMillis()) else it
+        }
+        persist(current)
+    }
+
+    /**
+     * Remember (or refresh) one endpoint.
+     *
+     * The id is stable across reconnects: `host:port` is the identity, so a returning harness keeps
+     * the id it already had. Minting a fresh UUID every time made the id useless as a list key and
+     * as a handle for anything stored per host. Cached describe fields survive a call that does not
+     * supply them.
+     */
+    suspend fun rememberHost(
+        name: String,
+        host: String,
+        port: Int,
+        isLoopback: Boolean,
+        useTls: Boolean = false,
+        description: HostDescription? = null,
+        relay: RelayIdentity? = null,
+        basePath: String = "",
+        isGateway: Boolean = false,
+    ): HostConfig {
+        val existing = hosts.first().firstOrNull { it.baseUrl == harnessBaseUrl(host, port, relay?.useTls ?: useTls, basePath) }
+        val config = HostConfig(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            name = name,
+            host = host,
+            port = port,
+            basePath = basePath,
+            isLoopback = isLoopback,
+            lastConnectedAt = System.currentTimeMillis(),
+            lastHome = description?.home ?: existing?.lastHome,
+            // A fresh pairing replaces the whole relay identity rather than merging into it: a
+            // re-pair mints a new device id, may move between TLS postures, and can land on a
+            // regenerated key. Keeping any of the previous three would leave the record describing
+            // two different enrolments at once. A pairing also decides the transport, which is why
+            // it outranks the caller's `useTls` here rather than sitting beside it.
+            useTls = relay?.useTls ?: useTls,
+            relayFingerprint = relay?.fingerprint ?: existing?.relayFingerprint,
+            relayDeviceId = relay?.deviceId ?: existing?.relayDeviceId,
+            relayTokenExpiresAt = relay?.tokenExpiresAt ?: existing?.relayTokenExpiresAt ?: 0L,
+            isGateway = isGateway || existing?.isGateway == true,
+        )
+        upsertHost(config)
+        return config
+    }
+
+    /** Fold a fresh host description into the remembered entry without touching its recency. */
+    suspend fun cacheDescription(id: String, description: HostDescription) {
+        val current = hosts.first()
+        if (current.none { it.id == id }) return
+        persist(
+            current.map {
+                if (it.id == id) {
+                    it.copy(lastHome = description.home)
+                } else {
+                    it
+                }
+            },
+        )
+    }
+
+    /**
+     * Forget an endpoint, and the credential that went with it.
+     *
+     * The token is dropped in the same act rather than left to expire. It would otherwise outlive
+     * everything that could ever present it, and a stored secret nothing can use is only a liability
+     * — the relay's own device entry is revoked from the relay, not from here.
+     */
+    suspend fun removeHost(id: String) {
+        persist(hosts.first().filterNot { it.id == id })
+        credentials.remove(id)
+    }
+
+    /**
+     * The session last opened on the complete endpoint, falling back to its legacy host:port key
+     * for saved data from before proxy roots and TLS became part of session history identity.
+     */
+    suspend fun lastSessionId(host: HostConfig): String? = host.rememberedSession(lastSessions())
+
+    /** Remember [sessionId] as the landing session for [hostKey], keeping the newest 8 hosts. */
+    suspend fun setLastSessionId(hostKey: String, sessionId: String) {
+        val next = LinkedHashMap<String, String>()
+        next[hostKey] = sessionId
+        lastSessions().forEach { (key, value) -> if (key != hostKey) next[key] = value }
+        val trimmed = next.entries.take(MAX_REMEMBERED_HOSTS).associate { it.key to it.value }
+        dataStore.edit { it[Keys.LAST_SESSIONS] = WireJson.encodeToString(lastSessionsSerializer, trimmed) }
+    }
+
+    /** Forget every remembered landing session (the Settings "clear data" action). */
+    suspend fun clearLastSessions() {
+        dataStore.edit { it.remove(Keys.LAST_SESSIONS) }
+    }
+
+    private suspend fun lastSessions(): Map<String, String> {
+        val raw = dataStore.data.first()[Keys.LAST_SESSIONS] ?: return emptyMap()
+        return runCatching { WireJson.decodeFromString(lastSessionsSerializer, raw) }.getOrDefault(emptyMap())
+    }
+
+    /** Drawer session ordering: `"manual"` follows the workspace order, `"updated"` sorts by recency. */
+    val sessionSort: Flow<String> = dataStore.data.map { it[Keys.SESSION_SORT] ?: "manual" }
+
+    suspend fun setSessionSort(value: String) {
+        dataStore.edit { it[Keys.SESSION_SORT] = value }
+    }
+
+    /** Remember that this release was declined, so it is not offered again. */
+    suspend fun setDismissedUpdate(version: String) {
+        dataStore.edit { it[Keys.DISMISSED_UPDATE] = version }
+    }
+
+    suspend fun addKnownPort(port: Int) {
+        val s = settingsOnce()
+        val ports = (s.knownPorts + port).distinct().take(8)
+        dataStore.edit { it[Keys.PORTS] = ports.joinToString(",") }
+    }
+
+    suspend fun setSetting(transform: (AppSettings) -> AppSettings) {
+        val next = transform(settingsOnce())
+        // Mirrored out to SharedPreferences as well: the scheme has to be readable before any
+        // activity exists, and DataStore cannot be read from there. See DshApplication.
+        DshApplication.storeThemePreference(context, next.themePreference)
+        dataStore.edit { prefs ->
+            prefs[Keys.AUTO_LAST] = next.autoConnectLast
+            prefs[Keys.AUTO_LAN] = next.autoConnectLan
+            prefs[Keys.AUTO_LOOPBACK] = next.autoConnectLoopback
+            prefs[Keys.AUTO_START_LOOPBACK] = next.autoStartLoopbackHarness
+            prefs[Keys.AUTO_RELAY] = next.autoConnectRelay
+            prefs[Keys.CONNECT_MODE] = next.connectMode
+            prefs[Keys.BACKGROUND] = next.keepConnectedInBackground
+            prefs[Keys.NOTIFY_TURN] = next.notifyTurnComplete
+            prefs[Keys.NOTIFY_GOAL] = next.notifyGoal
+            prefs[Keys.NOTIFY_ACTION] = next.notifyNeedsAction
+            prefs[Keys.THEME] = next.themePreference
+            prefs[Keys.UPDATE_CHECK] = next.updateCheckEnabled
+            next.localeOverride?.let { prefs[Keys.LOCALE] = it } ?: prefs.remove(Keys.LOCALE)
+        }
+    }
+
+    /**
+     * Decide the connect mode once, on first run, and never again.
+     *
+     * Every [setSetting] writes the mode back, so an install that has been used even once carries a
+     * stored value and [default] is never consulted for it. The write is conditional inside the
+     * edit, so two callers racing on a fresh install cannot each pick differently.
+     *
+     * @return the mode in effect afterwards.
+     */
+    suspend fun setConnectModeIfUnset(default: suspend () -> String): String {
+        val stored = dataStore.data.first()[Keys.CONNECT_MODE]
+        if (stored != null) return ConnectMode.of(stored)
+        val chosen = ConnectMode.of(default())
+        dataStore.edit { prefs ->
+            if (prefs[Keys.CONNECT_MODE] == null) prefs[Keys.CONNECT_MODE] = chosen
+        }
+        return ConnectMode.of(dataStore.data.first()[Keys.CONNECT_MODE])
+    }
+
+    /**
+     * The remembered record for the harness on this device at [port], created when there is none.
+     *
+     * Deliberately not [rememberHost]: that stamps "connected just now", and this record has to
+     * exist *before* the first connection — the sign-in exchange stores its cookie against the
+     * record's id — so a fresh one is inserted with no recency at all. An existing record, with
+     * its history, is returned untouched.
+     */
+    suspend fun ensureLoopbackHost(port: Int): HostConfig {
+        val existing = hosts.first().firstOrNull { it.host == LOOPBACK_HOST && it.port == port }
+        if (existing != null) return existing
+        val config = HostConfig(
+            id = UUID.randomUUID().toString(),
+            name = LOOPBACK_HOST,
+            host = LOOPBACK_HOST,
+            port = port,
+            isLoopback = true,
+            lastConnectedAt = 0L,
+        )
+        upsertHost(config)
+        return config
+    }
+
+    private suspend fun persist(list: List<HostConfig>) {
+        dataStore.edit { it[Keys.HOSTS] = WireJson.encodeToString(hostsSerializer, list) }
+    }
+
+    private companion object {
+        /** Bound on the remembered-session map, matching the known-port cap. */
+        const val MAX_REMEMBERED_HOSTS = 8
+
+        /** The address "this phone" mode reaches; the harness trusts it without configuration. */
+        const val LOOPBACK_HOST = "127.0.0.1"
+    }
+}
+
+/**
+ * What a successful relay pairing tells this app about an endpoint.
+ *
+ * Grouped rather than passed as four loose parameters because they are only ever meaningful
+ * together: a fingerprint without a device id describes a relay this device cannot talk to, and a
+ * device id without a scheme describes one it cannot address.
+ */
+data class RelayIdentity(
+    val deviceId: String,
+    val useTls: Boolean,
+    val fingerprint: String?,
+    val tokenExpiresAt: Long,
+)

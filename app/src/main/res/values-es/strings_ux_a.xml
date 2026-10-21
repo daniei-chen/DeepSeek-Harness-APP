@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ux_a_refresh">Actualizar</string>
+    <string name="ux_a_details">Detalles técnicos</string>
+    <string name="ux_a_every">Cada %1$s</string>
+    <string name="ux_a_daily">Cada día a las %1$s · %2$s</string>
+    <string name="ux_a_daily_clock">Cada día a las %1$s</string>
+    <string name="ux_a_weekly">%1$s a las %2$s · %3$s</string>
+    <string name="ux_a_cron">%1$s · %2$s</string>
+    <string name="ux_a_cron_expression">Cron: %1$s</string>
+    <string name="ux_a_next_run">Próxima ejecución: %1$s (%2$s)</string>
+    <string name="ux_a_due_now">ahora</string>
+    <string name="ux_a_in">en %1$s</string>
+    <string name="ux_a_overdue">%1$s de retraso</string>
+    <string name="ux_a_retention">El historial conserva hasta %1$s y %2$s.</string>
+    <string name="ux_a_load_error">No se pudo cargar la lista. Inténtalo de nuevo.</string>
+    <string name="ux_a_action_error">No se pudo completar la acción. Actualiza e inténtalo de nuevo.</string>
+    <string name="ux_a_session_archived">Este chat está archivado.</string>
+    <string name="ux_a_session_unavailable">Este chat ya no está disponible.</string>
+    <string name="ux_a_date">Fecha</string>
+    <string name="ux_a_precise_time">Hora (HH:mm:ss, fracciones opcionales)</string>
+    <string name="ux_a_time_error">Elige una hora local válida para esta fecha y zona horaria.</string>
+    <string name="ux_a_interval_amount">Cantidad del intervalo</string>
+    <string name="ux_a_interval_error">Introduce un entero con un intervalo de al menos 60 segundos.</string>
+    <string name="ux_a_weekdays_error">Elige al menos un día.</string>
+    <string name="ux_a_cron_advanced">Cron (avanzado)</string>
+    <string name="ux_a_cron_error">Introduce cinco campos cron válidos: minuto, hora, día, mes, día de semana.</string>
+    <string name="ux_a_zone_search">Buscar zonas horarias</string>
+    <string name="ux_a_manage_plugins">Gestionar plugins</string>
+    <string name="ux_a_update">Actualizar</string>
+    <string name="ux_a_installed">Instalados</string>
+    <string name="ux_a_available">Disponibles</string>
+    <string name="ux_a_installed_version">Versión instalada: %1$s</string>
+    <string name="ux_a_previous_install">Instalación anterior (paquete no registrado)</string>
+    <string name="ux_a_unknown">Se desconoce el resultado. Comprueba el estado o actualiza la lista antes de reintentar. Ocultar el aviso no deshace la instalación.</string>
+    <string name="ux_a_check_status">Comprobar estado</string>
+    <string name="ux_a_approve_retry">Aprobar y reintentar</string>
+    <string name="ux_a_inspected">Paquete inspeccionado. Revisa la versión antes de instalar.</string>
+    <string name="ux_a_inspect_notice">Revisa los detalles del paquete antes de instalar.</string>
+    <string name="ux_a_phase_starting">Preparando instalación…</string>
+    <string name="ux_a_phase_installing">Instalando paquete…</string>
+    <string name="ux_a_phase_applying">Aplicando cambios…</string>
+    <string name="ux_a_phase_cancelling">Cancelando instalación…</string>
+    <string name="ux_a_reason_required">La gestión de plugins necesita este componente. No se puede desactivar ni eliminar.</string>
+    <string name="ux_a_reason_unaddressable">La configuración del host no puede identificar esta entrada de forma única.</string>
+    <string name="ux_a_reason_missing">Este plugin ya no está disponible. Actualiza la lista.</string>
+    <string name="ux_a_reason_spec">Introduce un nombre de paquete o dirección válidos.</string>
+    <string name="ux_a_reason_ambiguous">No se pudo identificar el paquete instalado. Actualiza la lista.</string>
+    <string name="ux_a_reason_bundle">Este paquete no declara un conjunto de plugins y no se puede gestionar aquí.</string>
+    <string name="ux_a_reason_removable">Este paquete pertenece a otro perfil o es necesario para gestionar plugins.</string>
+    <string name="ux_a_reason_stop">Detén este perfil del host y desinstala el paquete con dsh plugin.</string>
+    <string name="ux_a_reason_in_use">Otra configuración usa este conjunto. Desactiva esos componentes primero.</string>
+    <string name="ux_a_reason_approval">Los scripts pendientes cambiaron. Instala de nuevo para revisar las nuevas aprobaciones.</string>
+    <string name="ux_a_reason_version">Este plugin es incompatible con esta versión de DSH. Instala una versión compatible.</string>
+    <plurals name="ux_a_days">
+        <item quantity="one">%1$s día</item>
+        <item quantity="many">%1$s días</item>
+        <item quantity="other">%1$s días</item>
+    </plurals>
+    <plurals name="ux_a_hours">
+        <item quantity="one">%1$s hora</item>
+        <item quantity="many">%1$s horas</item>
+        <item quantity="other">%1$s horas</item>
+    </plurals>
+    <plurals name="ux_a_minutes">
+        <item quantity="one">%1$s minuto</item>
+        <item quantity="many">%1$s minutos</item>
+        <item quantity="other">%1$s minutos</item>
+    </plurals>
+    <plurals name="ux_a_seconds">
+        <item quantity="one">%1$s segundo</item>
+        <item quantity="many">%1$s segundos</item>
+        <item quantity="other">%1$s segundos</item>
+    </plurals>
+    <plurals name="ux_a_records">
+        <item quantity="one">%1$s envío</item>
+        <item quantity="many">%1$s envíos</item>
+        <item quantity="other">%1$s envíos</item>
+    </plurals>
+    <string name="ux_a_reason_installed">Este paquete ya está instalado. Usa Actualizar en su entrada.</string>
+    <string name="ux_a_reason_network">No se pudo acceder al origen del paquete. Comprueba la conexión y reintenta.</string>
+    <string name="ux_a_reason_package">Esta dirección no contiene un paquete. Revisa el nombre o la ruta.</string>
+    <string name="ux_a_time">Hora</string>
+    <string name="ux_a_zone">Zona horaria</string>
+    <string name="ux_a_save_error">No se pudo guardar esta automatización. Actualiza la regla y reintenta.</string>
+    <string name="ux_a_delete_error">No se pudo eliminar esta automatización. Actualiza la lista y reintenta.</string>
+    <string name="ux_a_last_run">Última ejecución: %1$s</string>
+</resources>

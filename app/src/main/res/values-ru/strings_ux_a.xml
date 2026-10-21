@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ux_a_refresh">Обновить</string>
+    <string name="ux_a_details">Технические сведения</string>
+    <string name="ux_a_every">Интервал: %1$s</string>
+    <string name="ux_a_daily">Ежедневно в %1$s · %2$s</string>
+    <string name="ux_a_daily_clock">Ежедневно в %1$s</string>
+    <string name="ux_a_weekly">%1$s в %2$s · %3$s</string>
+    <string name="ux_a_cron">%1$s · %2$s</string>
+    <string name="ux_a_cron_expression">Правило Cron: %1$s</string>
+    <string name="ux_a_next_run">Следующий запуск: %1$s (%2$s)</string>
+    <string name="ux_a_due_now">сейчас</string>
+    <string name="ux_a_in">через %1$s</string>
+    <string name="ux_a_overdue">просрочено на %1$s</string>
+    <string name="ux_a_retention">История хранится не дольше %1$s и не более %2$s.</string>
+    <string name="ux_a_load_error">Не удалось загрузить список. Повторите попытку.</string>
+    <string name="ux_a_action_error">Не удалось выполнить действие. Обновите и повторите попытку.</string>
+    <string name="ux_a_session_archived">Этот чат в архиве.</string>
+    <string name="ux_a_session_unavailable">Этот чат больше недоступен.</string>
+    <string name="ux_a_date">Дата</string>
+    <string name="ux_a_precise_time">Время (HH:mm:ss, доли необязательны)</string>
+    <string name="ux_a_time_error">Выберите допустимое местное время для этой даты и часового пояса.</string>
+    <string name="ux_a_interval_amount">Величина интервала</string>
+    <string name="ux_a_interval_error">Введите целое число: интервал должен быть не менее 60 секунд.</string>
+    <string name="ux_a_weekdays_error">Выберите хотя бы один день недели.</string>
+    <string name="ux_a_cron_advanced">Cron (расширенный)</string>
+    <string name="ux_a_cron_error">Введите пять полей cron: минута, час, день, месяц, день недели.</string>
+    <string name="ux_a_zone_search">Поиск часового пояса</string>
+    <string name="ux_a_manage_plugins">Управление плагинами</string>
+    <string name="ux_a_update">Обновить</string>
+    <string name="ux_a_installed">Установленные</string>
+    <string name="ux_a_available">Доступные</string>
+    <string name="ux_a_installed_version">Установленная версия: %1$s</string>
+    <string name="ux_a_previous_install">Предыдущая установка (пакет не записан)</string>
+    <string name="ux_a_unknown">Результат установки неизвестен. Проверьте статус или обновите список перед повтором. Закрытие уведомления не отменяет установку.</string>
+    <string name="ux_a_check_status">Проверить статус</string>
+    <string name="ux_a_approve_retry">Разрешить и повторить</string>
+    <string name="ux_a_inspected">Пакет проверен. Проверьте версию перед установкой.</string>
+    <string name="ux_a_inspect_notice">Проверьте сведения о пакете перед установкой.</string>
+    <string name="ux_a_phase_starting">Подготовка установки…</string>
+    <string name="ux_a_phase_installing">Установка пакета…</string>
+    <string name="ux_a_phase_applying">Применение изменений…</string>
+    <string name="ux_a_phase_cancelling">Отмена установки…</string>
+    <string name="ux_a_reason_required">Этот компонент нужен для управления плагинами. Его нельзя отключить или удалить.</string>
+    <string name="ux_a_reason_unaddressable">Конфигурация хоста не позволяет однозначно определить эту запись.</string>
+    <string name="ux_a_reason_missing">Этот плагин больше недоступен. Обновите список.</string>
+    <string name="ux_a_reason_spec">Введите допустимое имя пакета или адрес.</string>
+    <string name="ux_a_reason_ambiguous">Не удалось определить установленный пакет. Обновите список.</string>
+    <string name="ux_a_reason_bundle">Пакет не объявляет набор плагинов; управление здесь недоступно.</string>
+    <string name="ux_a_reason_removable">Пакет принадлежит другому профилю или нужен для управления плагинами.</string>
+    <string name="ux_a_reason_stop">Остановите профиль хоста, затем удалите пакет через dsh plugin.</string>
+    <string name="ux_a_reason_in_use">Набор используется другой конфигурацией. Сначала отключите её компоненты.</string>
+    <string name="ux_a_reason_approval">Ожидающие скрипты изменились. Повторите установку, чтобы проверить новый список разрешений.</string>
+    <string name="ux_a_reason_version">Плагин несовместим с этой версией DSH. Установите совместимую версию.</string>
+    <plurals name="ux_a_days">
+        <item quantity="one">%1$s день</item>
+        <item quantity="few">%1$s дня</item>
+        <item quantity="many">%1$s дней</item>
+        <item quantity="other">%1$s дня</item>
+    </plurals>
+    <plurals name="ux_a_hours">
+        <item quantity="one">%1$s час</item>
+        <item quantity="few">%1$s часа</item>
+        <item quantity="many">%1$s часов</item>
+        <item quantity="other">%1$s часа</item>
+    </plurals>
+    <plurals name="ux_a_minutes">
+        <item quantity="one">%1$s минута</item>
+        <item quantity="few">%1$s минуты</item>
+        <item quantity="many">%1$s минут</item>
+        <item quantity="other">%1$s минуты</item>
+    </plurals>
+    <plurals name="ux_a_seconds">
+        <item quantity="one">%1$s секунда</item>
+        <item quantity="few">%1$s секунды</item>
+        <item quantity="many">%1$s секунд</item>
+        <item quantity="other">%1$s секунды</item>
+    </plurals>
+    <plurals name="ux_a_records">
+        <item quantity="one">%1$s доставка</item>
+        <item quantity="few">%1$s доставки</item>
+        <item quantity="many">%1$s доставок</item>
+        <item quantity="other">%1$s доставки</item>
+    </plurals>
+    <string name="ux_a_reason_installed">Пакет уже установлен. Нажмите «Обновить» в его строке.</string>
+    <string name="ux_a_reason_network">Источник пакета недоступен. Проверьте соединение и повторите попытку.</string>
+    <string name="ux_a_reason_package">По этому адресу нет пакета. Проверьте имя или путь.</string>
+    <string name="ux_a_time">Время</string>
+    <string name="ux_a_zone">Часовой пояс</string>
+    <string name="ux_a_save_error">Не удалось сохранить автоматизацию. Обновите правило и повторите попытку.</string>
+    <string name="ux_a_delete_error">Не удалось удалить автоматизацию. Обновите список и повторите попытку.</string>
+    <string name="ux_a_last_run">Последний запуск: %1$s</string>
+</resources>

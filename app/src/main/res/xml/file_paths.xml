@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fork: one private cache directory holds photos taken inside the app before they are read and
+     uploaded; nothing outside the app can address these files. -->
+<paths>
+    <cache-path name="camera" path="images/" />
+</paths>

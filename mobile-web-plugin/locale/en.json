@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "@dsh-android/dsh-client-ui-responsive",
+    "description": "Android mobile adaptation layer for the WebView shell: narrow drawer, safe areas, keyboard insets and the back-button layer stack."
+  }
+}
