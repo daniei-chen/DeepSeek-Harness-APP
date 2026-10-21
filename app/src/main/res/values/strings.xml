@@ -798,6 +798,13 @@
     <string name="shell_mobile_setup_copy">Copy command</string>
     <string name="shell_mobile_setup_copied">Command copied</string>
     <string name="shell_mobile_setup_docs">Setup guide</string>
+    <string name="shell_diagnostics">Diagnostics</string>
+    <string name="shell_diagnostics_hint">Page loads, renderer crashes and connection state.</string>
+    <string name="shell_diagnostics_title">WebView diagnostics</string>
+    <string name="shell_diagnostics_message">Page: %1$s\nLoads in last 60s: %2$d\nRenderer crashes in last 2min: %3$d\nConnection: %4$s\nWebView: %5$s\nAndroid: %6$s</string>
+    <string name="shell_diagnostics_copy">Copy diagnostics</string>
+    <string name="shell_diagnostics_copied">Diagnostics copied</string>
+    <string name="shell_diagnostics_clear_cache">Clear cache and reload</string>
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
     <string name="shell_settings_scan_lan">Scan local network</string>

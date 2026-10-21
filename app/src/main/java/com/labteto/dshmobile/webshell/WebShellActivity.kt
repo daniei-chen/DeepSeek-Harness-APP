@@ -924,6 +924,7 @@ class WebShellActivity : AppCompatActivity() {
             ntfyEnabled = NtfyConfig.load(this) != null,
             onConnection = { showConnectionPage() },
             onMobileSetup = { showMobileSetupDialog() },
+            onDiagnostics = { showDiagnosticsDialog() },
             onNotifications = { showNotificationsPage() },
             onBackground = { showBackgroundPage() },
             onCheckUpdate = { checkForUpdate() },
@@ -960,6 +961,34 @@ class WebShellActivity : AppCompatActivity() {
                     Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP/blob/main/setup/README.md"),
                 )
             }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun showDiagnosticsDialog() {
+        val loads = synchronized(pageLoadTimes) { pageLoadTimes.size }
+        val crashes = synchronized(rendererCrashTimes) { rendererCrashTimes.size }
+        val webViewVersion = runCatching {
+            WebView.getCurrentWebViewPackage()?.versionName
+        }.getOrNull() ?: "unknown"
+        val message = getString(
+            R.string.shell_diagnostics_message,
+            targetUrl.ifBlank { "(none)" },
+            loads,
+            crashes,
+            connectionManager.state.value.phase.name.lowercase(),
+            webViewVersion,
+            "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_diagnostics_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.shell_diagnostics_copy) { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("DSH diagnostics", message))
+                Toast.makeText(this, R.string.shell_diagnostics_copied, Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton(R.string.shell_diagnostics_clear_cache) { _, _ -> clearCacheAndReload() }
             .setNegativeButton(R.string.common_close, null)
             .show()
     }

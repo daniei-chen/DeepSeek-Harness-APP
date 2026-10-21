@@ -796,6 +796,13 @@
     <string name="shell_mobile_setup_copy">复制命令</string>
     <string name="shell_mobile_setup_copied">命令已复制</string>
     <string name="shell_mobile_setup_docs">安装说明</string>
+    <string name="shell_diagnostics">诊断</string>
+    <string name="shell_diagnostics_hint">查看网页加载次数、渲染崩溃和连接状态。</string>
+    <string name="shell_diagnostics_title">WebView 诊断</string>
+    <string name="shell_diagnostics_message">页面：%1$s\n最近 60 秒加载次数：%2$d\n最近 2 分钟渲染崩溃：%3$d\n连接状态：%4$s\nWebView：%5$s\nAndroid：%6$s</string>
+    <string name="shell_diagnostics_copy">复制诊断信息</string>
+    <string name="shell_diagnostics_copied">诊断信息已复制</string>
+    <string name="shell_diagnostics_clear_cache">清除缓存并重载</string>
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
     <string name="shell_settings_scan_lan">扫描局域网</string>
