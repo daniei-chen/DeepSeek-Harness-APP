@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: "@dsh-android/deepseek-harness-app-plugin",
+  id: "@dsh-android/dsh-client-ui-responsive-bundle",
   factory: (require) => {
     var module = { exports: {} };
     var exports = module.exports;
@@ -425,12 +425,23 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           event.preventDefault();
           event.stopPropagation();
           closeMenu();
-          const anchor = document.createElement("a");
-          anchor.href = "/dsh-file-ops?action=download&path=" + encodeURIComponent(filePath);
-          anchor.download = filePath.split(/[\\/]/).pop() || "download";
-          document.body.appendChild(anchor);
-          anchor.click();
-          anchor.remove();
+          const url = "/dsh-file-ops?action=download&path=" + encodeURIComponent(filePath);
+          fetch(url, { credentials: "include" })
+            .then((response) => {
+              if (!response.ok) throw new Error("HTTP " + response.status);
+              return response.blob();
+            })
+            .then((blob) => {
+              const objectUrl = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = objectUrl;
+              anchor.download = filePath.split(/[\\/]/).pop() || "download";
+              document.body.appendChild(anchor);
+              anchor.click();
+              anchor.remove();
+              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+            })
+            .catch((error) => window.alert("下载失败：" + (error instanceof Error ? error.message : String(error))));
         });
         const remove = document.createElement("button");
         remove.className = "danger";
@@ -443,6 +454,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           try {
             const response = await fetch("/dsh-file-ops?action=delete", {
               method: "POST",
+              credentials: "include",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ path: filePath }),
             });
