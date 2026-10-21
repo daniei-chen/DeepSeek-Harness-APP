@@ -937,6 +937,16 @@
     <string name="shell_settings_copied">已复制</string>
     <string name="shell_settings_test_connection">测试当前连接</string>
     <string name="shell_settings_test_connection_hint">检查地址可达性与延迟</string>
+    <string name="shell_pair_title">配对码连接</string>
+    <string name="shell_pair_description">输入电脑上显示的中继地址和 8 位配对码。地址填中继本身，不是 DSH 的端口。</string>
+    <string name="shell_pair_address_hint">https://192.168.2.13:3443</string>
+    <string name="shell_pair_code_hint">8 位配对码</string>
+    <string name="shell_pair_connect">连接</string>
+    <string name="shell_pair_scan">改用扫码</string>
+    <string name="shell_pair_invalid">地址或配对码格式不对</string>
+    <string name="shell_pair_row">配对码连接</string>
+    <string name="shell_pair_row_hint">没有摄像头时，手动输入中继地址和配对码</string>
+    <string name="shell_scan_all_added">找到 %1$d 个设备，均已添加</string>
     <string name="shell_doctor">连接体检</string>
     <string name="shell_doctor_hint">逐项检查 DNS、端口、证书、登录和主机插件</string>
     <string name="shell_doctor_title">连接体检</string>

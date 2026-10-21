@@ -59,6 +59,18 @@ node setup/dsh-mobile-setup.mjs doctor  --profile desktop
 `doctor` checks the profile, package dependencies, bundle entries, managed patch, file roots and
 the relay listener. It exits non-zero if a required check fails.
 
+## Pair a device without the QR
+
+```powershell
+node setup/dsh-mobile-setup.mjs pair --profile desktop
+```
+
+Prints the relay's LAN address, a live eight-digit code, its expiry and the pair/devices URLs. Add
+`--fresh` to replace an outstanding code, or `--json` to script it. On the phone use
+**Settings → Connection → Pair with a code** and enter the same two values — this is the fallback
+when the camera or the QR page is not available, and it is also how an agent can verify pairing
+end-to-end.
+
 ## Roll back
 
 The installer writes `package.json`, `cordis.patch.yml`, `pnpm-lock.yaml`, the workspace file and

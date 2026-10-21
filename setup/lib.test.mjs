@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { versionCodeFor } from "./make-latest-json.mjs";
 
 import {
   applyManagedBlock,
@@ -216,4 +217,11 @@ test("restore removes a patch file the installer created", async () => {
   await assert.rejects(fs.access(path.join(profileDir, "cordis.patch.yml")));
 
   await fs.rm(root, { recursive: true, force: true });
+});
+
+test("the update manifest uses the same versionCode rule as Gradle", () => {
+    assert.equal(versionCodeFor("0.9.37"), 31937);
+    assert.equal(versionCodeFor("v0.9.36"), 31936);
+    assert.equal(versionCodeFor("0.10.0"), 32000);
+    assert.equal(versionCodeFor("1.2.3"), 10203);
 });

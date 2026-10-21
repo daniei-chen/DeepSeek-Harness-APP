@@ -1,4 +1,4 @@
-# Release 0.9.37
+# Release 0.10.0
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.37-personal.97.apk`
-- SHA-256: `76FC72C59C7942B6A88A8908F65571FCA29C5BE628B374B6EADDD291E5C26568`
+- APK: `dist/DeepSeek-Harness-0.10.0-personal.100.apk`
+- SHA-256: `2BAD4E020E7B24BE74E25AAE4346AA73176DFDDC39085D8DA1618D3F71791A74`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
