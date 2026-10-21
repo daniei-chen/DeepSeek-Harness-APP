@@ -1,6 +1,6 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { execFile } from "node:child_process";
-import { lstat, mkdtemp, realpath, rm, stat } from "node:fs/promises";
+import { appendFile, lstat, mkdir, mkdtemp, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -14,9 +14,10 @@ export const inject = ["webServer"];
  * A deliberately tiny file-operation surface for the phone's workspace file panel.
  *
  * The shipped workspaceFiles API is read-only (list/stat/read/readBytes/changes). This route adds
- * exactly the two missing verbs — download and delete — and confines every path to the configured
- * workspace roots. The route is intended to be mounted behind the self-hosted server's own front
- * gate; the original host plugin's extra `dsh_gate` cookie check is intentionally removed here.
+ * the file-panel verbs — download, delete, rename, mkdir and upload — and confines every path to
+ * the configured workspace roots. The route is intended to be mounted behind the self-hosted
+ * server's own front gate; the original host plugin's extra `dsh_gate` cookie check is intentionally
+ * removed here.
  */
 export function apply(ctx, config = {}) {
     const configured = [
@@ -24,6 +25,25 @@ export function apply(ctx, config = {}) {
         ...(Array.isArray(config.fileOpsRoots) ? config.fileOpsRoots : []),
     ].filter(Boolean);
     const roots = (configured.length > 0 ? configured : [process.cwd()]).map((root) => path.resolve(root));
+    const auditLog = String(config.auditLog || process.env.DSH_MOBILE_AUDIT_LOG || "").trim();
+    if (auditLog !== "") {
+        mkdir(path.dirname(path.resolve(auditLog)), { recursive: true })
+            .catch((error) => ctx.logger?.warn?.(error));
+    }
+
+    /** Append-only local audit trail; a failure to write it must never fail the file action. */
+    const audit = (req, action, target, result) => {
+        if (auditLog === "") return;
+        const entry = {
+            time: new Date().toISOString(),
+            action,
+            path: target,
+            result,
+            remote: req.socket?.remoteAddress || "",
+            agent: String(req.headers?.["user-agent"] || "").slice(0, 200),
+        };
+        appendFile(auditLog, JSON.stringify(entry) + "\n").catch((error) => ctx.logger?.warn?.(error));
+    };
 
     const insideRoots = (target) => {
         const normalized = path.resolve(target);
@@ -50,6 +70,85 @@ export function apply(ctx, config = {}) {
         try {
             const url = new URL(req.url || "/", "http://localhost");
             const action = url.searchParams.get("action") || "";
+
+            const childName = (value) => {
+                const name = String(value || "").trim();
+                if (!name || name === "." || name === ".." || /[\\/]/.test(name)) return null;
+                return name;
+            };
+
+            if (action === "mkdir" || action === "rename") {
+                if (req.method !== "POST") {
+                    json(res, 405, { error: "POST required" });
+                    return;
+                }
+                const body = await readJson(req);
+                const targetPath = path.resolve(String(body.path || ""));
+                const name = childName(body.name);
+                if (!name) {
+                    json(res, 400, { error: "a valid name is required" });
+                    return;
+                }
+                if (!insideRoots(targetPath)) {
+                    json(res, 403, { error: "path is outside the workspace roots" });
+                    return;
+                }
+                if (action === "rename" && roots.includes(targetPath)) {
+                    json(res, 400, { error: "refusing to rename a workspace root" });
+                    return;
+                }
+                const destination = path.join(
+                    action === "rename" ? path.dirname(targetPath) : targetPath,
+                    name,
+                );
+                if (!insideRoots(destination)) {
+                    json(res, 403, { error: "destination is outside the workspace roots" });
+                    return;
+                }
+                if (action === "mkdir") {
+                    await mkdir(destination);
+                    audit(req, "mkdir", destination, "ok");
+                    json(res, 201, { ok: true, path: destination });
+                } else {
+                    await rename(targetPath, destination);
+                    audit(req, "rename", destination, "ok");
+                    json(res, 200, { ok: true, path: destination });
+                }
+                return;
+            }
+
+            if (action === "upload") {
+                if (req.method !== "POST") {
+                    json(res, 405, { error: "POST required" });
+                    return;
+                }
+                const directory = path.resolve(String(url.searchParams.get("path") || ""));
+                const name = childName(url.searchParams.get("name"));
+                if (!name) {
+                    json(res, 400, { error: "a valid name is required" });
+                    return;
+                }
+                if (!insideRoots(directory)) {
+                    json(res, 403, { error: "path is outside the workspace roots" });
+                    return;
+                }
+                const destination = path.join(directory, name);
+                if (!insideRoots(destination)) {
+                    json(res, 403, { error: "destination is outside the workspace roots" });
+                    return;
+                }
+                const output = createWriteStream(destination, { flags: "wx" });
+                await new Promise((resolve, reject) => {
+                    output.on("finish", resolve);
+                    output.on("error", reject);
+                    req.on("error", reject);
+                    req.pipe(output);
+                });
+                audit(req, "upload", destination, "ok");
+                json(res, 201, { ok: true, path: destination });
+                return;
+            }
+
             let target = "";
             if (action === "delete") {
                 if (req.method !== "POST") {
@@ -76,6 +175,7 @@ export function apply(ctx, config = {}) {
                     return;
                 }
                 await rm(resolved, { recursive: true, force: false });
+                audit(req, "delete", resolved, "ok");
                 json(res, 200, { ok: true, path: resolved });
                 return;
             }
@@ -135,6 +235,7 @@ export function apply(ctx, config = {}) {
                 "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
                 "cache-control": "no-store",
             });
+            audit(req, "download", real, "ok");
             createReadStream(real).pipe(res);
         } catch (error) {
             ctx.logger?.warn?.(error);

@@ -2,6 +2,7 @@
 #
 # One host plugin contributes:
 # - /dsh-file-ops (Android workspace file panel)
+# - /dsh-mobile/info (Settings -> 手机访问 status)
 # - BrowserSkill browser_* tools
 # The client bundle in lib/client.js adds the Android WebView adaptation layer.
 - insert:

@@ -159,6 +159,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         if ((rootStyle.getPropertyValue(name) || "") !== quoted) rootStyle.setProperty(name, quoted);
       };
 
+      let speedMissingSince = 0;
       const compactActivity = () => {
         const root = document.querySelector('[data-composer-stat="activity"]');
         if (root === null) return;
@@ -182,11 +183,16 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           }
         }
         if (speed !== undefined && speed !== "") {
+          speedMissingSince = 0;
           if (root.style.display !== "") root.style.display = "";
           setVar("--dsh-mobile-speed", speed);
           return;
         }
-        // No speed available: hide the turns/steps-only pill rather than showing the counts.
+        // No speed available yet: keep the last reading for a moment instead of blinking
+        // between the activity pill and an empty slot on every stream gap.
+        const now = Date.now();
+        if (speedMissingSince === 0) speedMissingSince = now;
+        if (now - speedMissingSince < 2500) return;
         if (root.style.display !== "none") root.style.display = "none";
         setVar("--dsh-mobile-speed", "");
       };
@@ -228,22 +234,27 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         }, 700);
       };
 
+      let dockObserver = null;
+      let observedDock = null;
       const observe = () => {
         const dock = document.querySelector('[data-slot="conversation.composer.dock"]') || document.querySelector("[data-composer-seat]");
-        if (dock === null) {
-          window.setTimeout(observe, 800);
-          return;
-        }
+        if (dock === null) return;
+        if (dock === observedDock && dockObserver !== null) return;
+        try {
+          dockObserver?.disconnect();
+        } catch (e) {}
+        observedDock = dock;
         compactStats();
         try {
-          new MutationObserver(schedule).observe(dock, { subtree: true, childList: true, characterData: true });
-        } catch (e) {}
+          dockObserver = new MutationObserver(schedule);
+          dockObserver.observe(dock, { subtree: true, childList: true, characterData: true });
+        } catch (e) {
+          dockObserver = null;
+        }
       };
 
       observe();
-      try {
-        new MutationObserver(schedule).observe(document.body, { subtree: true, childList: true, characterData: true });
-      } catch (e) {}
+      window.setInterval(observe, 3000);
       window.setInterval(compactStats, 2000);
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") compactStats();
@@ -412,7 +423,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           return /刷新|refresh/i.test(text);
         });
         if (button !== null) button.click();
-        else window.setTimeout(() => window.location.reload(), 300);
+        else console.warn("dsh-file-ops: refresh button not found; keeping the page as is");
       };
 
       const showMenu = (row, filePath) => {
@@ -450,7 +461,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           event.preventDefault();
           event.stopPropagation();
           closeMenu();
-          if (!window.confirm("删除这个文件/文件夹？\\n" + filePath)) return;
           try {
             const response = await fetch("/dsh-file-ops?action=delete", {
               method: "POST",
@@ -459,7 +469,10 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
               body: JSON.stringify({ path: filePath }),
             });
             if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
-            window.setTimeout(refreshFiles, 350);
+            // Remove the row immediately; the background refresh reconciles the rest of the
+            // directory without making the user stare at a stale list.
+            row.remove();
+            window.setTimeout(refreshFiles, 50);
           } catch (error) {
             window.alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
           }
@@ -475,9 +488,28 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         openMenu = menu;
       };
 
+      let panelNudged = false;
+      let panelSeenAt = 0;
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
-        if (rootPath() === "") return;
+        const root = rootPath();
+        if (root === "") {
+          panelNudged = false;
+          panelSeenAt = 0;
+          return;
+        }
+        const rows = document.querySelectorAll('[class*="Woyo-G_row"]').length;
+        if (rows > 0) {
+          panelNudged = true;
+        } else if (!panelNudged) {
+          if (panelSeenAt === 0) panelSeenAt = Date.now();
+          // The DSH file panel sometimes opens against a request that never paints. One
+          // programmatic refresh reproduces the tap that makes it appear, without a reload.
+          if (Date.now() - panelSeenAt > 1200) {
+            panelNudged = true;
+            refreshFiles();
+          }
+        }
         document.querySelectorAll('[class*="Woyo-G_row"]').forEach((row) => {
           if (row.dataset.dshFileActions === "1") return;
           row.dataset.dshFileActions = "1";
@@ -500,9 +532,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") decorate();
       });
-      try {
-        new MutationObserver(decorate).observe(document.body, { subtree: true, childList: true });
-      } catch (e) {}
       window.setInterval(decorate, 1500);
     }
 

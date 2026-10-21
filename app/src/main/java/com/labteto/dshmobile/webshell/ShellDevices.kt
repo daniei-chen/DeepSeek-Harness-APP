@@ -38,6 +38,25 @@ internal class ShellDevices(context: Context) {
         prefs.edit().putString(KEY_CURRENT, id).apply()
     }
 
+    /**
+     * A self-signed certificate is trusted per host:port, never globally.
+     *
+     * The relay's default listener is HTTPS with a certificate it generated itself. Android's
+     * WebView refuses that until the user explicitly accepts it. The exception is deliberately
+     * narrow — only an address that is already in this device list can be trusted, and the
+     * decision is remembered for that authority alone.
+     */
+    fun isSelfSignedTrusted(authority: String): Boolean {
+        val trusted = prefs.getStringSet(KEY_TRUSTED_SELF_SIGNED, emptySet()).orEmpty()
+        return trusted.contains(authority)
+    }
+
+    fun trustSelfSigned(authority: String) {
+        val trusted = prefs.getStringSet(KEY_TRUSTED_SELF_SIGNED, emptySet()).orEmpty().toMutableSet()
+        trusted.add(authority)
+        prefs.edit().putStringSet(KEY_TRUSTED_SELF_SIGNED, trusted).apply()
+    }
+
     /** Ensure there is at least the current address as a named device, and return the full list. */
     fun ensure(url: String): List<ShellDevice> {
         val existing = load()
@@ -95,5 +114,6 @@ internal class ShellDevices(context: Context) {
         const val PREFS = "shell_devices"
         const val KEY_DEVICES = "devices_json"
         const val KEY_CURRENT = "current_id"
+        const val KEY_TRUSTED_SELF_SIGNED = "trusted_self_signed"
     }
 }

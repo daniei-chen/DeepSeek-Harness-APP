@@ -11,6 +11,32 @@ fits your network.
 | WireGuard / Tailscale | Yes | Medium–hard | Private network; system VPN |
 | SSH port forwarding | Yes | Hard | Advanced users only |
 
+## LAN scan and loopback
+
+DSH Desktop deliberately binds its web server to `127.0.0.1`. A phone cannot reach that listener
+over Wi-Fi, and the app's scan does not pretend otherwise. **Settings → Connection → Scan local
+network** now sweeps the configured harness ports plus `3080`, reports progress, and also looks for
+`dsh-relay` on `3443/3444`. If nothing is found, it shows the phone's subnet, the ports tried and
+the three common causes (loopback-only DSH, firewall, guest-Wi-Fi isolation).
+
+For a Desktop host, install `dsh-relay` and pair once. The relay listens on `0.0.0.0:3443`, keeps
+the harness on loopback, and terminates TLS with a self-signed certificate by default. The app asks
+once before trusting that certificate for the exact `host:port`; it never disables certificate
+checks globally.
+
+**Fleet overview** reads one `sessionList` per saved host in parallel and shows the host's session
+count and running count. It is read-only: the active WebView connection is untouched until a host
+row is selected.
+
+**Cross-host inbox** uses the same reads to list sessions that are running or have an active
+question/plan review. Waiting work sorts first; tapping a row switches to that host and opens the
+session. Approval requests are process-local waterfalls and are therefore not included in this
+read-only view; open the host's own inbox for those.
+
+**Device health** probes every saved shell device in parallel and reports HTTP status and latency,
+offline, or a certificate that still needs first-use trust. It is a diagnostic surface, not a
+second connection: tapping a row only switches the shell to that address.
+
 ## Profiles
 
 The app stores connection profiles (name + URL) so you can switch between a home LAN address and

@@ -175,8 +175,12 @@ class NotificationObserver @Inject constructor(
                 Spec(
                     channel = DshNotifications.CHANNEL_ACTION,
                     title = context.getString(R.string.notif_review_requested),
-                    text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
-                    actionLabel = context.getString(R.string.notif_open),
+                    text = listOfNotNull(
+                        event.toolName.takeIf { it.isNotBlank() },
+                        event.reason?.take(80)?.takeIf { it.isNotBlank() },
+                        sessionTitle(event.sessionId),
+                    ).joinToString(" · ").ifBlank { context.getString(R.string.notif_session_fallback) },
+                    approvalId = event.approvalId,
                 )
             }
             is CompletionEvent.QuestionRequested -> {
@@ -185,6 +189,7 @@ class NotificationObserver @Inject constructor(
                     channel = DshNotifications.CHANNEL_ACTION,
                     title = context.getString(R.string.notif_question),
                     text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
+                    actionLabel = context.getString(R.string.notif_open),
                 )
             }
             is CompletionEvent.SessionIdle -> {
@@ -199,8 +204,16 @@ class NotificationObserver @Inject constructor(
 
         if (isDuplicate(event.dedupKey)) return
 
-        val id = notificationId(event.sessionId, spec.channel)
-        notifications.postSession(spec.channel, id, spec.title, spec.text, event.sessionId, spec.actionLabel)
+        val id = notificationId(event.sessionId, spec.channel, spec.approvalId)
+        notifications.postSession(
+            channel = spec.channel,
+            id = id,
+            title = spec.title,
+            text = spec.text,
+            sessionId = event.sessionId,
+            actionLabel = spec.actionLabel,
+            approvalId = spec.approvalId,
+        )
     }
 
     private data class Spec(
@@ -208,18 +221,22 @@ class NotificationObserver @Inject constructor(
         val title: String,
         val text: String,
         val actionLabel: String? = null,
+        val approvalId: String? = null,
     )
 
     private fun sessionTitle(sessionId: String): String? =
         store.sessions.value.firstOrNull { it.sessionId == sessionId }?.title
 
-    private fun notificationId(sessionId: String, channel: String): Int {
+    private fun notificationId(sessionId: String, channel: String, approvalId: String? = null): Int {
         val offset = when (channel) {
             DshNotifications.CHANNEL_ACTION -> CHANNEL_ACTION_OFFSET
             DshNotifications.CHANNEL_CONNECTION -> CHANNEL_CONNECTION_OFFSET
             else -> CHANNEL_COMPLETIONS_OFFSET
         }
-        val base = ((sessionId.hashCode() % 1000) + 1000) % 1000
+        // Approvals are keyed by their own request id: two tool calls in one session can wait at
+        // the same time, and a session-keyed id would make the second replace the first.
+        val seed = approvalId ?: sessionId
+        val base = ((seed.hashCode() % 1000) + 1000) % 1000
         return base + offset
     }
 

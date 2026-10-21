@@ -15,10 +15,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -55,14 +57,27 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.labteto.dshmobile.BuildConfig
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
+import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
+import com.labteto.dshmobile.connection.HarnessClientFactory
+import com.labteto.dshmobile.connection.MdnsDiscovery
 import com.labteto.dshmobile.connection.AppSettings
+import com.labteto.dshmobile.core.wire.RpcResult
+import com.labteto.dshmobile.core.wire.dto.SessionSummary
+import com.labteto.dshmobile.data.SessionRow
+import com.labteto.dshmobile.data.SessionStore
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.notify.NtfyConfig
 import com.labteto.dshmobile.notify.NtfySubscriberService
@@ -73,6 +88,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -116,6 +133,9 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var discoveryEngine: DiscoveryEngine
+    @Inject lateinit var mdnsDiscovery: MdnsDiscovery
+    @Inject lateinit var harnessClientFactory: HarnessClientFactory
+    @Inject lateinit var sessionStore: SessionStore
     @Inject lateinit var updateChecker: UpdateChecker
 
     private val cookieManager: CookieManager get() = CookieManager.getInstance()
@@ -127,6 +147,8 @@ class WebShellActivity : AppCompatActivity() {
     private var pageHadError = false
     private var pendingSessionId: String? = null
     private var pendingNativeSpeech = false
+    private var lanScanning = false
+    private var sslPromptShowing = false
     private var speechRecognizer: SpeechRecognizer? = null
     private lateinit var welcomeView: LinearLayout
     private lateinit var welcomeTitle: TextView
@@ -153,6 +175,12 @@ class WebShellActivity : AppCompatActivity() {
     private var pageDark = false
     private var clearHistoryAfterLoad = false
     private var micPermissionAsked = false
+
+    /** Wall-clock timestamps of main-document loads, used to break a WebView reload loop. */
+    private val pageLoadTimes = java.util.ArrayDeque<Long>()
+    /** Timestamps of renderer crashes; repeated crashes must not become an automatic reload loop. */
+    private val rendererCrashTimes = java.util.ArrayDeque<Long>()
+    private var reloadLoopNoticeShown = false
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
@@ -342,6 +370,7 @@ class WebShellActivity : AppCompatActivity() {
     // ---- WebView ------------------------------------------------------------
 
     private fun configureWebView() {
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         webView.setBackgroundColor(Color.WHITE)
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.isVerticalScrollBarEnabled = false
@@ -473,6 +502,34 @@ class WebShellActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Detect a pathological main-document reload loop.
+     *
+     * A normal SPA load finishes once. Four document loads inside a minute means the page is
+     * reloading itself (or the renderer is being torn down) faster than anyone can use it. Stop
+     * hiding the error surface and tell the reader what happened instead of repainting the same
+     * skeleton forever.
+     */
+    private fun recordPageLoad(url: String?): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        synchronized(pageLoadTimes) {
+            pageLoadTimes.addLast(now)
+            while (pageLoadTimes.isNotEmpty() && now - pageLoadTimes.first() > 60_000L) {
+                pageLoadTimes.removeFirst()
+            }
+            if (pageLoadTimes.size < 4) return false
+        }
+        Log.w(TAG, "web page reload loop detected: url=$url")
+        if (!reloadLoopNoticeShown) {
+            reloadLoopNoticeShown = true
+            showError(
+                getString(R.string.webshell_reload_loop_title),
+                getString(R.string.webshell_reload_loop_message),
+            )
+        }
+        return true
+    }
+
     private fun markPageReady() {
         pageReady.set(true)
     }
@@ -523,13 +580,14 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            val reloadLoop = recordPageLoad(url)
             if (!pageHadError) {
                 failoverTried.clear()
                 failoverInProgress = false
             }
             pageHadError = false
             markPageReady()
-            hideError()
+            if (!reloadLoop) hideError()
             injectPageScripts()
             openPendingSession()
             applyInsetsToPage()
@@ -570,6 +628,15 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+            val authority = authorityOf(error.url)
+            if (authority != null && isKnownDeviceAuthority(authority)) {
+                if (shellDevices.isSelfSignedTrusted(authority)) {
+                    handler.proceed()
+                } else {
+                    showSslTrustDialog(handler, authority, error)
+                }
+                return
+            }
             handler.cancel()
             showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_ssl))
         }
@@ -613,6 +680,21 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            val now = SystemClock.elapsedRealtime()
+            synchronized(rendererCrashTimes) {
+                rendererCrashTimes.addLast(now)
+                while (rendererCrashTimes.isNotEmpty() && now - rendererCrashTimes.first() > 120_000L) {
+                    rendererCrashTimes.removeFirst()
+                }
+                if (rendererCrashTimes.size >= 3) {
+                    Log.e(TAG, "renderer crashed repeatedly; refusing another automatic reload")
+                    showError(
+                        getString(R.string.webshell_renderer_loop_title),
+                        getString(R.string.webshell_renderer_loop_message),
+                    )
+                    return true
+                }
+            }
             recreateWebView()
             return true
         }
@@ -772,6 +854,8 @@ class WebShellActivity : AppCompatActivity() {
         failoverTried.clear()
         failoverInProgress = false
         pageHadError = false
+        reloadLoopNoticeShown = false
+        synchronized(pageLoadTimes) { pageLoadTimes.clear() }
         hideError()
         interceptPrefetch = false
         webView.loadUrl(markAndroidUrl(targetUrl))
@@ -856,10 +940,12 @@ class WebShellActivity : AppCompatActivity() {
         val versionName = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull() ?: "0.0.0"
+        val inboxRows = buildInboxRows()
         chrome.showSettingsHome(
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
+            inboxCount = inboxRows.count { it.action },
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
             backgroundEnabled = runCatching {
@@ -867,6 +953,9 @@ class WebShellActivity : AppCompatActivity() {
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
             onConnection = { showConnectionPage() },
+            onInbox = { showInbox() },
+            onMobileSetup = { showMobileSetupDialog() },
+            onDiagnostics = { showDiagnosticsDialog() },
             onNotifications = { showNotificationsPage() },
             onBackground = { showBackgroundPage() },
             onCheckUpdate = { checkForUpdate() },
@@ -876,14 +965,236 @@ class WebShellActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Native inbox for the current host: sessions that need a decision first, then running work,
+     * then recent idle sessions. It reads the same live [SessionStore] the notification observer
+     * uses, so opening it never starts a second connection or resumes an agent.
+     */
+    private fun buildInboxRows(): List<ShellInboxRow> {
+        return sessionStore.sessions.value
+            .filterNot { it.blank }
+            .sortedWith(
+                compareByDescending<SessionRow> { it.pendingInteraction != null }
+                    .thenByDescending { it.running }
+                    .thenByDescending { it.updatedAt },
+            )
+            .take(30)
+            .map { session ->
+                val action = session.pendingInteraction != null
+                val running = session.running
+                val status = when (session.pendingInteraction) {
+                    "approval" -> getString(R.string.shell_inbox_status_approval)
+                    "question" -> getString(R.string.shell_inbox_status_question)
+                    "plan-review" -> getString(R.string.shell_inbox_status_plan)
+                    else -> if (running) {
+                        getString(R.string.shell_inbox_status_running)
+                    } else {
+                        getString(R.string.shell_inbox_status_idle)
+                    }
+                }
+                val cwd = session.cwd
+                    ?.substringAfterLast('/')
+                    ?.substringAfterLast('\\')
+                    ?.takeIf { it.isNotBlank() }
+                ShellInboxRow(
+                    sessionId = session.sessionId,
+                    title = session.title?.takeIf { it.isNotBlank() }
+                        ?: getString(R.string.shell_inbox_untitled, session.sessionId.take(8)),
+                    subtitle = listOfNotNull(status, cwd).joinToString(" · "),
+                    action = action,
+                    running = running,
+                )
+            }
+    }
+
+    private fun showInbox() {
+        val connection = connectionManager.state.value
+        val phase = when (connection.phase) {
+            ConnectionPhase.CONNECTED -> getString(R.string.shell_inbox_state_connected)
+            ConnectionPhase.CONNECTING, ConnectionPhase.RECONNECTING ->
+                getString(R.string.shell_inbox_state_connecting)
+            ConnectionPhase.DISCONNECTED -> getString(R.string.shell_inbox_state_disconnected)
+        }
+        val label = connection.host?.let { host ->
+            getString(R.string.shell_inbox_connection, host.host, phase)
+        } ?: getString(R.string.shell_inbox_disconnected)
+        chrome.showInboxPage(
+            dark = pageDark,
+            rows = buildInboxRows(),
+            connectionLabel = label,
+            onOpen = { row ->
+                pendingSessionId = row.sessionId
+                openPendingSession()
+            },
+            onDetails = { row -> loadSessionCockpit(row) },
+            onRefresh = { showInbox() },
+            onBack = { showSettings() },
+        )
+    }
+
+    /** Load the native transcript first, then show the cockpit for that session. */
+    private fun loadSessionCockpit(row: ShellInboxRow) {
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_cockpit_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { sessionStore.openSession(row.sessionId) }
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            showSessionCockpit(row)
+        }
+    }
+
+    private fun showSessionCockpit(row: ShellInboxRow) {
+        val session = sessionStore.sessions.value.firstOrNull { it.sessionId == row.sessionId }
+        val currentRow = buildInboxRows().firstOrNull { it.sessionId == row.sessionId } ?: row
+        val usage = sessionStore.tokenUsage.value
+        val stats = sessionStore.sessionStats.value
+        val pressure = sessionStore.contextPressure.value
+        val model = sessionStore.models.value?.current
+        val contextWindow = pressure?.contextWindow
+        val context = if (contextWindow != null) {
+            val used = pressure?.projectedTokens ?: pressure?.pressureTokens ?: 0L
+            val ratio = pressure?.usedRatio
+            buildString {
+                append(compactNumber(used))
+                append(" / ")
+                append(compactNumber(contextWindow))
+                if (ratio != null) {
+                    append(" (")
+                    append((ratio * 100).roundToInt())
+                    append("%)")
+                }
+            }
+        } else {
+            "—"
+        }
+        val details = listOf(
+            getString(R.string.shell_cockpit_label_status) to currentRow.subtitle,
+            getString(R.string.shell_cockpit_label_model) to (model?.let { "${it.provider} / ${it.model}" } ?: "—"),
+            getString(R.string.shell_cockpit_label_input) to (usage?.inputTokens?.let(::compactNumber) ?: "—"),
+            getString(R.string.shell_cockpit_label_output) to (usage?.outputTokens?.let(::compactNumber) ?: "—"),
+            getString(R.string.shell_cockpit_label_cache) to (usage?.cacheHitRatio?.let { "${(it * 100).roundToInt()}%" } ?: "—"),
+            getString(R.string.shell_cockpit_label_speed) to (stats?.tokensPerSecond?.let {
+                String.format(java.util.Locale.US, "%.1f tok/s", it)
+            } ?: "—"),
+            getString(R.string.shell_cockpit_label_ttft) to (stats?.meanTtftMs?.let { "$it ms" } ?: "—"),
+            getString(R.string.shell_cockpit_label_context) to context,
+            getString(R.string.shell_cockpit_label_turns) to (stats?.let { "${it.turns} / ${it.steps}" } ?: "—"),
+        )
+        chrome.showSessionCockpit(
+            dark = pageDark,
+            title = currentRow.title,
+            status = currentRow.subtitle,
+            details = details,
+            running = session?.running == true,
+            onOpen = {
+                pendingSessionId = row.sessionId
+                openPendingSession()
+            },
+            onStop = { confirmStopSession(row) },
+            onFork = {
+                lifecycleScope.launch {
+                    runCatching { sessionStore.forkSession(row.sessionId) }
+                    Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_forked, Toast.LENGTH_SHORT).show()
+                    showSessionCockpit(row)
+                }
+            },
+            onRefresh = { showSessionCockpit(row) },
+            onBack = { showInbox() },
+        )
+    }
+
+    private fun confirmStopSession(row: ShellInboxRow) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_cockpit_stop_title)
+            .setMessage(R.string.shell_cockpit_stop_message)
+            .setPositiveButton(R.string.shell_cockpit_stop_confirm) { _, _ ->
+                lifecycleScope.launch {
+                    if (sessionStore.currentSessionId.value != row.sessionId) {
+                        Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_not_open, Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    runCatching { sessionStore.cancelTurn() }
+                    Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_stopped, Toast.LENGTH_SHORT).show()
+                    showSessionCockpit(row)
+                }
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun compactNumber(value: Long): String = when {
+        value >= 1_000_000 -> String.format(java.util.Locale.US, "%.1fM", value / 1_000_000.0)
+        value >= 1_000 -> String.format(java.util.Locale.US, "%.1fk", value / 1_000.0)
+        else -> value.toString()
+    }
+
     private fun showConnectionPage() {
         chrome.showConnectionPage(
             dark = pageDark,
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
+            onNetworkInfo = { showNetworkInfoDialog() },
+            onFleet = { showFleet() },
+            onFleetInbox = { showFleetInbox() },
+            onDeviceHealth = { checkDeviceHealth() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
         )
+    }
+
+    private fun showMobileSetupDialog() {
+        val command = "powershell -ExecutionPolicy Bypass -File setup/install.ps1 " +
+            "-Profile desktop -FileRoot \"D:\\your-workspace\"\n\n" +
+            "./setup/install.sh --profile desktop --file-root \"\$HOME/workspaces\""
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_mobile_setup_title)
+            .setMessage(getString(R.string.shell_mobile_setup_message, command))
+            .setPositiveButton(R.string.shell_mobile_setup_copy) { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("DSH host setup", command))
+                Toast.makeText(this, R.string.shell_mobile_setup_copied, Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton(R.string.shell_mobile_setup_docs) { _, _ ->
+                openExternalUri(
+                    Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP/blob/main/setup/README.md"),
+                )
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun showDiagnosticsDialog() {
+        val loads = synchronized(pageLoadTimes) { pageLoadTimes.size }
+        val crashes = synchronized(rendererCrashTimes) { rendererCrashTimes.size }
+        val webViewVersion = runCatching {
+            WebView.getCurrentWebViewPackage()?.versionName
+        }.getOrNull() ?: "unknown"
+        val message = getString(
+            R.string.shell_diagnostics_message,
+            targetUrl.ifBlank { "(none)" },
+            loads,
+            crashes,
+            connectionManager.state.value.phase.name.lowercase(),
+            webViewVersion,
+            "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_diagnostics_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.shell_diagnostics_copy) { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("DSH diagnostics", message))
+                Toast.makeText(this, R.string.shell_diagnostics_copied, Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton(R.string.shell_diagnostics_clear_cache) { _, _ -> clearCacheAndReload() }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
     }
 
     private fun showNotificationsPage() {
@@ -936,30 +1247,187 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun scanLan() {
-        Toast.makeText(this, R.string.shell_settings_scanning, Toast.LENGTH_SHORT).show()
+        if (lanScanning) return
+        lanScanning = true
+        val progress = AlertDialog.Builder(this)
+            .setTitle(R.string.shell_settings_scan_lan)
+            .setMessage(R.string.shell_settings_scanning)
+            .setCancelable(false)
+            .create()
+        progress.setOnDismissListener { lanScanning = false }
+        progress.show()
+
         lifecycleScope.launch {
-            val ports = runCatching { hostsStore.settings.first().knownPorts }.getOrDefault(listOf(3080))
-            val found = withContext(Dispatchers.IO) {
-                runCatching { discoveryEngine.scan(ports) }.getOrDefault(emptyList())
+            val settings = runCatching { hostsStore.settings.first() }.getOrDefault(AppSettings())
+            val ports = (settings.knownPorts + 3080).distinct().take(8)
+            val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
+            // mDNS is best-effort and runs beside the sweep. A relay advertises the port and
+            // pin it was configured with, so a hit here is both faster and more trustworthy
+            // than a subnet knock; multicast-filtered Wi-Fi still falls back to the sweep.
+            val advertised = async(Dispatchers.IO) {
+                runCatching { mdnsDiscovery.browse(1_500) }.getOrDefault(emptyList())
             }
+            val harnesses = withContext(Dispatchers.IO) {
+                runCatching {
+                    discoveryEngine.scan(
+                        ports = ports,
+                        onProgress = { probed, total ->
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed && progress.isShowing) {
+                                    progress.setMessage(
+                                        getString(R.string.shell_settings_scan_progress, probed, total),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }.getOrDefault(emptyList())
+            }
+            // A relay is the only supported way to reach a Desktop host that binds loopback.
+            // The sweep is the fallback when mDNS is unavailable; a trusted LAN harness still
+            // gets any advertised relay added alongside it.
+            val sweptRelays = if (harnesses.none { it.trusted }) {
+                withContext(Dispatchers.IO) {
+                    runCatching { discoveryEngine.scanForRelays() }.getOrDefault(emptyList())
+                }
+            } else {
+                emptyList()
+            }
+            val relays = (advertised.await() + sweptRelays).distinctBy { it.authority }
             if (isFinishing || isDestroyed) return@launch
-            if (found.isEmpty()) {
-                Toast.makeText(this@WebShellActivity, R.string.shell_settings_scan_empty, Toast.LENGTH_SHORT).show()
+            progress.dismiss()
+
+            val existing = shellDevices.load().map { it.url.trimEnd('/') }.toMutableSet()
+            var added = 0
+            harnesses.filter { it.trusted }.forEach { host ->
+                val url = host.baseUrl.trimEnd('/') + "/"
+                if (url.trimEnd('/') !in existing) {
+                    shellDevices.add(url = url, name = "局域网 ${host.host}")
+                    existing.add(url.trimEnd('/'))
+                    added++
+                }
+            }
+            relays.filter { it.host != "127.0.0.1" }.forEach { relay ->
+                // The relay's default listener is TLS. The WebView asks for explicit trust on the
+                // first visit; this address is remembered per host:port in ShellDevices.
+                val url = relay.baseUrl.trimEnd('/') + "/relay/pair"
+                if (url.trimEnd('/') !in existing) {
+                    shellDevices.add(url = url, name = "中继 ${relay.host}")
+                    existing.add(url.trimEnd('/'))
+                    added++
+                }
+            }
+            if (added > 0) {
+                Toast.makeText(
+                    this@WebShellActivity,
+                    getString(R.string.shell_settings_scan_found_count, added),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                showDeviceManager()
                 return@launch
             }
-            found.forEach { host ->
-                shellDevices.add(
-                    url = host.baseUrl.trimEnd('/') + "/",
-                    name = "局域网 ${host.host}",
-                )
-            }
-            Toast.makeText(
-                this@WebShellActivity,
-                getString(R.string.shell_settings_scan_found),
-                Toast.LENGTH_SHORT,
-            ).show()
-            showDeviceManager()
+            showScanEmptyDialog(subnet, ports, harnesses.count { !it.trusted }, relays.size)
         }
+    }
+
+    private fun showScanEmptyDialog(
+        subnet: String?,
+        ports: List<Int>,
+        harnessCount: Int,
+        relayCount: Int,
+    ) {
+        val extra = buildString {
+            if (harnessCount > 0) {
+                append("\n\n")
+                append(getString(R.string.shell_settings_scan_untrusted, harnessCount))
+            }
+            if (relayCount > 0) {
+                append("\n\n")
+                append(getString(R.string.shell_settings_scan_relay_unpaired, relayCount))
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_settings_scan_empty_title)
+            .setMessage(
+                getString(
+                    R.string.shell_settings_scan_empty_detail,
+                    subnet ?: getString(R.string.shell_settings_scan_unknown_subnet),
+                    ports.joinToString(" / "),
+                ) + extra,
+            )
+            .setPositiveButton(R.string.shell_settings_scan_help) { _, _ -> showMobileSetupDialog() }
+            .setNeutralButton(R.string.device_add) { _, _ -> showAddDeviceDialog() }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun showNetworkInfoDialog() {
+        lifecycleScope.launch {
+            val addresses = withContext(Dispatchers.IO) { discoveryEngine.localIpv4s() }
+            val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
+            val ports = runCatching { hostsStore.settings.first().knownPorts + 3080 }
+                .getOrDefault(listOf(3080))
+                .distinct()
+            if (isFinishing || isDestroyed) return@launch
+            AlertDialog.Builder(this@WebShellActivity)
+                .setTitle(R.string.shell_settings_network_info_title)
+                .setMessage(
+                    getString(
+                        R.string.shell_settings_network_info_message,
+                        addresses.ifEmpty { listOf(getString(R.string.shell_settings_network_none)) }
+                            .joinToString("\n") { "• $it" },
+                        subnet ?: getString(R.string.shell_settings_scan_unknown_subnet),
+                        ports.joinToString(" / "),
+                    ),
+                )
+                .setPositiveButton(R.string.common_close, null)
+                .show()
+        }
+    }
+
+    /** host:port key used for the per-device self-signed trust decision. */
+    private fun authorityOf(url: String?): String? {
+        val uri = url?.let { Uri.parse(it) } ?: return null
+        val host = uri.host ?: return null
+        val port = when {
+            uri.port != -1 -> uri.port
+            uri.scheme.equals("https", ignoreCase = true) -> 443
+            else -> 80
+        }
+        return "$host:$port"
+    }
+
+    /** Only an address already in the device list may be offered the self-signed exception. */
+    private fun isKnownDeviceAuthority(authority: String): Boolean =
+        shellDevices.load().any { device ->
+            authorityOf(device.url)?.equals(authority, ignoreCase = true) == true
+        }
+
+    private fun showSslTrustDialog(handler: SslErrorHandler, authority: String, error: SslError) {
+        if (sslPromptShowing || isFinishing || isDestroyed) {
+            handler.cancel()
+            return
+        }
+        sslPromptShowing = true
+        val issuer = error.certificate?.issuedTo?.cName?.takeIf { it.isNotBlank() } ?: authority
+        AlertDialog.Builder(this)
+            .setTitle(R.string.webshell_ssl_trust_title)
+            .setMessage(getString(R.string.webshell_ssl_trust_message, authority, issuer))
+            .setPositiveButton(R.string.webshell_ssl_trust_continue) { _, _ ->
+                sslPromptShowing = false
+                shellDevices.trustSelfSigned(authority)
+                handler.proceed()
+            }
+            .setNegativeButton(R.string.webshell_ssl_trust_cancel) { _, _ ->
+                sslPromptShowing = false
+                handler.cancel()
+                showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_ssl))
+            }
+            .setOnCancelListener {
+                sslPromptShowing = false
+                handler.cancel()
+            }
+            .show()
     }
 
     private fun openNotificationSettings() {
@@ -969,6 +1437,227 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    /**
+     * Multi-host overview: one `sessionList` read per saved device, in parallel. This is a
+     * read-only fleet view; the active WebView connection is not touched until a row is tapped.
+     */
+    private fun showFleet() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_fleet_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_fleet_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { queryFleetHost(device) } }.awaitAll()
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showFleetPage(
+                dark = pageDark,
+                rows = rows,
+                onSelect = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { showFleet() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun queryFleetHost(device: ShellDevice): ShellFleetHost {
+        if (device.url.contains("/relay/")) {
+            return ShellFleetHost(device, null, getString(R.string.shell_fleet_relay))
+        }
+        val hosts = runCatching { hostsStore.hosts.first() }.getOrDefault(emptyList())
+        val base = device.url.substringBefore("/relay/").trimEnd('/')
+        val host = hosts.firstOrNull {
+            it.baseUrl.trimEnd('/') == device.url.trimEnd('/') || it.baseUrl.trimEnd('/') == base
+        } ?: return ShellFleetHost(device, null, getString(R.string.shell_fleet_not_configured))
+        if (host.isRelay) {
+            return ShellFleetHost(device, null, getString(R.string.shell_fleet_relay))
+        }
+        val result = withTimeoutOrNull(6_000) {
+            runCatching {
+                val client = harnessClientFactory.clientFor(host)
+                when (val list = client.sessionList()) {
+                    is RpcResult.Ok -> {
+                        val items = list.value.items
+                        ShellFleetHost(
+                            device = device,
+                            online = true,
+                            detail = getString(
+                                R.string.shell_fleet_online,
+                                items.size,
+                                items.count { it.running },
+                            ),
+                            sessionCount = items.size,
+                            runningCount = items.count { it.running },
+                        )
+                    }
+                    is RpcResult.Err -> ShellFleetHost(
+                        device,
+                        false,
+                        getString(R.string.shell_fleet_error, list.error.code),
+                    )
+                }
+            }.getOrNull()
+        }
+        return result ?: ShellFleetHost(device, false, getString(R.string.shell_fleet_timeout))
+    }
+
+    /**
+     * Cross-host inbox: only sessions that are running or have an active user question/plan
+     * review. Idle history stays in each host's own inbox and is not pulled into this view.
+     */
+    private fun showFleetInbox() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_fleet_inbox_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_fleet_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { queryFleetSessions(device) } }.awaitAll()
+            }.flatten()
+                .sortedWith(compareBy<ShellFleetSession> { it.priority }.thenByDescending { it.updatedAt })
+                .take(40)
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showFleetInboxPage(
+                dark = pageDark,
+                rows = rows,
+                onOpen = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    pendingSessionId = row.sessionId
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { showFleetInbox() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun queryFleetSessions(device: ShellDevice): List<ShellFleetSession> {
+        if (device.url.contains("/relay/")) return emptyList()
+        val hosts = runCatching { hostsStore.hosts.first() }.getOrDefault(emptyList())
+        val base = device.url.substringBefore("/relay/").trimEnd('/')
+        val host = hosts.firstOrNull {
+            it.baseUrl.trimEnd('/') == device.url.trimEnd('/') || it.baseUrl.trimEnd('/') == base
+        } ?: return emptyList()
+        if (host.isRelay) return emptyList()
+        val result = withTimeoutOrNull(6_000) {
+            runCatching { harnessClientFactory.clientFor(host).sessionList() }.getOrNull()
+        } ?: return emptyList()
+        val items = when (result) {
+            is RpcResult.Ok -> result.value.items
+            is RpcResult.Err -> return emptyList()
+        }
+        return items.mapNotNull { summary ->
+            val pending = pendingQuestionCount(summary)
+            if (!summary.running && pending == 0) return@mapNotNull null
+            val status = buildList {
+                if (pending > 0) add(getString(R.string.shell_fleet_pending, pending))
+                if (summary.running) add(getString(R.string.shell_fleet_running))
+            }.joinToString(" · ")
+            ShellFleetSession(
+                device = device,
+                sessionId = summary.sessionId,
+                title = sessionTitleOf(summary)
+                    ?: getString(R.string.shell_inbox_untitled, summary.sessionId.take(8)),
+                status = status,
+                updatedAt = summary.updatedAt,
+                priority = if (pending > 0) 0 else 1,
+            )
+        }
+    }
+
+    private fun pendingQuestionCount(summary: SessionSummary): Int {
+        val values = summary.projections?.values ?: return 0
+        val questions = values["userQuestions"] as? JsonObject ?: return 0
+        return (questions["active"] as? JsonArray)?.size ?: 0
+    }
+
+    private fun sessionTitleOf(summary: SessionSummary): String? {
+        val value = summary.projections?.values?.get("title") ?: return null
+        return when (value) {
+            is JsonPrimitive -> value.contentOrNull
+            is JsonObject -> value["title"]?.jsonPrimitive?.contentOrNull
+            else -> null
+        }
+    }
+
+    private fun checkDeviceHealth() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_device_health_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_device_health_checking)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { probeDeviceHealth(device) } }.awaitAll()
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showDeviceHealthPage(
+                dark = pageDark,
+                rows = rows,
+                onSelect = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { checkDeviceHealth() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun probeDeviceHealth(device: ShellDevice): ShellDeviceHealth {
+        val started = System.nanoTime()
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val request = okhttp3.Request.Builder().url(device.url).head().build()
+                client.newCall(request).execute().use { it.code }
+            }
+        }
+        val elapsed = ((System.nanoTime() - started) / 1_000_000).toInt()
+        return result.fold(
+            onSuccess = { code ->
+                ShellDeviceHealth(device, true, getString(R.string.shell_device_health_online, code, elapsed))
+            },
+            onFailure = { error ->
+                val message = error.message.orEmpty()
+                if (message.contains("SSL", ignoreCase = true) ||
+                    message.contains("certificate", ignoreCase = true)
+                ) {
+                    ShellDeviceHealth(device, null, getString(R.string.shell_device_health_tls))
+                } else {
+                    ShellDeviceHealth(device, false, getString(R.string.shell_device_health_offline))
+                }
+            },
+        )
     }
 
     private fun testConnection() {
@@ -1468,7 +2157,9 @@ class WebShellActivity : AppCompatActivity() {
      * address and as a host record, which is what lets a gateway cookie survive a switch back.
      */
     private fun markAndroidUrl(raw: String): String = runCatching {
-        Uri.parse(raw).buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
+        val uri = Uri.parse(raw)
+        if (uri.getQueryParameter("dsh_android") == "1") raw
+        else uri.buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
     }.getOrDefault(raw)
 
     private fun applyServerUrl(raw: String): Boolean {
@@ -1698,6 +2389,7 @@ class WebShellActivity : AppCompatActivity() {
     private data class InsetsDp(val top: Float, val bottom: Float, val ime: Float)
 
     private companion object {
+        const val TAG = "DshWebShell"
         const val SPLASH_TIMEOUT_MS = 8_000L
 
         /**

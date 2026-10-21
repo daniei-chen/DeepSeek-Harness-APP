@@ -159,6 +159,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         if ((rootStyle.getPropertyValue(name) || "") !== quoted) rootStyle.setProperty(name, quoted);
       };
 
+      let speedMissingSince = 0;
       const compactActivity = () => {
         const root = document.querySelector('[data-composer-stat="activity"]');
         if (root === null) return;
@@ -182,11 +183,16 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           }
         }
         if (speed !== undefined && speed !== "") {
+          speedMissingSince = 0;
           if (root.style.display !== "") root.style.display = "";
           setVar("--dsh-mobile-speed", speed);
           return;
         }
-        // No speed available: hide the turns/steps-only pill rather than showing the counts.
+        // No speed available yet: keep the last reading for a moment instead of blinking
+        // between the activity pill and an empty slot on every stream gap.
+        const now = Date.now();
+        if (speedMissingSince === 0) speedMissingSince = now;
+        if (now - speedMissingSince < 2500) return;
         if (root.style.display !== "none") root.style.display = "none";
         setVar("--dsh-mobile-speed", "");
       };
@@ -228,22 +234,27 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         }, 700);
       };
 
+      let dockObserver = null;
+      let observedDock = null;
       const observe = () => {
         const dock = document.querySelector('[data-slot="conversation.composer.dock"]') || document.querySelector("[data-composer-seat]");
-        if (dock === null) {
-          window.setTimeout(observe, 800);
-          return;
-        }
+        if (dock === null) return;
+        if (dock === observedDock && dockObserver !== null) return;
+        try {
+          dockObserver?.disconnect();
+        } catch (e) {}
+        observedDock = dock;
         compactStats();
         try {
-          new MutationObserver(schedule).observe(dock, { subtree: true, childList: true, characterData: true });
-        } catch (e) {}
+          dockObserver = new MutationObserver(schedule);
+          dockObserver.observe(dock, { subtree: true, childList: true, characterData: true });
+        } catch (e) {
+          dockObserver = null;
+        }
       };
 
       observe();
-      try {
-        new MutationObserver(schedule).observe(document.body, { subtree: true, childList: true, characterData: true });
-      } catch (e) {}
+      window.setInterval(observe, 3000);
       window.setInterval(compactStats, 2000);
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") compactStats();
@@ -367,6 +378,13 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         }
         .dsh-file-menu button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127,127,127,.2)); }
         .dsh-file-menu button.danger { color: var(--dsw-alias-label-danger, #f2555a); }
+        .dsh-file-tools { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+        .dsh-file-tool {
+          border: 1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.3));
+          border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary, #999);
+          font: 11px/1.2 sans-serif; padding: 4px 6px; cursor: pointer;
+        }
+        .dsh-file-tool:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127,127,127,.2)); }
       `;
       style.dataset.plugin = "@dsh-android/dsh-file-actions";
       document.head.appendChild(style);
@@ -412,7 +430,83 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           return /刷新|refresh/i.test(text);
         });
         if (button !== null) button.click();
-        else window.setTimeout(() => window.location.reload(), 300);
+        else console.warn("dsh-file-ops: refresh button not found; keeping the page as is");
+      };
+
+      const fileRequest = async (action, payload) => {
+        const response = await fetch("/dsh-file-ops?action=" + action, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
+      };
+
+      const newFolder = async () => {
+        const name = window.prompt("新建文件夹名称");
+        if (name === null || name.trim() === "") return;
+        try {
+          await fileRequest("mkdir", { path: rootPath(), name: name.trim() });
+          refreshFiles();
+        } catch (error) {
+          window.alert("新建文件夹失败：" + (error instanceof Error ? error.message : String(error)));
+        }
+      };
+
+      const uploadFiles = () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.multiple = true;
+        input.style.display = "none";
+        document.body.appendChild(input);
+        input.addEventListener("change", async () => {
+          const files = [...(input.files || [])];
+          if (files.length === 0) {
+            input.remove();
+            return;
+          }
+          try {
+            for (const file of files) {
+              const url = "/dsh-file-ops?action=upload&path=" + encodeURIComponent(rootPath()) +
+                "&name=" + encodeURIComponent(file.name);
+              const response = await fetch(url, {
+                method: "POST",
+                credentials: "include",
+                headers: { "content-type": "application/octet-stream" },
+                body: file,
+              });
+              if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
+            }
+            refreshFiles();
+          } catch (error) {
+            window.alert("上传失败：" + (error instanceof Error ? error.message : String(error)));
+          } finally {
+            input.remove();
+          }
+        });
+        input.click();
+      };
+
+      const installHeaderTools = () => {
+        const header = document.querySelector('[class*="Woyo-G_header"]');
+        if (header === null || header.querySelector(".dsh-file-tools") !== null) return;
+        const tools = document.createElement("span");
+        tools.className = "dsh-file-tools";
+        const makeButton = (text, handler) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "dsh-file-tool";
+          button.textContent = text;
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handler();
+          });
+          return button;
+        };
+        tools.append(makeButton("上传", uploadFiles), makeButton("新建", newFolder));
+        header.appendChild(tools);
       };
 
       const showMenu = (row, filePath) => {
@@ -443,6 +537,21 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
             })
             .catch((error) => window.alert("下载失败：" + (error instanceof Error ? error.message : String(error))));
         });
+        const rename = document.createElement("button");
+        rename.textContent = "重命名";
+        rename.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMenu();
+          const name = window.prompt("重命名为", label(row));
+          if (name === null || name.trim() === "") return;
+          try {
+            await fileRequest("rename", { path: filePath, name: name.trim() });
+            refreshFiles();
+          } catch (error) {
+            window.alert("重命名失败：" + (error instanceof Error ? error.message : String(error)));
+          }
+        });
         const remove = document.createElement("button");
         remove.className = "danger";
         remove.textContent = "删除";
@@ -450,7 +559,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           event.preventDefault();
           event.stopPropagation();
           closeMenu();
-          if (!window.confirm("删除这个文件/文件夹？\\n" + filePath)) return;
           try {
             const response = await fetch("/dsh-file-ops?action=delete", {
               method: "POST",
@@ -459,25 +567,48 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
               body: JSON.stringify({ path: filePath }),
             });
             if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
-            window.setTimeout(refreshFiles, 350);
+            // Remove the row immediately; the background refresh reconciles the rest of the
+            // directory without making the user stare at a stale list.
+            row.remove();
+            window.setTimeout(refreshFiles, 50);
           } catch (error) {
             window.alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
           }
         });
-        menu.append(download, remove);
+        menu.append(download, rename, remove);
         document.body.appendChild(menu);
         const rect = row.getBoundingClientRect();
         const width = 140;
         const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
-        const top = Math.min(rect.bottom + 4, window.innerHeight - 90);
+        const top = Math.min(rect.bottom + 4, window.innerHeight - 130);
         menu.style.left = left + "px";
         menu.style.top = top + "px";
         openMenu = menu;
       };
 
+      let panelNudged = false;
+      let panelSeenAt = 0;
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
-        if (rootPath() === "") return;
+        const root = rootPath();
+        if (root === "") {
+          panelNudged = false;
+          panelSeenAt = 0;
+          return;
+        }
+        const rows = document.querySelectorAll('[class*="Woyo-G_row"]').length;
+        if (rows > 0) {
+          panelNudged = true;
+        } else if (!panelNudged) {
+          if (panelSeenAt === 0) panelSeenAt = Date.now();
+          // The DSH file panel sometimes opens against a request that never paints. One
+          // programmatic refresh reproduces the tap that makes it appear, without a reload.
+          if (Date.now() - panelSeenAt > 1200) {
+            panelNudged = true;
+            refreshFiles();
+          }
+        }
+        installHeaderTools();
         document.querySelectorAll('[class*="Woyo-G_row"]').forEach((row) => {
           if (row.dataset.dshFileActions === "1") return;
           row.dataset.dshFileActions = "1";
@@ -500,9 +631,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") decorate();
       });
-      try {
-        new MutationObserver(decorate).observe(document.body, { subtree: true, childList: true });
-      } catch (e) {}
       window.setInterval(decorate, 1500);
     }
 
@@ -5741,4 +5869,414 @@ window.__ModuleLoader__.load({
 		exports.inject = inject;
 		return module.exports;
 	}
+});
+
+// ---- generated from mobile-access-client.js (Settings -> 手机访问)
+/**
+ * Settings → 手机访问.
+ *
+ * This is deliberately a status panel, not a second connection manager. It answers the three
+ * questions a phone user actually has when a LAN scan finds nothing:
+ *
+ *   1. where is this DSH listening,
+ *   2. is that address reachable from a phone,
+ *   3. if not, which supported path (LAN bind or dsh-relay) will work.
+ *
+ * All facts come from the host's /dsh-mobile/info route. No credential is read or displayed.
+ */
+window.__ModuleLoader__.load({
+  id: "@dsh-android/deepseek-harness-app-plugin/mobile-access",
+  factory: (require) => {
+    const React = require("react");
+    const h = React.createElement;
+
+    const S = {
+      wrap: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        width: "100%",
+        maxWidth: "760px",
+        padding: "4px 0 28px",
+        color: "var(--dsw-alias-label-primary, #111)",
+        fontFamily: "inherit",
+      },
+      card: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        padding: "16px",
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.25))",
+        borderRadius: "14px",
+        background: "var(--dsw-alias-bg-layer-1, transparent)",
+      },
+      title: { fontSize: "15px", fontWeight: 600, margin: 0 },
+      hint: {
+        margin: 0,
+        color: "var(--dsw-alias-label-secondary, #666)",
+        fontSize: "12px",
+        lineHeight: 1.6,
+      },
+      row: {
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: "12px",
+        padding: "7px 0",
+        borderTop: "1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.14))",
+        fontSize: "12px",
+        lineHeight: 1.5,
+      },
+      rowFirst: { borderTop: "none", paddingTop: 0 },
+      label: { color: "var(--dsw-alias-label-secondary, #666)", flex: "0 0 auto" },
+      value: {
+        color: "var(--dsw-alias-label-primary, #111)",
+        textAlign: "right",
+        overflowWrap: "anywhere",
+        minWidth: 0,
+      },
+      code: {
+        fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace",
+        fontSize: "11px",
+        background: "var(--dsw-alias-bg-layer-2, rgba(127,127,127,.1))",
+        borderRadius: "5px",
+        padding: "2px 5px",
+      },
+      badge: {
+        display: "inline-flex",
+        alignItems: "center",
+        borderRadius: "999px",
+        padding: "1px 7px",
+        fontSize: "11px",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+      },
+      actions: { display: "flex", flexWrap: "wrap", gap: "8px" },
+      button: {
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.25))",
+        background: "var(--dsw-alias-bg-layer-1, transparent)",
+        color: "var(--dsw-alias-label-primary, #111)",
+        borderRadius: "8px",
+        padding: "7px 11px",
+        fontSize: "12px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+      },
+      buttonPrimary: {
+        background: "var(--dsw-alias-button-primary-fill, #2563eb)",
+        borderColor: "transparent",
+        color: "var(--dsw-alias-label-primary-foreground, #fff)",
+      },
+      buttonDisabled: { opacity: 0.45, cursor: "not-allowed" },
+      list: { margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" },
+      listItem: { fontSize: "12px", lineHeight: 1.6, color: "var(--dsw-alias-label-secondary, #555)" },
+      error: {
+        color: "var(--dsw-alias-state-error-primary, #b42318)",
+        fontSize: "12px",
+        lineHeight: 1.6,
+        margin: 0,
+      },
+      auditRow: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        padding: "7px 0",
+        borderTop: "1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.14))",
+        fontSize: "11.5px",
+        lineHeight: 1.5,
+      },
+      auditMeta: { color: "var(--dsw-alias-label-secondary, #666)", fontSize: "11px" },
+      spinner: { fontSize: "12px", color: "var(--dsw-alias-label-secondary, #666)" },
+      muted: { color: "var(--dsw-alias-label-secondary, #666)" },
+      monoList: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "3px",
+        alignItems: "flex-end",
+      },
+    };
+
+    function badge(tone, text) {
+      const colors = {
+        success: ["var(--dsw-alias-state-success-primary, #067647)", "rgba(6,118,71,.12)"],
+        warning: ["var(--dsw-alias-state-warning-primary, #b54708)", "rgba(181,71,8,.12)"],
+        neutral: ["var(--dsw-alias-label-secondary, #666)", "rgba(127,127,127,.12)"],
+        danger: ["var(--dsw-alias-state-error-primary, #b42318)", "rgba(180,35,24,.12)"],
+      };
+      const [color, background] = colors[tone] || colors.neutral;
+      return h("span", { style: { ...S.badge, color, background } }, text);
+    }
+
+    function code(value) {
+      return h("code", { style: S.code }, value);
+    }
+
+    function row(label, value, first = false) {
+      return h(
+        "div",
+        { style: { ...S.row, ...(first ? S.rowFirst : {}) } },
+        h("span", { style: S.label }, label),
+        h("span", { style: S.value }, value),
+      );
+    }
+
+    function button(label, onClick, options = {}) {
+      return h(
+        "button",
+        {
+          type: "button",
+          onClick,
+          disabled: Boolean(options.disabled),
+          style: {
+            ...S.button,
+            ...(options.primary ? S.buttonPrimary : {}),
+            ...(options.disabled ? S.buttonDisabled : {}),
+          },
+        },
+        label,
+      );
+    }
+
+    function fallbackCopy(text) {
+      try {
+        const input = document.createElement("textarea");
+        input.value = text;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    async function copyText(text) {
+      if (!text) return false;
+      try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch {
+        // HTTP LAN origins are not secure contexts; fall through to the textarea path.
+      }
+      return fallbackCopy(text);
+    }
+
+    function MobileAccessSection() {
+      const [info, setInfo] = React.useState(null);
+      const [audit, setAudit] = React.useState(null);
+      const [error, setError] = React.useState("");
+      const [loading, setLoading] = React.useState(true);
+      const [notice, setNotice] = React.useState("");
+      const noticeTimer = React.useRef(null);
+
+      const load = React.useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const response = await fetch("/dsh-mobile/info", {
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const next = await response.json();
+          if (!next || next.ok !== true) throw new Error(next?.error || "invalid response");
+          setInfo(next);
+          try {
+            const auditResponse = await fetch("/dsh-mobile/audit?limit=8", {
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (auditResponse.ok) {
+              const auditValue = await auditResponse.json();
+              if (auditValue?.ok === true) setAudit(auditValue);
+            }
+          } catch {
+            // The audit route is additive; a plugin version without it must not break this panel.
+          }
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause));
+        } finally {
+          setLoading(false);
+        }
+      }, []);
+
+      React.useEffect(() => {
+        load();
+        return () => {
+          if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+        };
+      }, [load]);
+
+      const flash = (message) => {
+        setNotice(message);
+        if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+        noticeTimer.current = window.setTimeout(() => setNotice(""), 2200);
+      };
+
+      const copy = async (text, label) => {
+        const ok = await copyText(text);
+        flash(ok ? `${label}已复制` : "复制失败，请长按选择文本");
+      };
+
+      const lanUrl = info?.urls?.[0]?.url || "";
+      const pairUrl = info?.relay?.pairUrl || "";
+      const currentUrl = info?.origin || (info?.bindHost && info?.port ? `http://${info.bindHost}:${info.port}/` : "");
+
+      return h(
+        "div",
+        { style: S.wrap },
+        h(
+          "div",
+          { style: S.card },
+          h("h3", { style: S.title }, "手机访问"),
+          h(
+            "p",
+            { style: S.hint },
+            "这里只显示当前 DSH 的真实监听地址和可用连接路径，不会修改 DSH 的监听设置，也不会显示任何配对凭据。",
+          ),
+          loading
+            ? h("p", { style: S.spinner }, "正在读取主机信息…")
+            : error
+              ? h(
+                  "div",
+                  { style: { display: "flex", flexDirection: "column", gap: "10px" } },
+                  h("p", { style: S.error }, `读取失败：${error}`),
+                  h("div", { style: S.actions }, button("重试", load, { primary: true })),
+                )
+              : info
+                ? h(
+                    React.Fragment,
+                    null,
+                    row("当前面板地址", code(currentUrl || "—"), true),
+                    row(
+                      "监听地址",
+                      h(
+                        "span",
+                        { style: { display: "inline-flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" } },
+                        code(`${info.bindHost || "?"}:${info.port ?? "?"}`),
+                        info.loopbackOnly
+                          ? badge("warning", "仅本机")
+                          : badge("success", "局域网可达"),
+                      ),
+                    ),
+                    row(
+                      "局域网地址",
+                      info.lanReachable && info.urls?.length
+                        ? h(
+                            "span",
+                            { style: S.monoList },
+                            ...info.urls.map((item) => code(item.url)),
+                          )
+                        : h("span", { style: S.muted }, "不可用：DSH 只监听回环地址"),
+                    ),
+                    row(
+                      "中继",
+                      h(
+                        "span",
+                        { style: { display: "inline-flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" } },
+                        info.relay?.ok ? badge("success", "已运行") : badge("neutral", "未运行"),
+                        code(`127.0.0.1:${info.relay?.port ?? 3443}`),
+                      ),
+                    ),
+                    row(
+                      "文件根目录",
+                      info.fileRoots?.length
+                        ? h("span", { style: S.monoList }, ...info.fileRoots.map((root) => code(root)))
+                        : h("span", { style: S.muted }, "未配置（使用进程工作目录）"),
+                    ),
+                    h(
+                      "div",
+                      { style: S.actions },
+                      button("复制当前地址", () => copy(currentUrl, "当前地址"), { disabled: !currentUrl }),
+                      button("复制局域网地址", () => copy(lanUrl, "局域网地址"), {
+                        primary: info.lanReachable && Boolean(lanUrl),
+                        disabled: !info.lanReachable || !lanUrl,
+                      }),
+                      button("复制配对地址", () => copy(pairUrl, "配对地址"), {
+                        disabled: !info.relay?.ok || !pairUrl,
+                      }),
+                      button("刷新", load),
+                    ),
+                    notice ? h("p", { style: S.hint }, notice) : null,
+                  )
+                : null,
+        ),
+        h(
+          "div",
+          { style: S.card },
+          h("h3", { style: S.title }, "最近文件操作"),
+          audit === null
+            ? h("p", { style: S.hint }, "审计日志未启用或当前插件版本不支持。")
+            : audit.configured === false
+              ? h("p", { style: S.hint }, "未配置 auditLog；在 deepseek-app 的 config 里设置 auditLog 后生效。")
+              : audit.entries?.length
+                ? h(
+                    "div",
+                    { style: { display: "flex", flexDirection: "column" } },
+                    ...[...audit.entries].reverse().map((entry, index) =>
+                      h(
+                        "div",
+                        { style: S.auditRow, key: `${entry.time || ""}:${index}` },
+                        h("div", null, `${entry.action || "?"} · ${entry.result || ""}`),
+                        h(
+                          "div",
+                          { style: S.auditMeta },
+                          `${entry.time ? new Date(entry.time).toLocaleString() : ""}${entry.remote ? " · " + entry.remote : ""}`,
+                        ),
+                        h("code", { style: S.code }, String(entry.path || "")),
+                      ),
+                    ),
+                  )
+                : h("p", { style: S.hint }, "暂无文件操作记录。"),
+        ),
+        h(
+          "div",
+          { style: S.card },
+          h("h3", { style: S.title }, "手机怎么连"),
+          h(
+            "ol",
+            { style: S.list },
+            h("li", { style: S.listItem }, "手机和电脑连同一个 Wi-Fi；访客 Wi-Fi 或 IoT Wi-Fi 通常做了客户端隔离，扫描会失败。"),
+            h(
+              "li",
+              { style: S.listItem },
+              info?.lanReachable
+                ? "在手机 APP 的“设备”里添加上面的局域网地址。"
+                : "当前 DSH Desktop 只监听 127.0.0.1，手机无法直接访问；这是 DSH 的安全默认值，不是扫描按钮坏了。",
+            ),
+            h(
+              "li",
+              { style: S.listItem },
+              info?.relay?.ok
+                ? "打开中继配对页，扫描二维码或输入 8 位码；配对后再回到 APP 选择该设备。"
+                : "需要局域网访问时，在电脑上安装并启动 dsh-relay；它会监听 0.0.0.0:3443，并提供二维码/8 位码配对与设备撤销。",
+            ),
+            h("li", { style: S.listItem }, "如果扫描仍为空，检查电脑防火墙是否放行 DSH/中继端口，以及手机是否连在 VPN 上。"),
+          ),
+          h(
+            "p",
+            { style: S.hint },
+            "APP 的“扫描局域网”只扫描手机当前 /24 网段；DSH Desktop 的随机端口和回环监听不会出现在结果里。",
+          ),
+        ),
+      );
+    }
+
+    function apply(ctx) {
+      ctx.slots.inject("settings.section", () => ctx.slots.register({
+        name: "settings.section",
+        id: "dsh-mobile-access",
+        order: 96,
+        label: () => "手机访问",
+      }, MobileAccessSection));
+    }
+
+    return { apply, inject: ["slots"] };
+  }
 });

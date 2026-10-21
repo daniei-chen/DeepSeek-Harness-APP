@@ -55,7 +55,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -108,6 +111,7 @@ import java.util.Locale
 fun SettingsScreen(
     onClose: () -> Unit,
     initialPage: String = PAGE_SETTINGS,
+    onPair: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.state.collectAsStateWithLifecycle()
@@ -118,6 +122,7 @@ fun SettingsScreen(
     val colors = DsTheme.colors
     val toast = rememberDsToast()
     var showDisconnectDialog by remember { mutableStateOf(false) }
+    var mobileSetupOpen by remember { mutableStateOf(false) }
     var pluginsOpen by remember { mutableStateOf(false) }
     // Settings and the archive are two different jobs: one is configuration, the other is a list to
     // search and restore from. A tab each keeps the settings reachable without scrolling past a
@@ -199,6 +204,20 @@ fun SettingsScreen(
                         stringResource(R.string.connect_auto_loopback),
                         settings.autoConnectLoopback,
                     ) { viewModel.set { it.copy(autoConnectLoopback = !it.autoConnectLoopback) } }
+                }
+
+                SettingsCard(stringResource(R.string.settings_mobile_access)) {
+                    Text(
+                        stringResource(R.string.settings_mobile_access_hint),
+                        style = DsType.small13,
+                        color = colors.labelSecondary,
+                    )
+                    DsButton(
+                        text = stringResource(R.string.settings_mobile_access_action),
+                        onClick = { mobileSetupOpen = true },
+                        variant = DsButtonVariant.Outline,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
 
                 // Only on a phone that has Termux: everything on this card goes through it.
@@ -383,6 +402,18 @@ fun SettingsScreen(
     if (pluginsOpen) {
         if (pluginManagementAvailable == false) plugins?.let { PluginsSheet(it, onDismiss = { pluginsOpen = false }) }
         else com.labteto.dshmobile.ui.screens.main.PluginManagerScreen(onClose = { pluginsOpen = false }, onDraftOpened = { pluginsOpen = false; onClose() })
+    }
+
+    if (mobileSetupOpen) {
+        val copiedMessage = stringResource(R.string.mobile_setup_copied)
+        MobileSetupDialog(
+            onDismiss = { mobileSetupOpen = false },
+            onScan = {
+                mobileSetupOpen = false
+                onPair()
+            },
+            onCopied = { toast.second(copiedMessage) },
+        )
     }
 
     if (showDisconnectDialog) {
@@ -770,6 +801,85 @@ private fun ConnectionSection(connectionState: ConnectionUiState, onDisconnect: 
             text = stringResource(R.string.settings_connection_disconnect),
             onClick = onDisconnect,
             variant = DsButtonVariant.Outline,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun MobileSetupDialog(
+    onDismiss: () -> Unit,
+    onScan: () -> Unit,
+    onCopied: () -> Unit,
+) {
+    val colors = DsTheme.colors
+    val clipboard = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
+    val command = "powershell -ExecutionPolicy Bypass -File setup/install.ps1 " +
+        "-Profile desktop -FileRoot \"D:\\your-workspace\"\n\n" +
+        "./setup/install.sh --profile desktop --file-root \"\$HOME/workspaces\""
+
+    DsDialog(title = stringResource(R.string.mobile_setup_title), onDismiss = onDismiss) {
+        Text(
+            stringResource(R.string.mobile_setup_body),
+            style = DsType.std14,
+            color = colors.labelSecondary,
+        )
+        Text(
+            stringResource(R.string.mobile_setup_command_label),
+            style = DsType.small13,
+            color = colors.labelTertiary,
+        )
+        Surface(
+            color = colors.bgLayer1,
+            shape = DsShapes.block,
+            border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderL1),
+        ) {
+            Text(
+                command,
+                style = DsType.caption11,
+                color = colors.labelSecondary,
+                modifier = Modifier.padding(DsSpacing.small),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(DsSpacing.small)) {
+            DsButton(
+                text = stringResource(R.string.mobile_setup_copy),
+                onClick = {
+                    clipboard.setText(AnnotatedString(command))
+                    onCopied()
+                },
+                variant = DsButtonVariant.Outline,
+                modifier = Modifier.weight(1f),
+            )
+            DsButton(
+                text = stringResource(R.string.mobile_setup_scan),
+                onClick = onScan,
+                variant = DsButtonVariant.Info,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        DsButton(
+            text = stringResource(R.string.mobile_setup_docs),
+            onClick = {
+                runCatching {
+                    uriHandler.openUri(
+                        "https://github.com/daniei-chen/DeepSeek-Harness-APP/blob/main/setup/README.md",
+                    )
+                }
+            },
+            variant = DsButtonVariant.Ghost,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            stringResource(R.string.mobile_setup_note),
+            style = DsType.caption11,
+            color = colors.labelTertiary,
+        )
+        DsButton(
+            text = stringResource(R.string.common_close),
+            onClick = onDismiss,
+            variant = DsButtonVariant.Ghost,
             modifier = Modifier.fillMaxWidth(),
         )
     }

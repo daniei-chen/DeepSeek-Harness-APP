@@ -38,6 +38,16 @@ SOFTWARE.
 ```
 
 
+## dsh-client-ui-responsive
+
+`vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` is the MIT-licensed
+`@dsh-android/dsh-client-ui-responsive` client plugin used by the combined APP plugin. The full
+licence text is kept beside it as `vendor/LICENSE.dsh-client-ui-responsive`.
+
+- Project: https://github.com/kelai141/dsh-client-ui-responsive
+- Licence: MIT
+- Local repack: version and peer ranges only, to match DSH `0.2.1-rc.2`; see `vendor/README.md`.
+
 ## xterm.js
 
 The terminal renderer bundles `@xterm/xterm` **5.5.0** and `@xterm/addon-fit`

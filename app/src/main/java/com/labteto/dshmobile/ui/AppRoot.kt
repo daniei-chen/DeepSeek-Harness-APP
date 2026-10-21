@@ -99,6 +99,11 @@ fun AppRoot(viewModel: AppViewModel = hiltViewModel()) {
                 settingsPage != null -> SettingsScreen(
                     onClose = { settingsPage = null },
                     initialPage = settingsPage.orEmpty(),
+                    onPair = {
+                        settingsPage = null
+                        pairUrl = null
+                        showPair = true
+                    },
                 )
                 showPair -> PairScreen(onClose = { showPair = false }, prefillUrl = pairUrl)
                 showMain -> MainScreen()
