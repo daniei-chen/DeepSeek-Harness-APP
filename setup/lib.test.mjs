@@ -60,6 +60,7 @@ test("managed block contains file roots, relay settings and hostnames", () => {
   assert.match(block, /addressGrants: false/);
   assert.match(block, /extraProxyPaths:/);
   assert.match(block, /\/dsh-file-ops/);
+  assert.match(block, /uiLink: false/);
   assert.match(block, /- 'dsh\.example\.com'/);
   assert.ok(block.includes("auditLog: 'C:\\Users\\me\\.dsh\\profiles\\desktop\\.dsh-mobile\\audit.jsonl'"));
 });

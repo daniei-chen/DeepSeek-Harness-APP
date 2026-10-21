@@ -850,6 +850,13 @@
     <string name="shell_cockpit_forked">已创建 Fork</string>
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
+    <string name="shell_settings_scan_qr">扫码连接</string>
+    <string name="shell_settings_scan_qr_hint">扫描电脑上的配对二维码</string>
+    <string name="shell_scan_qr_prompt">对准电脑上的二维码</string>
+    <string name="shell_scan_qr_invalid">不是 DSH 地址或配对二维码</string>
+    <string name="shell_scan_qr_too_new">二维码版本过新，请升级 App</string>
+    <string name="shell_scan_qr_device">扫码设备</string>
+    <string name="shell_scan_qr_added">已添加扫码设备</string>
     <string name="shell_settings_scan_lan">扫描局域网</string>
     <string name="shell_settings_scan_lan_hint">查找同一 Wi-Fi 下的 DSH 主机</string>
     <string name="shell_settings_scanning">正在扫描局域网…</string>

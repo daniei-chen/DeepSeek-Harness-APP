@@ -231,6 +231,7 @@ export function buildManagedBlock({ fileRoots, relayPort, relayStateDir, publicH
         : "    publicHostnames: []",
       ...publicHostnames.map((host) => `      - ${yamlQuote(host)}`),
       "    privilegedMethods: 'allow-authenticated'",
+      "    uiLink: false",
       "    extraProxyPaths:",
       "      - /dsh-file-ops",
       "      - /dsh-mobile",

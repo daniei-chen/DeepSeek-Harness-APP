@@ -483,6 +483,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     fun showConnectionPage(
         dark: Boolean,
         onManageDevices: () -> Unit,
+        onScanQr: () -> Unit,
         onScanLan: () -> Unit,
         onNetworkInfo: () -> Unit,
         onFleet: () -> Unit,
@@ -504,6 +505,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_manage_devices), activity.getString(R.string.shell_settings_manage_devices_hint)) {
                 dialog.dismiss()
                 onManageDevices()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_scan_qr), activity.getString(R.string.shell_settings_scan_qr_hint)) {
+                dialog.dismiss()
+                onScanQr()
             },
         )
         card.addView(
