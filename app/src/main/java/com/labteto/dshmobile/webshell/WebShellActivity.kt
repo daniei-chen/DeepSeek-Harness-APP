@@ -189,6 +189,14 @@ class WebShellActivity : AppCompatActivity() {
     private var imeVisible = false
     private var glassCompat = "auto"
     private var inboxQuery = ""
+    /**
+     * Human-readable page lifecycle events, newest last.
+     *
+     * "It refreshed by itself" has several possible authors — the renderer crashing, a failed
+     * main-frame load, a device failover, or the page's own JavaScript. The diagnostics page
+     * shows this list so the next report names the author instead of guessing.
+     */
+    private val pageEvents = java.util.ArrayDeque<String>()
     private var relayPairingResult: kotlinx.coroutines.CompletableDeferred<String>? = null
     private var pageDark = false
     private var clearHistoryAfterLoad = false
@@ -639,6 +647,7 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            recordPageEvent("page started " + (url?.substringAfter("://")?.take(80) ?: ""))
             injectPageScripts()
         }
 
@@ -653,6 +662,7 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            recordPageEvent("page finished")
             val reloadLoop = recordPageLoad(url)
             if (!pageHadError) {
                 failoverTried.clear()
@@ -684,6 +694,7 @@ class WebShellActivity : AppCompatActivity() {
             error: WebResourceError,
         ) {
             if (request.isForMainFrame) {
+                recordPageEvent("main-frame error ${error.errorCode} ${error.description}")
                 pageHadError = true
                 if (tryFailover()) return
                 showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_network))
@@ -756,6 +767,7 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            recordPageEvent("renderer crash")
             val now = SystemClock.elapsedRealtime()
             synchronized(rendererCrashTimes) {
                 rendererCrashTimes.addLast(now)
@@ -1012,6 +1024,7 @@ class WebShellActivity : AppCompatActivity() {
     // ---- navigation and recovery -------------------------------------------
 
     private fun reloadPage() {
+        recordPageEvent("reload (requested)")
         failoverTried.clear()
         failoverInProgress = false
         pageHadError = false
@@ -1030,6 +1043,7 @@ class WebShellActivity : AppCompatActivity() {
 
     private fun recreateWebView() {
         if (isFinishing || isDestroyed) return
+        recordPageEvent("webview recreated")
         val old = webView
         root.removeView(old)
         old.destroy()
@@ -1435,7 +1449,8 @@ class WebShellActivity : AppCompatActivity() {
             connectionManager.state.value.phase.name.lowercase(),
             webViewVersion,
             "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-        ) + "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary())
+        ) + "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary()) +
+            "\n\n" + getString(R.string.shell_diagnostics_events) + "\n" + pageEventSummary()
         chrome.showDiagnosticsPage(
             dark = pageDark,
             message = message,
@@ -2772,6 +2787,7 @@ class WebShellActivity : AppCompatActivity() {
 
     private fun applyServerUrl(raw: String): Boolean {
         val target = parseServerUrl(raw) ?: return false
+        recordPageEvent("switch device " + target.host + ":" + target.port)
         lifecycleScope.launch {
             val remembered = withContext(Dispatchers.IO) {
                 runCatching {
@@ -2936,6 +2952,7 @@ class WebShellActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        recordPageEvent("resume")
         if (::webView.isInitialized) {
             webView.onResume()
             // Returning from the background is the other moment a stale surface shows up.
@@ -3013,6 +3030,21 @@ class WebShellActivity : AppCompatActivity() {
         val decor = runCatching { window.decorView.height }.getOrDefault(0)
         return "web=$web root=$container window=${metrics.widthPixels}x${metrics.heightPixels} " +
             "decor=$decor density=${metrics.density} ime=${insets.ime}"
+    }
+
+    /** Append one line to the page lifecycle log shown by diagnostics. */
+    private fun recordPageEvent(message: String) {
+        val stamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+            .format(java.util.Date())
+        synchronized(pageEvents) {
+            pageEvents.addLast("$stamp $message")
+            while (pageEvents.size > 80) pageEvents.removeFirst()
+        }
+    }
+
+    private fun pageEventSummary(limit: Int = 24): String = synchronized(pageEvents) {
+        if (pageEvents.isEmpty()) return@synchronized "(none yet)"
+        pageEvents.toList().takeLast(limit).joinToString("\n")
     }
 
     private companion object {

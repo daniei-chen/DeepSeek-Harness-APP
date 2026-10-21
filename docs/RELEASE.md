@@ -1,4 +1,4 @@
-# Release 1.0.0
+# Release 1.0.1
 
 ## What this release is
 
@@ -8,7 +8,7 @@ no monetization.
 ## 1.0 quality gates
 
 - **New user:** install -> first connection in under ten minutes, by QR or by the pairing-code path (设置 -> 连接 -> 配对码连接).
-- **Upgrade:** every release has a strictly higher versionCode (1.0.0 = 50000); settings and devices survive.
+- **Upgrade:** every release has a strictly higher versionCode (1.0.1 = 50001); settings and devices survive.
 - **Failure is explainable:** connection doctor, notification self-check and the offline session snapshot each name the cause and the next action.
 - **Updates:** read from the repository's latest.json first, so release ordering and GitHub rate limits cannot hide a version.
 - **Offline:** the last synced session list stays readable without a network.
@@ -16,8 +16,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-1.0.0-personal.1.apk`
-- SHA-256: `54C59A80E8A650D541B787E11AE1D2C204F9F38DE42AAB4CFBBAA07BDCEFA4F0`
+- APK: `dist/DeepSeek-Harness-1.0.1-personal.2.apk`
+- SHA-256: `A8F9F472FF3F49D56D79EBFF7C76396FC93E66240E452A08F44A61768137467D`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -36,6 +36,8 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Page event timeline:** diagnostics now lists the last 24 page events — started, finished, main-frame error, renderer crash, webview recreated, device switch, resume, requested reload — so "it refreshed by itself" names its author instead of being a guess.
+- **Pseudo-element glass detection:** the compatibility check now also reads `:before/:after` and the body, which catches Bloom's full-screen 76px blur layer (a GPU-memory hog on a phone) that the ancestor walk could not see.
 - **Offline snapshot:** the last synced session list is kept per host; when the page cannot load, "View recent sessions offline" shows what was running, read-only, with a retry button.
 - **Folder load fix:** expanding a folder in the file panel now triggers one automatic refresh when the expansion produced no child rows — the manual refresh that used to be required is no longer needed (host plugin 0.1.10).
 - **Notification self-check:** permission, system switch, each channel's importance, battery-optimisation exemption and self-hosted push in one report, each with its fix.
