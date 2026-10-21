@@ -87,3 +87,7 @@ its own branch, so `git revert` / `git reset` is enough.
   cookie gate. Keep it behind the relay or your own authenticated reverse proxy.
 - The installer does not install a Windows service, modify firewall rules, or write outside the
   DSH profile (apart from the temporary package cache).
+- `dsh-relay`'s settings card injects the host `settingsScope` service. Install it into a complete
+  DSH profile (the desktop profile, or a profile DSH created and started itself). A hand-made
+  minimal profile can fail the whole web boot with `Failed to load plugins` /
+  `dsh-relay: pending (waiting for service: settingsScope)`; use `--no-relay` there instead.
