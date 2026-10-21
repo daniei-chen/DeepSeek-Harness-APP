@@ -1,10 +1,10 @@
 {
-  "version": "0.10.1",
-  "versionCode": 32001,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v0.10.1/DeepSeek-Harness-0.10.1-personal.101.apk",
-  "sha256": "48D436151266BCBF6699BAFE05D3378DBABD6DC759686336F86FAE40E78D94AA",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.10.1",
-  "minPluginVersion": "0.1.9",
-  "notes": "Quiet layout repair, inbox search, file preview",
-  "generatedAt": "2026-10-21T18:18:39.896Z"
+  "version": "0.11.0",
+  "versionCode": 32100,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v0.11.0/DeepSeek-Harness-0.11.0-personal.110.apk",
+  "sha256": "AF77AF163AA1D529C37F2A68916AD5A3E43998E72448835F4F6E26EC48743D6B",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.11.0",
+  "minPluginVersion": "0.1.10",
+  "notes": "Notification self-check, folder load fix, CI",
+  "generatedAt": "2026-10-21T18:38:57.354Z"
 }

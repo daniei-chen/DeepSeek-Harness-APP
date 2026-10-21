@@ -2,6 +2,7 @@ package com.labteto.dshmobile.webshell
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -15,6 +16,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -65,6 +67,9 @@ import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionDoctor
+import com.labteto.dshmobile.connection.DoctorReport
+import com.labteto.dshmobile.connection.DoctorStatus
+import com.labteto.dshmobile.connection.DoctorStep
 import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
@@ -1321,6 +1326,7 @@ class WebShellActivity : AppCompatActivity() {
             }
             chrome.showDoctorPage(
                 dark = pageDark,
+                title = getString(R.string.shell_doctor_title),
                 target = url,
                 report = report,
                 onRerun = { runConnectionDoctor() },
@@ -1544,6 +1550,88 @@ class WebShellActivity : AppCompatActivity() {
         val devicesPage: String?,
     )
 
+    /**
+     * Notification self-check: the four things that silently turn a notification off.
+     *
+     * Nothing here is guessed — permission, the system switch, each channel's importance and the
+     * battery-optimisation exemption are all readable from the OS, so a "no notifications" report
+     * can end with a specific fix instead of "check your settings".
+     */
+    private fun runNotificationCheck() {
+        val manager = getSystemService(NotificationManager::class.java)
+        val steps = mutableListOf<DoctorStep>()
+        val permission = notifications.canPost()
+        steps += DoctorStep(
+            getString(R.string.shell_notify_perm),
+            if (permission) DoctorStatus.OK else DoctorStatus.FAIL,
+            if (permission) getString(R.string.shell_settings_enabled) else getString(R.string.shell_settings_disabled),
+            if (permission) null else getString(R.string.shell_notify_fix_permission),
+        )
+        val systemEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        steps += DoctorStep(
+            getString(R.string.shell_notify_system),
+            if (systemEnabled) DoctorStatus.OK else DoctorStatus.FAIL,
+            if (systemEnabled) getString(R.string.shell_settings_enabled) else getString(R.string.shell_settings_disabled),
+            if (systemEnabled) null else getString(R.string.shell_notify_fix_permission),
+        )
+        listOf(
+            DshNotifications.CHANNEL_ACTION to getString(R.string.shell_notify_channel_action),
+            DshNotifications.CHANNEL_COMPLETIONS to getString(R.string.shell_notify_channel_done),
+        ).forEach { (id, label) ->
+            val channel = manager?.getNotificationChannel(id)
+            steps += when {
+                channel == null -> DoctorStep(
+                    label,
+                    DoctorStatus.FAIL,
+                    getString(R.string.shell_settings_disabled),
+                    getString(R.string.shell_notify_fix_channel),
+                )
+                channel.importance >= NotificationManager.IMPORTANCE_DEFAULT -> DoctorStep(
+                    label,
+                    DoctorStatus.OK,
+                    "importance=${channel.importance}",
+                )
+                else -> DoctorStep(
+                    label,
+                    DoctorStatus.WARN,
+                    "importance=${channel.importance}",
+                    getString(R.string.shell_notify_fix_channel),
+                )
+            }
+        }
+        val power = getSystemService(PowerManager::class.java)
+        val exempt = power?.isIgnoringBatteryOptimizations(packageName) == true
+        steps += DoctorStep(
+            getString(R.string.shell_notify_background),
+            if (exempt) DoctorStatus.OK else DoctorStatus.WARN,
+            if (exempt) getString(R.string.shell_settings_enabled) else getString(R.string.shell_settings_background_off),
+            if (exempt) null else getString(R.string.shell_notify_fix_background),
+        )
+        val push = NtfyConfig.load(this) != null || !UnifiedPushConfig.load(this).isNullOrBlank()
+        steps += DoctorStep(
+            getString(R.string.shell_notify_push),
+            if (push) DoctorStatus.OK else DoctorStatus.SKIP,
+            if (push) getString(R.string.shell_settings_enabled) else getString(R.string.shell_settings_disabled),
+        )
+        val report = DoctorReport("notifications", steps)
+        chrome.showDoctorPage(
+            dark = pageDark,
+            title = getString(R.string.shell_notify_check_title),
+            target = packageName,
+            report = report,
+            onRerun = { runNotificationCheck() },
+            onCopy = {
+                val text = buildString {
+                    appendLine("DSH notification check")
+                    appendLine(report.summary)
+                    report.steps.forEach { step -> appendLine("- [${step.status}] ${step.label}: ${step.detail}") }
+                }
+                copyToClipboard(text)
+            },
+            onBack = { showNotificationsPage() },
+        )
+    }
+
     private fun showNotificationsPage() {
         val settings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
         chrome.showNotificationsPage(
@@ -1557,6 +1645,7 @@ class WebShellActivity : AppCompatActivity() {
             unifiedPushEndpoint = UnifiedPushConfig.load(this),
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
+            onCheck = { runNotificationCheck() },
             onToggleTurn = { toggleNotificationSetting { it.copy(notifyTurnComplete = !it.notifyTurnComplete) } },
             onToggleAction = { toggleNotificationSetting { it.copy(notifyNeedsAction = !it.notifyNeedsAction) } },
             onToggleGoal = { toggleNotificationSetting { it.copy(notifyGoal = !it.notifyGoal) } },
