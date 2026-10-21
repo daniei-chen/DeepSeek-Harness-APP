@@ -765,7 +765,7 @@
     <string name="shell_settings_scan_lan_hint">Find a DSH host on the same Wi-Fi</string>
     <string name="shell_settings_scanning">Scanning the local network…</string>
     <string name="shell_settings_scan_empty">No DSH host found on this network</string>
-    <string name="shell_settings_scan_found">Found %1$d host(s); added to devices</string>
+    <string name="shell_settings_scan_found">Hosts found and added to devices</string>
     <string name="shell_settings_failover">Current device unavailable; trying the next one…</string>
     <string name="shell_settings_ntfy">Self-hosted ntfy push</string>
     <string name="shell_settings_ntfy_hint">Enter your own ntfy topic URL, or leave empty to disable</string>

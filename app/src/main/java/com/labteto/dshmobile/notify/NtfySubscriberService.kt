@@ -95,6 +95,12 @@ class NtfySubscriberService : Service() {
         if (json.optString("event", "message") != "message") return
         val message = json.optString("message").trim()
         if (message.isEmpty()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
         val title = json.optString("title").ifBlank { getString(R.string.app_name) }
         val open = PendingIntent.getActivity(
             this,

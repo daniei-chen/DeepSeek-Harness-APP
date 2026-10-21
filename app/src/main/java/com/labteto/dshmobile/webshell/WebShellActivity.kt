@@ -801,7 +801,7 @@ class WebShellActivity : AppCompatActivity() {
             }
             Toast.makeText(
                 this@WebShellActivity,
-                getString(R.string.shell_settings_scan_found, found.size),
+                getString(R.string.shell_settings_scan_found),
                 Toast.LENGTH_SHORT,
             ).show()
             showDeviceManager()
@@ -967,6 +967,7 @@ class WebShellActivity : AppCompatActivity() {
         )
     }
 
+    @SuppressLint("BatteryLife")
     private fun openBatterySettings() {
         val power = getSystemService(android.os.PowerManager::class.java)
         if (power != null && power.isIgnoringBatteryOptimizations(packageName)) {

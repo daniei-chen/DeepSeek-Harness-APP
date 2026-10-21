@@ -763,7 +763,7 @@
     <string name="shell_settings_scan_lan_hint">查找同一 Wi-Fi 下的 DSH 主机</string>
     <string name="shell_settings_scanning">正在扫描局域网…</string>
     <string name="shell_settings_scan_empty">当前网络没有发现 DSH 主机</string>
-    <string name="shell_settings_scan_found">发现 %1$d 台主机，已加入设备列表</string>
+    <string name="shell_settings_scan_found">已发现主机并加入设备列表</string>
     <string name="shell_settings_failover">当前设备不可用，正在尝试备用设备…</string>
     <string name="shell_settings_ntfy">自建 ntfy 推送</string>
     <string name="shell_settings_ntfy_hint">输入自己的 ntfy topic 地址；留空表示关闭</string>
