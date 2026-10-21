@@ -1,4 +1,4 @@
-# Release 0.9.31
+# Release 0.9.32
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.31-personal.91.apk`
-- SHA-256: `C7E07BF7507BA515EAD58042EB6303E33F78591179CFBC78F5FA03614B23AB3F`
+- APK: `dist/DeepSeek-Harness-0.9.32-personal.92.apk`
+- SHA-256: `429DC6EE56DA2A1B9F62BE9AF37C06ABBDFFD776722CE2B157E42B058B2FDBF2`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -26,6 +26,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
+- LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
 - Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
 - empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
 - **Fleet overview**: one parallel `sessionList` per saved host, showing session and running counts; read-only until a host is selected.

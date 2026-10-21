@@ -67,6 +67,7 @@ import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.connection.HarnessClientFactory
+import com.labteto.dshmobile.connection.MdnsDiscovery
 import com.labteto.dshmobile.connection.AppSettings
 import com.labteto.dshmobile.core.wire.RpcResult
 import com.labteto.dshmobile.core.wire.dto.SessionSummary
@@ -132,6 +133,7 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var discoveryEngine: DiscoveryEngine
+    @Inject lateinit var mdnsDiscovery: MdnsDiscovery
     @Inject lateinit var harnessClientFactory: HarnessClientFactory
     @Inject lateinit var sessionStore: SessionStore
     @Inject lateinit var updateChecker: UpdateChecker
@@ -1259,6 +1261,12 @@ class WebShellActivity : AppCompatActivity() {
             val settings = runCatching { hostsStore.settings.first() }.getOrDefault(AppSettings())
             val ports = (settings.knownPorts + 3080).distinct().take(8)
             val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
+            // mDNS is best-effort and runs beside the sweep. A relay advertises the port and
+            // pin it was configured with, so a hit here is both faster and more trustworthy
+            // than a subnet knock; multicast-filtered Wi-Fi still falls back to the sweep.
+            val advertised = async(Dispatchers.IO) {
+                runCatching { mdnsDiscovery.browse(1_500) }.getOrDefault(emptyList())
+            }
             val harnesses = withContext(Dispatchers.IO) {
                 runCatching {
                     discoveryEngine.scan(
@@ -1276,14 +1284,16 @@ class WebShellActivity : AppCompatActivity() {
                 }.getOrDefault(emptyList())
             }
             // A relay is the only supported way to reach a Desktop host that binds loopback.
-            // Scan it only when no plain harness answered, so a normal LAN host stays fast.
-            val relays = if (harnesses.none { it.trusted }) {
+            // The sweep is the fallback when mDNS is unavailable; a trusted LAN harness still
+            // gets any advertised relay added alongside it.
+            val sweptRelays = if (harnesses.none { it.trusted }) {
                 withContext(Dispatchers.IO) {
                     runCatching { discoveryEngine.scanForRelays() }.getOrDefault(emptyList())
                 }
             } else {
                 emptyList()
             }
+            val relays = (advertised.await() + sweptRelays).distinctBy { it.authority }
             if (isFinishing || isDestroyed) return@launch
             progress.dismiss()
 
