@@ -3,72 +3,72 @@
 Open-source Android client for **self-hosted DeepSeek Harness (DSH)**.
 
 A thin, self-hosted-first mobile shell: the chat UI is the real DSH web client, while the native
-layer provides connection profiles, file-panel actions, notifications, permissions and the Android
-pieces a browser cannot provide.
+layer adds connection management, notifications, an inbox and cockpit, file operations and the
+Android pieces a browser cannot provide.
 
 > **Status:** active development. This is an unofficial community project, not affiliated with or
 > endorsed by DeepSeek. “DeepSeek Harness” and the whale logo are trademarks of their respective
 > owners.
 
+## Latest
+
+- **APK 0.9.32** — mDNS + subnet LAN discovery, relay pairing, device health, fleet overview,
+  cross-host inbox, session cockpit, actionable approval notifications.
+- **Host plugin 0.1.7** — file upload / rename / new folder, file-operation audit log, relay
+  extra proxy paths for `/dsh-file-ops` and `/dsh-mobile`.
+- **One-command host setup** — `dsh-relay` (TLS, QR/passcode pairing, device revoke), the combined
+  APP plugin, optional ntfy publisher and the vendored responsive base.
+
+Downloads:
+
+- [APK v0.9.32](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.32)
+- [Host plugin 0.1.7](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.7)
+
 ## What is inside
 
-- **Android app** (`app/`, `core/`) — Kotlin/Compose + WebView shell, minSdk 26.
-- **`host-plugin/`** — the internal `@dsh-android/dsh-file-ops-bundle` host plugin. It is a
-  first-class part of this project, not an external optional package:
-  - workspace file download;
-  - workspace folder download as zip;
-  - recursive file/folder delete;
-  - path confinement through `DSH_FILE_OPS_ROOTS`;
-  - the right-side workspace file panel gets a `⋯` menu with download/delete.
-- **`notify-plugin/`** — self-hosted ntfy publisher for task/approval events. The app itself has
-  no cloud push; this plugin lets the host publish to the operator's own ntfy endpoint.
-- **`mobile-web-plugin/`** — the phone UI layer: responsive drawer, compact stats, file-panel
-  actions, safe-area/keyboard handling.
+- **`app/`, `core/`** — Kotlin Android app, minSdk 26. The visible surface is the DSH web client in
+  a WebView; the native layer owns connection profiles, notifications, files and Android chrome.
+- **`combined-plugin/`** — the single host plugin:
+  - `/dsh-file-ops`: download, zip, delete, rename, mkdir, upload, append-only audit log;
+  - `/dsh-mobile/info` and `/dsh-mobile/audit`: the Settings → 手机访问 panel;
+  - BrowserSkill `browser_*` tools;
+  - Android WebView adaptation (drawer, safe areas, IME, image upload, back stack).
+- **`setup/`** — one-command installer, `status`, `doctor` and reversible `uninstall`.
+- **`notify-plugin/`** — self-hosted ntfy publisher for task/approval events.
+- **`vendor/`** — the responsive base plugin repacked for DSH `0.2.1-rc.2`.
 - **`docs/`** — self-hosting, connections, notifications, file operations and architecture notes.
 
 ## Current
 
-- Fresh installs open **Settings** first; no personal DSH URL is baked into the app.
-- Self-hosted DSH connection profiles (add / rename / delete / switch devices).
-- Native settings surface reached from the back button: device manager, LAN scan, notification
-  setup/test, foreground-service toggle, battery-unrestricted shortcut, vendor autostart shortcut,
-  update check, version/source.
-- WebView shell with drawer gestures, custom back navigation, in-app document preview.
-- Workspace file panel: preview HTML/PDF/Word/PPT, download files/folders, delete files/folders
-  through the internal `host-plugin/`.
-- Android notification channels and test notification; native DSH event connection for
-  approval/question notifications while the app is alive, including inline **Approve**/**Reject**
-  actions on approval notifications.
-- Fleet overview: one parallel `sessionList` per saved host, showing session and running counts;
-  a read-only multi-host view that switches hosts on tap.
-- Cross-host inbox: running or waiting sessions across all saved hosts, sorted with waiting work
-  first; tapping one switches host and opens that session.
-- Device health: probe every saved device in parallel and see HTTP status/latency, offline, or
-  a certificate that still needs first-use trust.
-- Native inbox for the current host: waiting approvals/questions, running and recent sessions,
-  with tap-through to the WebView session.
-- Session cockpit from an inbox row: model, token accounting, cache hit, decode speed, TTFT,
-  context pressure and turns/steps; open, stop, fork and refresh from the same sheet.
-- In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
-  terminal/approval events published by `notify-plugin/`.
-- Optional UnifiedPush registration with an installed distributor; the endpoint is shown in
-  Settings → Notifications → UnifiedPush endpoint and can be copied for `DSH_UNIFIEDPUSH_ENDPOINT`.
-- Multi-device failover: when the current profile fails to load, the next saved profile is tried.
-- In-app update check against GitHub Releases; APK download tries the direct asset and
-  `gh-proxy.com` / `ghproxy.net` mirrors before falling back to the release page.
-- Multiple connection routes: LAN direct, your own HTTPS address, a tunnel you run yourself
-  (Cloudflare Tunnel / frp / Tailscale), or a self-hosted `dsh-relay`. No project-operated relay.
-- No account, no telemetry, no ads, no monetization.
+### Connection
 
-## Roadmap
+- Self-hosted DSH profiles: add, rename, delete and switch devices.
+- LAN scan reports progress and combines `_dsh._tcp` mDNS with the subnet sweep; discovers
+  `dsh-relay` on `3443/3444`.
+- Relay pairing with first-use certificate trust scoped to the exact `host:port`.
+- Device health: HTTP status/latency, offline, or a certificate that still needs trust; tap to switch.
+- Fleet overview: one parallel `sessionList` per saved host, showing session and running counts.
+- Cross-host inbox: running sessions and active questions/plan reviews across saved hosts, waiting
+  work first; tap to switch host and open the session.
 
-- Native inbox for the current host: waiting approvals/questions, running and recent sessions.
-- Multi-host unified inbox across every paired harness.
-- **Self-hosted ntfy / UnifiedPush push** for notifications after the app is killed. This is a
-  required, documented feature of the project; it is optional for each user to enable. There is
-  **no official cloud push service**.
-- LAN discovery, relay pairing and a future local gateway for transport failover.
+### Mobile cockpit
 
+- Native inbox for the current host: approvals, questions, running and recent sessions.
+- Session cockpit: model, input/output/cache tokens, decode speed, mean TTFT, context pressure and
+  turns/steps; open, stop, fork and refresh.
+- File panel: upload, rename, new folder, download, zip and recursive delete; operation audit log.
+- Android notification channels, per-session deep links and inline **Approve** / **Reject** actions
+  on approval notifications while the app process holds the live connection.
+- Optional self-hosted ntfy and UnifiedPush paths for notifications after Android kills the app.
+
+### Product boundaries
+
+- No project cloud, account, telemetry, ads or monetization.
+- No project-operated relay or push service.
+- Approval waterfalls are process-local and are not replayed after a disconnect; cross-host live
+  approval aggregation is therefore not part of the current release.
+- Multi-host real-time approvals, per-device scopes and native PTY/live-browser views are planned
+  only when a real use case justifies the extra complexity.
 
 ## Build
 
@@ -82,9 +82,6 @@ keystore or signing password.
 
 ## One-command host setup
 
-The new installer wires the host side in one step: `dsh-relay` for TLS / QR pairing / device
-revocation, the combined APP plugin, the optional ntfy publisher, and the vendored responsive base.
-
 ```powershell
 # Windows, from the repository root
 powershell -ExecutionPolicy Bypass -File setup/install.ps1 `
@@ -96,32 +93,35 @@ powershell -ExecutionPolicy Bypass -File setup/install.ps1 `
 ./setup/install.sh --profile desktop --file-root "$HOME/workspaces"
 ```
 
-Then restart DSH and open `https://127.0.0.1:3443/relay/pair` on the computer. See
-[`setup/README.md`](setup/README.md) for status, doctor and rollback.
+Then restart DSH and open `https://127.0.0.1:3443/relay/pair` on the computer, or use
+**Settings → 手机访问** in DSH. See [`setup/README.md`](setup/README.md) for status, doctor and
+rollback.
 
-## Host plugin installation
+## Roadmap
 
-The file-ops bundle is part of this repository:
+**Next, if the use case exists**
 
-```text
-host-plugin/                 # @dsh-android/dsh-file-ops-bundle
-mobile-web-plugin/           # phone UI client bundle
-```
+- Multi-host live approval aggregation (requires per-host event connections or a fleet fan-in).
+- Per-device scopes and audit attribution (requires relay-injected device identity).
+- File-manager polish: upload progress, unzip, text/image preview, share-sheet import.
 
-See [`host-plugin/README.md`](host-plugin/README.md) for the DSH profile installation and
-`DSH_FILE_OPS_ROOTS` configuration. See [`mobile-web-plugin/README.md`](mobile-web-plugin/README.md)
-for the client bundle.
+**Later, deliberately**
+
+- Native PTY terminal.
+- Live browser screencast/control.
+- Plugin marketplace.
+- Automation recipes and scheduling.
 
 ## Documentation
 
 - [One-command host setup](setup/README.md)
 - [Self-hosting](docs/SELF_HOSTING.md)
 - [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
-- [Release 0.9.16](docs/RELEASE.md)
 - [Connections](docs/CONNECTIONS.md)
 - [Notifications and self-hosted push](docs/NOTIFICATIONS.md)
 - [File operations](docs/FILE_OPERATIONS.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Release notes](docs/RELEASE.md)
 
 ## Security
 
