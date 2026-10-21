@@ -107,6 +107,28 @@ class HostsStore @Inject constructor(
 
     suspend fun settingsOnce(): AppSettings = settings.first()
 
+    /**
+     * Keep the newest session list for [hostId] so the shell can show a read-only snapshot while
+     * the network is down. Best-effort: a failed write must never disturb live state.
+     */
+    suspend fun saveSessionSnapshot(hostId: String, rows: List<SessionSnapshot>) {
+        if (hostId.isBlank()) return
+        val raw = runCatching {
+            WireJson.encodeToString(ListSerializer(SessionSnapshot.serializer()), rows)
+        }.getOrNull() ?: return
+        runCatching { dataStore.edit { it[snapshotKey(hostId)] = raw } }
+    }
+
+    suspend fun sessionSnapshot(hostId: String): List<SessionSnapshot> {
+        if (hostId.isBlank()) return emptyList()
+        val raw = runCatching { dataStore.data.first()[snapshotKey(hostId)] }.getOrNull() ?: return emptyList()
+        return runCatching {
+            WireJson.decodeFromString(ListSerializer(SessionSnapshot.serializer()), raw)
+        }.getOrDefault(emptyList())
+    }
+
+    private fun snapshotKey(hostId: String) = stringPreferencesKey("snapshot_$hostId")
+
     suspend fun upsertHost(config: HostConfig) {
         val current = hosts.first().toMutableList()
         current.removeAll { it.id == config.id || it.baseUrl == config.baseUrl }

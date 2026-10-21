@@ -955,6 +955,14 @@
     <string name="shell_pair_row_hint">No camera? Type the relay address and the code</string>
     <string name="shell_scan_all_added">Found %1$d device(s) — all already added</string>
     <string name="shell_notify_check">Notification check</string>
+    <string name="shell_offline_title">Offline snapshot</string>
+    <string name="shell_offline_hint">The last synced sessions, read-only while the host is unreachable</string>
+    <string name="shell_offline_empty">Nothing cached yet — open this host once while online.</string>
+    <string name="shell_offline_retry">Retry connection</string>
+    <string name="shell_offline_running">Running</string>
+    <string name="shell_offline_pending">Waiting for you</string>
+    <string name="shell_offline_updated">updated %1$s</string>
+    <string name="webshell_offline_snapshot">View recent sessions offline</string>
     <string name="shell_notify_perm">Notification permission</string>
     <string name="shell_notify_system">System notification switch</string>
     <string name="shell_notify_channel_action">Approval / question channel</string>
