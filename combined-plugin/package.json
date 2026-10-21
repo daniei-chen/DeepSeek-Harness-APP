@@ -1,0 +1,41 @@
+{
+  "name": "@dsh-android/deepseek-harness-app-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DeepSeek Harness APP 插件：Android WebView 适配 + 文件操作 + BrowserSkill 浏览器工具，单插件安装",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json",
+    "./locale/en.json": "./locale/en.json",
+    "./locale/zh.json": "./locale/zh.json"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "README.md"
+  ],
+  "dependencies": {
+    "@wxg-prc-cpg/browser-skill-dsh-plugin": "^0.3.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  }
+}

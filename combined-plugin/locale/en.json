@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DeepSeek Harness APP Plugin",
+    "description": "Android mobile adaptation layer for the WebView shell: drawer, safe areas, IME, back stack and direct image upload."
+  }
+}

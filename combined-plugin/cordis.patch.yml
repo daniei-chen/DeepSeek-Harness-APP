@@ -1,0 +1,9 @@
+# DeepSeek Harness APP 插件
+#
+# One host plugin contributes:
+# - /dsh-file-ops (Android workspace file panel)
+# - BrowserSkill browser_* tools
+# The client bundle in lib/client.js adds the Android WebView adaptation layer.
+- insert:
+    - id: deepseek-app
+      name: "@dsh-android/deepseek-harness-app-plugin"
