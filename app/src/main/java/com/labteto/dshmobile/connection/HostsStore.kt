@@ -45,6 +45,7 @@ class HostsStore @Inject constructor(
         val LAST_SESSIONS = stringPreferencesKey("last_sessions_json")
         val SESSION_SORT = stringPreferencesKey("session_sort")
         val UPDATE_CHECK = booleanPreferencesKey("update_check")
+        val GLASS_COMPAT = stringPreferencesKey("glass_compat")
         val DISMISSED_UPDATE = stringPreferencesKey("dismissed_update")
         /** Fork: the WebView shell's address, separate from the native connection modes. */
         val SHELL_URL = stringPreferencesKey("shell_url")
@@ -100,6 +101,7 @@ class HostsStore @Inject constructor(
             // touched the switch, even though the data class default says false.
             updateCheckEnabled = prefs[Keys.UPDATE_CHECK] ?: false,
             dismissedUpdate = prefs[Keys.DISMISSED_UPDATE],
+            glassCompat = prefs[Keys.GLASS_COMPAT] ?: "auto",
         )
     }
 
@@ -251,6 +253,7 @@ class HostsStore @Inject constructor(
             prefs[Keys.NOTIFY_ACTION] = next.notifyNeedsAction
             prefs[Keys.THEME] = next.themePreference
             prefs[Keys.UPDATE_CHECK] = next.updateCheckEnabled
+            prefs[Keys.GLASS_COMPAT] = next.glassCompat
             next.localeOverride?.let { prefs[Keys.LOCALE] = it } ?: prefs.remove(Keys.LOCALE)
         }
     }

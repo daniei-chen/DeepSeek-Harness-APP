@@ -32,6 +32,24 @@ internal data class GithubAsset(
 data class ReleaseAsset(val name: String, val url: String)
 
 /**
+ * The repository's own update manifest (`latest.json` on `main`).
+ *
+ * Reading it removes two dependencies at once: GitHub's release ordering (which put a plugin
+ * release ahead of an app release) and the unauthenticated API's rate limit. The manifest is a
+ * plain static file, so it can be cached or mirrored by anything.
+ */
+@Serializable
+internal data class UpdateManifest(
+    val version: String = "",
+    @SerialName("versionCode") val versionCode: Int = 0,
+    val apk: String = "",
+    val sha256: String = "",
+    val page: String = "",
+    @SerialName("minPluginVersion") val minPluginVersion: String = "",
+    val notes: String = "",
+)
+
+/**
  * Only tags shaped like an app version are candidates: `v0.9.35`, `0.9.35`, `0.9.35-rc1`.
  *
  * The repository also publishes `app-plugin-v0.1.8`-style releases. GitHub's "latest release"
@@ -201,6 +219,18 @@ class UpdateChecker @Inject constructor(
      * the list and keeping only app-shaped tags removes the ordering dependency entirely.
      */
     private suspend fun fetchLatest(): GithubRelease? = withContext(Dispatchers.IO) {
+        // The repository's own manifest wins when it is readable: it is a static file, so it has
+        // no ordering rules and no API quota. The release API stays as a fallback for a clone or
+        // a fork that has not published one yet.
+        fetchManifest()?.let { manifest ->
+            if (manifest.version.isNotBlank() && manifest.apk.startsWith("https://")) {
+                return@withContext GithubRelease(
+                    tagName = "v${manifest.version.trim().removePrefix("v")}",
+                    htmlUrl = manifest.page.ifBlank { RELEASES_URL },
+                    assets = listOf(GithubAsset("app-release.apk", manifest.apk)),
+                )
+            }
+        }
         for (base in API_BASES) {
             val request = Request.Builder()
                 .url("$base/repos/$REPO/releases?per_page=50")
@@ -237,6 +267,26 @@ class UpdateChecker @Inject constructor(
         null
     }
 
+    /** Read `latest.json` from the repository (or a mirror of it). */
+    private fun fetchManifest(): UpdateManifest? {
+        for (url in MANIFEST_URLS) {
+            val request = Request.Builder()
+                .url(url)
+                .header("Accept", "application/json")
+                .get()
+                .build()
+            val manifest = runCatching {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    val body = response.body?.string() ?: return@use null
+                    json.decodeFromString(UpdateManifest.serializer(), body)
+                }
+            }.getOrNull()
+            if (manifest != null && manifest.version.isNotBlank()) return manifest
+        }
+        return null
+    }
+
     /** What a check found. */
     sealed interface CheckOutcome {
         data class Available(val update: AvailableUpdate) : CheckOutcome
@@ -253,6 +303,12 @@ class UpdateChecker @Inject constructor(
             "https://api.github.com",
             "https://gh-proxy.com/https://api.github.com",
             "https://ghproxy.net/https://api.github.com",
+        )
+        const val MANIFEST = "https://raw.githubusercontent.com/$REPO/main/latest.json"
+        val MANIFEST_URLS = listOf(
+            MANIFEST,
+            "https://gh-proxy.com/$MANIFEST",
+            "https://cdn.jsdelivr.net/gh/$REPO@main/latest.json",
         )
         const val RELEASES_URL = "https://github.com/$REPO/releases/latest"
     }

@@ -117,6 +117,23 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
   max-width: 40vw !important;
   overflow: hidden !important;
 }
+/* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
+   like filter/contain/perspective, makes the element the containing block of its fixed
+   descendants, so the mobile drawer and dialogs get positioned against the shell instead of the
+   viewport — the page then paints in a band with the drawer at an offset. The shell sets
+   html[data-dsh-glass="off"] when it detects such a theme; only the frosted layer is dropped, the
+   palette and every other token stay exactly as the theme set them. */
+html[data-dsh-glass="off"] *,
+html[data-dsh-glass="off"] *::before,
+html[data-dsh-glass="off"] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-dsh-glass="off"] body::before,
+html[data-dsh-glass="off"] body::after {
+  filter: none !important;
+  animation-duration: 0s !important;
+}
 `;
 
     function apply(ctx) {

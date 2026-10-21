@@ -64,6 +64,7 @@ import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
+import com.labteto.dshmobile.connection.ConnectionDoctor
 import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
@@ -180,6 +181,7 @@ class WebShellActivity : AppCompatActivity() {
     private var pendingPermissionRequest: PermissionRequest? = null
     private var insets = InsetsDp(0f, 0f, 0f)
     private var imeVisible = false
+    private var glassCompat = "auto"
     private var relayPairingResult: kotlinx.coroutines.CompletableDeferred<String>? = null
     private var pageDark = false
     private var clearHistoryAfterLoad = false
@@ -254,6 +256,16 @@ class WebShellActivity : AppCompatActivity() {
         installJavascriptInterfaces()
         installBackHandling()
         installInsetHandling()
+        // Keep the glass-compat mode live: changing it in Settings re-marks the page immediately.
+        lifecycleScope.launch {
+            hostsStore.settings.collect { settings ->
+                val mode = settings.glassCompat
+                if (mode != glassCompat) {
+                    glassCompat = mode
+                    applyGlassCompat()
+                }
+            }
+        }
         startLoading()
         if (shellDevices.load().isNotEmpty()) {
             mainHandler.postDelayed({ autoCheckForUpdate() }, 1800)
@@ -830,6 +842,13 @@ class WebShellActivity : AppCompatActivity() {
         if (!::webView.isInitialized) return
         webView.evaluateJavascript(WebShellScripts.SHIMS, null)
         applyInsetsToPage()
+        applyGlassCompat()
+    }
+
+    /** Re-evaluate the page for a glass theme that breaks fixed positioning. */
+    private fun applyGlassCompat() {
+        if (!::webView.isInitialized) return
+        webView.evaluateJavascript(WebShellScripts.glassCompat(glassCompat), null)
     }
 
     private fun applyInsetsToPage() {
@@ -1226,9 +1245,69 @@ class WebShellActivity : AppCompatActivity() {
             onFleet = { showFleet() },
             onFleetInbox = { showFleetInbox() },
             onDeviceHealth = { checkDeviceHealth() },
+            onDoctor = { runConnectionDoctor() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
         )
+    }
+
+    /**
+     * Run the connection doctor against the current address and show every step.
+     *
+     * It reuses the same URL the WebView is on, so the report describes the path the user is
+     * actually using — not a generic reachability test.
+     */
+    private fun runConnectionDoctor() {
+        val url = targetUrl
+        if (url.isBlank()) {
+            Toast.makeText(this, R.string.shell_settings_no_device, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val loading = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_doctor_running)
+            .setCancelable(false)
+            .create()
+        loading.show()
+        lifecycleScope.launch {
+            val report = runCatching {
+                ConnectionDoctor.run(
+                    url = url,
+                    relayPort = targetHost?.takeIf { it.isRelay }?.port ?: 3443,
+                    wsConnected = when (connectionManager.state.value.phase) {
+                        ConnectionPhase.CONNECTED -> true
+                        ConnectionPhase.DISCONNECTED -> null
+                        else -> false
+                    },
+                )
+            }.getOrNull()
+            if (!isFinishing && !isDestroyed && loading.isShowing) loading.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            if (report == null) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_settings_test_connection_failed, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            chrome.showDoctorPage(
+                dark = pageDark,
+                target = url,
+                report = report,
+                onRerun = { runConnectionDoctor() },
+                onCopy = {
+                    val text = buildString {
+                        appendLine("DSH connection doctor")
+                        appendLine(url)
+                        appendLine(report.summary)
+                        report.steps.forEach { step ->
+                            append("- [${step.status}] ${step.label}: ${step.detail}")
+                            if (!step.action.isNullOrBlank()) append(" -> ${step.action}")
+                            appendLine()
+                        }
+                    }
+                    copyToClipboard(text)
+                    Toast.makeText(this@WebShellActivity, R.string.shell_doctor_copied, Toast.LENGTH_SHORT).show()
+                },
+                onBack = { showConnectionPage() },
+            )
+        }
     }
 
     private fun showMobileSetupDialog() {
@@ -1270,12 +1349,30 @@ class WebShellActivity : AppCompatActivity() {
         chrome.showDiagnosticsPage(
             dark = pageDark,
             message = message,
+            glassCompatLabel = when (glassCompat) {
+                "force" -> getString(R.string.shell_glass_force)
+                "off" -> getString(R.string.shell_glass_off)
+                else -> getString(R.string.shell_glass_auto)
+            },
             onCopy = {
                 getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(ClipData.newPlainText("DSH diagnostics", message))
                 Toast.makeText(this, R.string.shell_diagnostics_copied, Toast.LENGTH_SHORT).show()
             },
             onClearCache = { clearCacheAndReload() },
+            onGlassCompat = {
+                val next = when (glassCompat) {
+                    "auto" -> "force"
+                    "force" -> "off"
+                    else -> "auto"
+                }
+                lifecycleScope.launch {
+                    hostsStore.setSetting { it.copy(glassCompat = next) }
+                    glassCompat = next
+                    applyGlassCompat()
+                    showDiagnosticsDialog()
+                }
+            },
             onRepair = { repairPageLayout(forceRepaint = true, notify = true) },
             onBack = { showSettings() },
         )

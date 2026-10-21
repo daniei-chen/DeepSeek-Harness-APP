@@ -1,4 +1,4 @@
-# Release 0.9.36
+# Release 0.9.37
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.36-personal.96.apk`
-- SHA-256: `E9A62462F7DF8912011937559F83E41E841AA1035FD418A35CF2CD48F71AF585`
+- APK: `dist/DeepSeek-Harness-0.9.37-personal.97.apk`
+- SHA-256: `76FC72C59C7942B6A88A8908F65571FCA29C5BE628B374B6EADDD291E5C26568`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,6 +27,9 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Connection doctor:** `设置 → 连接 → 连接体检` walks the same path the WebView walks — address shape, loopback trap, DNS, TCP, TLS certificate, HTTP/gate, host plugin, relay and the live page connection — and prints the fix next to every failing step. Reports can be copied as text.
+- **Glass-theme compatibility:** the shell detects `backdrop-filter`/`filter`/`contain`/`perspective` on the app shell (the Bloom regression) and drops only the frosted layer, so the theme keeps its palette and fixed drawers stop drifting. Three modes in `设置 → 诊断`: auto-detect, always off, leave the page alone.
+- **Self-hosted update manifest:** the app reads `latest.json` from the repository first and only falls back to the GitHub API, so release ordering and API rate limits cannot hide an update.
 - **Update check:** reads the release list and keeps only app-shaped tags (`v0.9.36`), so a host-plugin release published after an app release can no longer become GitHub's "latest" and make the app report "up to date" while an update exists. Plugin releases are also published as pre-releases so older clients keep working.
 - **Layout recovery:** back to `adjustResize`, plus a real 1px view-resize nudge (the only thing that makes the renderer re-read the viewport), a `min-height` repair pass, and an automatic repair on resume, after the keyboard closes and after page load. `Settings → Diagnostics → Repair page layout` forces a full repaint.
 - **Settings → 远控 (Remote access):** the relay pairing QR is drawn inside the app from the live invitation, with the 8-digit code, remaining validity, copy pairing link/code, relay addresses and a shortcut to the paired-device page. Requires host plugin **0.1.8**; on an older host the page says which side to update.

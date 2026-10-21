@@ -38,7 +38,7 @@ Then `设置 → 连接 → 添加设备` (or scan the relay QR at `https://<hos
 
 ## Latest
 
-- **APK 0.9.36** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
+- **APK 0.9.37** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
   expiry and paired-device entry; layout recovery for pages left at a stale height (auto on
   resume / keyboard close, plus 设置 → 诊断 → 修复界面排版); QR scan, mDNS + subnet LAN discovery,
   device health, fleet overview, cross-host inbox, session cockpit and actionable notifications.
@@ -54,13 +54,13 @@ Install facts (used by `docs/INSTALL_FOR_AGENTS.md`):
 
 | | |
 | --- | --- |
-| APK `versionCode` | **31936** (must be greater than the installed one) |
-| APK SHA-256 | `E9A62462F7DF8912011937559F83E41E841AA1035FD418A35CF2CD48F71AF585` |
+| APK `versionCode` | **31937** (must be greater than the installed one) |
+| APK SHA-256 | `76FC72C59C7942B6A88A8908F65571FCA29C5BE628B374B6EADDD291E5C26568` |
 | Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
 
 Downloads:
 
-- [APK v0.9.36](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.36)
+- [APK v0.9.37](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.37)
 - [Host plugin 0.1.8](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.8)
 
 ## What is inside

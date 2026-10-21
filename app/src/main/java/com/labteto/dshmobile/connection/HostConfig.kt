@@ -167,6 +167,15 @@ data class AppSettings(
     val updateCheckEnabled: Boolean = false,
     /** A release the user has already declined, so it is offered once rather than every launch. */
     val dismissedUpdate: String? = null,
+    /**
+     * How the shell treats third-party glass/frosted themes on the phone.
+     *
+     * `auto` watches the page for the properties that turn a `position: fixed` overlay into a
+     * locally-positioned one (`backdrop-filter` and friends) and disables just the frosted layer
+     * when it finds them. `force` always disables it, `off` never touches the page. Stored as a
+     * string so a future mode does not need a schema change.
+     */
+    val glassCompat: String = "auto",
 )
 
 /** The three ways the app can reach a harness. Persisted as [AppSettings.connectMode]. */
