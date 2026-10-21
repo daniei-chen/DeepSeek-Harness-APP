@@ -1,4 +1,4 @@
-# Release 0.11.0
+# Release 0.11.1
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.11.0-personal.110.apk`
-- SHA-256: `AF77AF163AA1D529C37F2A68916AD5A3E43998E72448835F4F6E26EC48743D6B`
+- APK: `dist/DeepSeek-Harness-0.11.1-personal.111.apk`
+- SHA-256: `9242212CF06DB99689F012A8706593C6241ECA9896F9318521172D38AC2F2244`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,6 +27,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Offline snapshot:** the last synced session list is kept per host; when the page cannot load, "View recent sessions offline" shows what was running, read-only, with a retry button.
 - **Folder load fix:** expanding a folder in the file panel now triggers one automatic refresh when the expansion produced no child rows — the manual refresh that used to be required is no longer needed (host plugin 0.1.10).
 - **Notification self-check:** permission, system switch, each channel's importance, battery-optimisation exemption and self-hosted push in one report, each with its fix.
 - **Quiet layout repair:** the automatic repair pass only writes when a value really changed and no longer dispatches a synthetic `resize`; repeated identical inset writes are skipped too. That churn was making the harness remount the composer and re-read its model list on its own. The speed pill now keeps its last reading for 6 s across stream gaps.

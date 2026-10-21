@@ -70,6 +70,7 @@ import com.labteto.dshmobile.connection.ConnectionDoctor
 import com.labteto.dshmobile.connection.DoctorReport
 import com.labteto.dshmobile.connection.DoctorStatus
 import com.labteto.dshmobile.connection.DoctorStep
+import com.labteto.dshmobile.connection.SessionSnapshot
 import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
@@ -272,6 +273,35 @@ class WebShellActivity : AppCompatActivity() {
                 }
             }
         }
+        // Keep a read-only snapshot of the session list, so a phone that wakes up without a
+        // network can still show what was running instead of an empty error page.
+        lifecycleScope.launch {
+            var lastSignature = ""
+            sessionStore.sessions.collect { rows ->
+                val hostId = targetHost?.id ?: return@collect
+                val snapshot = rows.asSequence()
+                    .filterNot { it.blank }
+                    .sortedByDescending { it.updatedAt }
+                    .take(30)
+                    .map {
+                        SessionSnapshot(
+                            sessionId = it.sessionId,
+                            title = it.title?.takeIf { title -> title.isNotBlank() } ?: it.sessionId,
+                            updatedAt = it.updatedAt,
+                            running = it.running,
+                            pending = it.pendingInteraction,
+                        )
+                    }
+                    .toList()
+                val signature = snapshot.joinToString("|") {
+                    "${it.sessionId}:${it.updatedAt}:${it.running}:${it.pending}"
+                }
+                if (signature != lastSignature) {
+                    lastSignature = signature
+                    hostsStore.saveSessionSnapshot(hostId, snapshot)
+                }
+            }
+        }
         startLoading()
         if (shellDevices.load().isNotEmpty()) {
             mainHandler.postDelayed({ autoCheckForUpdate() }, 1800)
@@ -374,6 +404,7 @@ class WebShellActivity : AppCompatActivity() {
         column.addView(errorTitle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(errorMessage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(errorButton(R.string.webshell_reload) { reloadPage() })
+        column.addView(errorButton(R.string.webshell_offline_snapshot) { showOfflineSnapshot() })
         column.addView(errorButton(R.string.webshell_clear_cache) { clearCacheAndReload() })
         column.addView(errorButton(R.string.shell_settings_title) { showSettings() })
         column.addView(errorButton(R.string.webshell_exit) { finishAffinity() })
@@ -956,6 +987,26 @@ class WebShellActivity : AppCompatActivity() {
         errorTitle.text = title
         errorMessage.text = message
         errorScroll.visibility = View.VISIBLE
+    }
+
+    /** Show the cached session list for the current host, without touching the network. */
+    private fun showOfflineSnapshot() {
+        val host = targetHost
+        if (host == null) {
+            Toast.makeText(this, R.string.shell_settings_no_device, Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val rows = hostsStore.sessionSnapshot(host.id)
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showOfflinePage(
+                dark = pageDark,
+                hostLabel = host.displayAddress,
+                rows = rows,
+                onRetry = { reloadPage() },
+                onBack = { showSettings() },
+            )
+        }
     }
 
     // ---- navigation and recovery -------------------------------------------

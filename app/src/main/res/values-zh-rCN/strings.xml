@@ -953,6 +953,14 @@
     <string name="shell_pair_row_hint">没有摄像头时，手动输入中继地址和配对码</string>
     <string name="shell_scan_all_added">找到 %1$d 个设备，均已添加</string>
     <string name="shell_notify_check">通知自检</string>
+    <string name="shell_offline_title">离线快照</string>
+    <string name="shell_offline_hint">主机连不上时显示最近一次同步的会话，只读</string>
+    <string name="shell_offline_empty">还没有缓存，先联网打开一次这个主机</string>
+    <string name="shell_offline_retry">重试连接</string>
+    <string name="shell_offline_running">运行中</string>
+    <string name="shell_offline_pending">等待处理</string>
+    <string name="shell_offline_updated">更新于 %1$s</string>
+    <string name="webshell_offline_snapshot">离线查看最近会话</string>
     <string name="shell_notify_perm">通知权限</string>
     <string name="shell_notify_system">系统通知开关</string>
     <string name="shell_notify_channel_action">审批 / 提问通道</string>

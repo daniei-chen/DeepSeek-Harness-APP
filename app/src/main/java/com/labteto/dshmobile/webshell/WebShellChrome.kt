@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.DoctorReport
 import com.labteto.dshmobile.connection.DoctorStatus
+import com.labteto.dshmobile.connection.SessionSnapshot
 import kotlin.math.roundToInt
 
 /** One saved shell device and the result of the last health probe. */
@@ -758,6 +759,97 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         })
         card.addView(menuRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_doctor_copy)) {
             onCopy()
+        })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    /**
+     * The offline snapshot: what was running the last time the host answered.
+     *
+     * Rows are not clickable on purpose — opening one needs a live session, and a button that
+     * silently fails is worse than a read-only list that says so.
+     */
+    fun showOfflinePage(
+        dark: Boolean,
+        hostLabel: String,
+        rows: List<SessionSnapshot>,
+        onRetry: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_offline_title)) { dialog.dismiss(); onBack() })
+        card.addView(
+            TextView(activity).apply {
+                text = "$hostLabel\n${activity.getString(R.string.shell_offline_hint)}"
+                textSize = 12f
+                setTextColor(colors.secondary)
+                setPadding(dp(14), 0, dp(14), dp(8))
+            },
+        )
+        if (rows.isEmpty()) {
+            card.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_offline_empty)
+                    textSize = 13f
+                    setTextColor(colors.secondary)
+                    setPadding(dp(14), dp(14), dp(14), dp(18))
+                },
+            )
+        } else {
+            val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+            val format = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+            rows.forEach { row ->
+                val column = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(14), dp(9), dp(14), dp(9))
+                }
+                column.addView(
+                    TextView(activity).apply {
+                        text = row.title
+                        textSize = 14f
+                        setTextColor(colors.primary)
+                        maxLines = 1
+                    },
+                )
+                val status = when {
+                    row.pending != null -> activity.getString(R.string.shell_offline_pending)
+                    row.running -> activity.getString(R.string.shell_offline_running)
+                    else -> activity.getString(R.string.shell_inbox_status_idle)
+                }
+                column.addView(
+                    TextView(activity).apply {
+                        text = "$status · " + activity.getString(
+                            R.string.shell_offline_updated,
+                            format.format(java.util.Date(row.updatedAt)),
+                        )
+                        textSize = 11.5f
+                        setTextColor(colors.secondary)
+                        setPadding(0, dp(2), 0, 0)
+                    },
+                )
+                list.addView(column)
+            }
+            val height = dp((rows.size * 56 + 16).coerceIn(120, 420))
+            card.addView(
+                ScrollView(activity).apply {
+                    isFillViewport = false
+                    addView(list, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height)
+                },
+            )
+        }
+        card.addView(divider(colors))
+        card.addView(menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_offline_retry)) {
+            dialog.dismiss()
+            onRetry()
         })
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         show(dialog, root, gravity = Gravity.CENTER)
