@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { apply, collectInfo, localIpv4s, probeRelayHealth, readAudit } from "../lib/mobile-access.js";
+import { apply, collectInfo, localIpv4s, parsePairingPage, probeRelayHealth, readAudit } from "../lib/mobile-access.js";
 
 function context(host, port) {
     return {
@@ -53,6 +53,30 @@ test("readAudit returns the newest valid entries", async () => {
     assert.equal(result.entries[0].action, "upload");
 });
 
+test("a pairing page is read back into the facts a QR carries", () => {
+    const html = `
+  <h1>Pair a device</h1>
+  <p>Scan this on the device, or open <span class="mono">https://192.168.2.13:3443/relay/pair</span> there and type the code.</p>
+  <div class="qr"><svg viewBox="0 0 21 21"></svg></div>
+  <div class="code">48192037</div>
+  <p class="caption">Expires in 288 seconds, and works once.</p>
+  <div class="notice tip">DSH Mobile 0.5.0 cannot use TLS, so it connects over the plain listener instead:
+       <br><span class="mono">http://192.168.2.13:3444</span></div>
+  <p class="caption fingerprint">Certificate pin (SHA-256/SPKI)<br><span class="mono">AbCdEf0123456789+/AbCdEf0123456789+/AbCdEf=</span></p>`;
+    const parsed = parsePairingPage(html);
+    assert.equal(parsed.code, "48192037");
+    assert.equal(parsed.origin, "https://192.168.2.13:3443");
+    assert.equal(parsed.plainUrl, "http://192.168.2.13:3444");
+    assert.equal(parsed.fingerprint, "AbCdEf0123456789+/AbCdEf0123456789+/AbCdEf=");
+    assert.equal(parsed.expiresInSeconds, 288);
+});
+
+test("a claim page on a non-operator device yields no invitation", () => {
+    const parsed = parsePairingPage("<h1>Pair this device</h1><form method=\"post\" action=\"/relay/pair\"></form>");
+    assert.equal(parsed.code, null);
+    assert.equal(parsed.origin, null);
+});
+
 test("apply registers the read-only info route", async () => {
     const routes = [];
     const ctx = {
@@ -69,10 +93,11 @@ test("apply registers the read-only info route", async () => {
         logger: { info: () => {}, warn: () => {} },
     };
     apply(ctx, { relayPort: 1 });
-    assert.equal(routes.length, 2);
+    assert.equal(routes.length, 3);
     const infoRoute = routes.find((route) => route.path === "/dsh-mobile/info");
     assert.equal(infoRoute.kind, "exact");
     assert.equal(routes.some((route) => route.path === "/dsh-mobile/audit"), true);
+    assert.equal(routes.some((route) => route.path === "/dsh-mobile/relay/pair"), true);
 
     let body = "";
     const res = {

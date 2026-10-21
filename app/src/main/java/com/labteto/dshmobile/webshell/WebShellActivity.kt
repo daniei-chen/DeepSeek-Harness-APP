@@ -179,6 +179,8 @@ class WebShellActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermissionRequest: PermissionRequest? = null
     private var insets = InsetsDp(0f, 0f, 0f)
+    private var imeVisible = false
+    private var relayPairingResult: kotlinx.coroutines.CompletableDeferred<String>? = null
     private var pageDark = false
     private var clearHistoryAfterLoad = false
     private var micPermissionAsked = false
@@ -392,6 +394,11 @@ class WebShellActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             textZoom = 100
+            // Honour the page's own `width=device-width` viewport instead of the legacy wide
+            // viewport. Without this the harness client can be laid out against a virtual width
+            // that no longer matches the window, and every height it derives from it is wrong.
+            useWideViewPort = true
+            loadWithOverviewMode = false
             setOffscreenPreRaster(true)
         }
         webView.webViewClient = shellClient
@@ -430,11 +437,16 @@ class WebShellActivity : AppCompatActivity() {
             val status = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             val navigation = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
             val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val wasIme = imeVisible
+            imeVisible = ime > 0
             insets = InsetsDp(status / density, navigation / density, ime / density)
             applyInsetsToPage()
-            // adjustNothing keeps the window full-height; a stale WebView measure after the
-            // keyboard closes can still leave a blank strip below the page on some OEMs.
-            if (ime == 0) webView.post { webView.requestLayout() }
+            // A page measured while the keyboard was up can keep that height after it closes —
+            // the chat then occupies a strip at the top with the page background below it. Wait
+            // for the window to settle, then let the page re-measure against the full viewport.
+            if (wasIme && !imeVisible) {
+                mainHandler.postDelayed({ repairPageLayout() }, 250)
+            }
             windowInsets
         }
         ViewCompat.requestApplyInsets(root)
@@ -612,6 +624,9 @@ class WebShellActivity : AppCompatActivity() {
             // The client mounts its frame asynchronously; re-apply the insets once the frame exists.
             mainHandler.postDelayed({ applyInsetsToPage() }, 350)
             mainHandler.postDelayed({ applyInsetsToPage() }, 1200)
+            // ...and once more after the shell has settled, so a root measured during the splash
+            // cannot keep a short height.
+            mainHandler.postDelayed({ repairPageLayout() }, 1600)
         }
 
         override fun onReceivedError(
@@ -794,6 +809,12 @@ class WebShellActivity : AppCompatActivity() {
         fun startSpeechInput() {
             runOnUiThread { startNativeSpeech() }
         }
+
+        /** Answer for [requestRelayPairing]; ignored when no request is outstanding. */
+        @android.webkit.JavascriptInterface
+        fun relayPairing(payload: String) {
+            runOnUiThread { relayPairingResult?.complete(payload) }
+        }
     }
 
     private inner class BackBridge {
@@ -814,6 +835,54 @@ class WebShellActivity : AppCompatActivity() {
     private fun applyInsetsToPage() {
         if (!::webView.isInitialized) return
         webView.evaluateJavascript(WebShellScripts.insets(insets.top, insets.bottom, insets.ime), null)
+    }
+
+    /**
+     * Make the page measure itself against the WebView again.
+     *
+     * A WebView that was resized while its surface was detached — the usual way a keyboard, a
+     * rotation or a trip to the background ends — can keep the old frame: the app renders in a
+     * strip at the top and the shell's own background shows below it. Nothing in the page will
+     * fix that by itself, because nothing in the page knows the viewport changed. This re-asserts
+     * the view's layout, asks the page to re-read the viewport, and (when explicitly requested)
+     * detaches the hardware layer so the next frame is painted from scratch.
+     */
+    private fun repairPageLayout(forceRepaint: Boolean = false, notify: Boolean = false) {
+        if (!::webView.isInitialized) return
+        // A 1px resize is the only reliable way to make the renderer re-read the viewport:
+        // `requestLayout()` with unchanged bounds is a no-op for the compositor, and that is
+        // exactly how a WebView keeps painting a strip of page above an empty field.
+        nudgeWebViewSize()
+        if (forceRepaint) {
+            val layer = webView.layerType
+            webView.setLayerType(View.LAYER_TYPE_NONE, null)
+            webView.post {
+                if (!::webView.isInitialized) return@post
+                webView.setLayerType(layer, null)
+                webView.requestLayout()
+            }
+        }
+        webView.requestLayout()
+        webView.invalidate()
+        webView.evaluateJavascript(WebShellScripts.repairViewport(), null)
+        if (notify) Toast.makeText(this, R.string.shell_diagnostics_repaired, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Resize the WebView by one pixel and back, so `onSizeChanged` reaches the renderer. */
+    private fun nudgeWebViewSize() {
+        if (!::webView.isInitialized) return
+        val params = webView.layoutParams as? FrameLayout.LayoutParams ?: return
+        if (params.height != ViewGroup.LayoutParams.MATCH_PARENT) return
+        val height = webView.height
+        if (height <= 1) return
+        params.height = height - 1
+        webView.layoutParams = params
+        webView.post {
+            if (!::webView.isInitialized) return@post
+            val restore = webView.layoutParams as? FrameLayout.LayoutParams ?: return@post
+            restore.height = ViewGroup.LayoutParams.MATCH_PARENT
+            webView.layoutParams = restore
+        }
     }
 
     private fun applyPageTheme(dark: Boolean) {
@@ -965,6 +1034,7 @@ class WebShellActivity : AppCompatActivity() {
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
             onConnection = { showConnectionPage() },
+            onRemote = { showRemoteAccess() },
             onInbox = { showInbox() },
             onMobileSetup = { showMobileSetupDialog() },
             onDiagnostics = { showDiagnosticsDialog() },
@@ -1196,7 +1266,7 @@ class WebShellActivity : AppCompatActivity() {
             connectionManager.state.value.phase.name.lowercase(),
             webViewVersion,
             "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-        )
+        ) + "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary())
         chrome.showDiagnosticsPage(
             dark = pageDark,
             message = message,
@@ -1206,9 +1276,143 @@ class WebShellActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.shell_diagnostics_copied, Toast.LENGTH_SHORT).show()
             },
             onClearCache = { clearCacheAndReload() },
+            onRepair = { repairPageLayout(forceRepaint = true, notify = true) },
             onBack = { showSettings() },
         )
     }
+
+    /**
+     * The relay's pairing invitation, drawn on the phone.
+     *
+     * A pairing code may only be *issued* from the machine running the harness; the relay decides
+     * that by the address the request arrives from. The phone therefore asks the host plugin —
+     * which runs on that machine — for the live invitation, and draws the QR itself. Nothing is
+     * stored: the code lives for the relay's pairing window and is replaced on refresh.
+     */
+    private fun showRemoteAccess(fresh: Boolean = false) {
+        if (!::webView.isInitialized || targetUrl.isBlank() || targetHost == null) {
+            Toast.makeText(this, R.string.shell_remote_no_host, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val loading = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_remote_loading)
+            .setCancelable(false)
+            .create()
+        loading.show()
+        lifecycleScope.launch {
+            val raw = requestRelayPairing(fresh)
+            if (!isFinishing && !isDestroyed && loading.isShowing) loading.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            val (invite, error) = if (raw == null) {
+                null to getString(R.string.shell_remote_offline)
+            } else {
+                parseRemoteInvite(raw)
+            }
+            renderRemoteAccess(invite, error)
+        }
+    }
+
+    /** Ask the page to fetch the invitation, so the relay's cookie and certificate are reused. */
+    private suspend fun requestRelayPairing(fresh: Boolean): String? {
+        val deferred = kotlinx.coroutines.CompletableDeferred<String>()
+        relayPairingResult = deferred
+        val query = if (fresh) "?new=1" else ""
+        val script = """
+            (function () {
+              var done = function (value) {
+                try { window.${WebShellScripts.SHELL_BRIDGE}.relayPairing(JSON.stringify(value)); } catch (e) {}
+              };
+              fetch('/dsh-mobile/relay/pair$query', {
+                credentials: 'include',
+                cache: 'no-store',
+                headers: { accept: 'application/json' }
+              })
+                .then(function (response) {
+                  return response.text().then(function (text) { done({ status: response.status, body: text }); });
+                })
+                .catch(function (error) { done({ status: 0, body: String((error && error.message) || error) }); });
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script, null)
+        return withTimeoutOrNull(8_000) { deferred.await() }
+    }
+
+    private fun parseRemoteInvite(raw: String): Pair<RemoteInvite?, String?> {
+        val envelope = runCatching { org.json.JSONObject(raw) }.getOrNull()
+            ?: return null to getString(R.string.shell_remote_offline)
+        val status = envelope.optInt("status", 0)
+        val body = envelope.optString("body", "")
+        if (status == 0) return null to getString(R.string.shell_remote_offline)
+        // A 404/HTML answer means the host is still running a plugin from before this route
+        // existed; saying "HTTP 404" would hide the one action that fixes it.
+        if (status == 404) return null to getString(R.string.shell_remote_plugin_outdated)
+        val root = runCatching { org.json.JSONObject(body) }.getOrNull()
+            ?: return null to getString(R.string.shell_remote_plugin_outdated)
+        if (!root.optBoolean("ok")) {
+            val code = root.optString("error")
+            val message = when (code) {
+                "relay-unreachable" -> getString(R.string.shell_remote_offline)
+                "relay-page-unreadable" -> getString(R.string.shell_remote_unreadable)
+                else -> getString(R.string.shell_remote_failed, code.ifBlank { "HTTP $status" })
+            }
+            return null to message
+        }
+        val payloadJson = root.optJSONObject("payload")?.toString()
+            ?: return null to getString(R.string.shell_remote_unreadable)
+        val payload = runCatching {
+            com.labteto.dshmobile.core.wire.WireJson.decodeFromString(
+                com.labteto.dshmobile.core.wire.RelayPairingPayload.serializer(),
+                payloadJson,
+            )
+        }.getOrNull() ?: return null to getString(R.string.shell_remote_unreadable)
+        return RemoteInvite(
+            payload = payload,
+            pairPage = root.optString("pairPage").takeIf { it.isNotBlank() },
+            devicesPage = root.optString("devicesPage").takeIf { it.isNotBlank() },
+        ) to null
+    }
+
+    private fun renderRemoteAccess(invite: RemoteInvite?, error: String?) {
+        val payload = invite?.payload
+        val qr = payload?.let { RemoteAccess.qrBitmap(RemoteAccess.encode(it), dp(232)) }
+        chrome.showRemoteAccessPage(
+            dark = pageDark,
+            qr = qr,
+            code = payload?.code,
+            expiry = payload?.let { RemoteAccess.remaining(it.expiresAt) },
+            addresses = listOfNotNull(
+                invite?.pairPage?.let { getString(R.string.shell_remote_pair_page) to it },
+                payload?.plainUrl?.let { getString(R.string.shell_remote_plain) to it },
+                invite?.devicesPage?.let { getString(R.string.shell_remote_devices) to it },
+            ),
+            note = getString(R.string.shell_remote_note),
+            message = error,
+            onRefresh = { showRemoteAccess(fresh = true) },
+            onCopyCode = { payload?.let { copyToClipboard(it.code) } },
+            onCopyLink = { payload?.let { copyToClipboard("${it.url}/relay/pair?code=${it.code}") } },
+            onDevices = {
+                val target = invite?.devicesPage
+                if (target.isNullOrBlank()) {
+                    Toast.makeText(this, R.string.shell_remote_offline, Toast.LENGTH_SHORT).show()
+                } else {
+                    webView.loadUrl(target)
+                }
+            },
+            onBack = { showSettings() },
+        )
+    }
+
+    private fun copyToClipboard(value: String) {
+        getSystemService(ClipboardManager::class.java)
+            .setPrimaryClip(ClipData.newPlainText("DSH", value))
+        Toast.makeText(this, R.string.shell_remote_copied, Toast.LENGTH_SHORT).show()
+    }
+
+    private data class RemoteInvite(
+        val payload: com.labteto.dshmobile.core.wire.RelayPairingPayload,
+        val pairPage: String?,
+        val devicesPage: String?,
+    )
 
     private fun showNotificationsPage() {
         val settings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
@@ -2416,7 +2620,11 @@ class WebShellActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::webView.isInitialized) webView.onResume()
+        if (::webView.isInitialized) {
+            webView.onResume()
+            // Returning from the background is the other moment a stale surface shows up.
+            mainHandler.postDelayed({ repairPageLayout() }, 300)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -2475,6 +2683,21 @@ class WebShellActivity : AppCompatActivity() {
     private data class ResolvedTarget(val host: HostConfig, val url: String, val cookie: String?)
 
     private data class InsetsDp(val top: Float, val bottom: Float, val ime: Float)
+
+    /**
+     * The numbers that decide whether the page can fill the window.
+     *
+     * Kept in the diagnostics page because a "page only fills a strip" report cannot be told apart
+     * from a page layout bug without knowing whether the WebView itself is short.
+     */
+    private fun layoutSummary(): String {
+        val metrics = resources.displayMetrics
+        val web = if (::webView.isInitialized) "${webView.width}x${webView.height}" else "n/a"
+        val container = if (::root.isInitialized) "${root.width}x${root.height}" else "n/a"
+        val decor = runCatching { window.decorView.height }.getOrDefault(0)
+        return "web=$web root=$container window=${metrics.widthPixels}x${metrics.heightPixels} " +
+            "decor=$decor density=${metrics.density} ime=${insets.ime}"
+    }
 
     private companion object {
         const val TAG = "DshWebShell"

@@ -2,6 +2,7 @@ package com.labteto.dshmobile.webshell
 
 import android.app.Dialog
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -352,6 +353,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         backgroundEnabled: Boolean,
         ntfyEnabled: Boolean,
         onConnection: () -> Unit,
+        onRemote: () -> Unit,
         onInbox: () -> Unit,
         onMobileSetup: () -> Unit,
         onDiagnostics: () -> Unit,
@@ -394,6 +396,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onConnection()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_link,
+                title = activity.getString(R.string.shell_remote),
+                subtitle = activity.getString(R.string.shell_remote_hint),
+            ) {
+                dialog.dismiss()
+                onRemote()
             },
         )
         card.addView(
@@ -558,6 +571,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         message: String,
         onCopy: () -> Unit,
         onClearCache: () -> Unit,
+        onRepair: () -> Unit,
         onBack: () -> Unit,
     ) {
         val colors = Colors(dark)
@@ -587,6 +601,160 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             dialog.dismiss()
             onClearCache()
         })
+        card.addView(menuRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_diagnostics_repair)) {
+            dialog.dismiss()
+            onRepair()
+        })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    /**
+     * The remote-access page: the relay's live pairing QR, the code, and where it points.
+     *
+     * The QR is drawn on the phone from the payload the host read out of the relay, so the page
+     * works with the relay's self-signed certificate and without a browser tab on the desktop.
+     */
+    fun showRemoteAccessPage(
+        dark: Boolean,
+        qr: Bitmap?,
+        code: String?,
+        expiry: String?,
+        addresses: List<Pair<String, String>>,
+        note: String,
+        message: String?,
+        onRefresh: () -> Unit,
+        onCopyCode: () -> Unit,
+        onCopyLink: () -> Unit,
+        onDevices: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_remote_title)) { dialog.dismiss(); onBack() })
+
+        val column = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(2), dp(8), dp(6))
+        }
+
+        if (qr != null) {
+            val frame = FrameLayout(activity).apply {
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(16).toFloat()
+                    setColor(Color.WHITE)
+                }
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                layoutParams = LinearLayout.LayoutParams(dp(244), dp(244)).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    topMargin = dp(2)
+                }
+            }
+            frame.addView(
+                ImageView(activity).apply {
+                    setImageBitmap(qr)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                },
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            column.addView(frame)
+        }
+
+        if (!code.isNullOrBlank()) {
+            column.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_remote_code, code.chunked(4).joinToString(" "))
+                    textSize = 19f
+                    setTextColor(colors.primary)
+                    typeface = android.graphics.Typeface.MONOSPACE
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(12), 0, 0)
+                },
+            )
+        }
+        if (!expiry.isNullOrBlank()) {
+            column.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_remote_expires, expiry)
+                    textSize = 12f
+                    setTextColor(colors.secondary)
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(2), 0, 0)
+                },
+            )
+        }
+        column.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_remote_qr_hint)
+                textSize = 11.5f
+                setTextColor(colors.secondary)
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+            },
+        )
+        if (!message.isNullOrBlank()) {
+            column.addView(
+                TextView(activity).apply {
+                    text = message
+                    textSize = 12f
+                    setTextColor(colors.danger)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(10), dp(2), dp(10), dp(8))
+                },
+            )
+        }
+
+        column.addView(divider(colors))
+        column.addView(menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_remote_refresh)) {
+            dialog.dismiss()
+            onRefresh()
+        })
+        if (!code.isNullOrBlank()) {
+            column.addView(menuRow(colors, R.drawable.ic_shell_edit, activity.getString(R.string.shell_remote_copy_code)) {
+                onCopyCode()
+            })
+        }
+        column.addView(menuRow(colors, R.drawable.ic_shell_link, activity.getString(R.string.shell_remote_copy_link)) {
+            onCopyLink()
+        })
+        column.addView(menuRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_remote_devices)) {
+            dialog.dismiss()
+            onDevices()
+        })
+
+        if (addresses.isNotEmpty()) {
+            column.addView(divider(colors))
+            column.addView(sectionLabel(colors, activity.getString(R.string.shell_remote_addresses)))
+            addresses.forEach { (label, value) -> column.addView(infoRow(colors, label, value)) }
+        }
+        column.addView(
+            TextView(activity).apply {
+                text = note
+                textSize = 11f
+                setTextColor(colors.secondary)
+                setPadding(dp(16), dp(6), dp(16), dp(8))
+            },
+        )
+
+        // Leave room for the card's own padding, its header and the status/navigation bars; the
+        // window is WRAP_CONTENT, so an over-tall card would simply be clipped at the bottom.
+        val cap = (activity.resources.displayMetrics.heightPixels - dp(160)).coerceAtLeast(dp(320))
+        val scroll = ScrollView(activity).apply {
+            isFillViewport = false
+            addView(column, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cap)
+        }
+        card.addView(scroll, 1)
+
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         show(dialog, root, gravity = Gravity.CENTER)
     }

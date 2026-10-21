@@ -192,6 +192,41 @@ internal object WebShellScripts {
     """.trimIndent()
 
     /**
+     * Re-assert the viewport against the real WebView size.
+     *
+     * The harness client is a full-height flex app: its root is sized from the viewport, and that
+     * viewport only changes when the WebView is resized. After a keyboard or a surface detach the
+     * root can be left at a stale, shorter height — the page then paints in a band at the top and
+     * the shell's background shows underneath. `min-height` never fights a page that is already
+     * full height; the explicit root height is the last resort for one that cached a pixel size.
+     */
+    fun repairViewport(): String = """
+        (function () {
+          try {
+            var viewport = Math.round(window.visualViewport ? window.visualViewport.height : window.innerHeight);
+            var root = document.documentElement;
+            var body = document.body;
+            if (!root || !body || !viewport) { return; }
+            root.style.minHeight = viewport + 'px';
+            body.style.minHeight = viewport + 'px';
+            root.style.setProperty('--dsh-android-viewport-height', viewport + 'px');
+            var app = document.getElementById('root');
+            if (app) {
+              var height = app.getBoundingClientRect().height;
+              if (height > 0 && height < viewport * 0.6) {
+                app.style.height = viewport + 'px';
+              }
+            }
+            void body.offsetHeight;
+            window.dispatchEvent(new Event('resize'));
+            if (window.visualViewport) {
+              try { window.visualViewport.dispatchEvent(new Event('resize')); } catch (e) {}
+            }
+          } catch (e) {}
+        })();
+    """.trimIndent()
+
+    /**
      * Push the current system-bar / IME insets into the page as CSS variables.
      *
      * `@dsh-android/dsh-client-ui-responsive` consumes exactly these three names: its mobile top bar
