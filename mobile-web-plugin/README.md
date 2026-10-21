@@ -1,4 +1,4 @@
-# Mobile web plugin
+# DeepSeek Harness APP 插件
 
 Phone-only client layer for the DSH web UI:
 

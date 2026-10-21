@@ -125,7 +125,9 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       // tweaks (compact stats, model label, file actions) must never run in the desktop window,
       // where they would hide the native speed/identity indicators. Only the Android shell has
       // the DshShellBridge (or a WebView user agent).
-      const androidShell = !!window.DshShellBridge || /;\s*wv\)/i.test(navigator.userAgent);
+      const androidShell = !!window.DshShellBridge ||
+        /DSHAndroidShell/i.test(navigator.userAgent) ||
+        /;\s*wv\)/i.test(navigator.userAgent);
       if (!androidShell) return;
       document.documentElement.setAttribute("data-dsh-android-shell", "1");
       document.documentElement.setAttribute("data-dsh-mobile-tweaks", "1");
@@ -237,6 +239,40 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         if (document.visibilityState !== "hidden") compactStats();
       });
       installFileActions();
+      installImageUploadDefault();
+    }
+
+    /**
+     * On the phone the attachment trigger opens a two-row menu whose entries both end in the same
+     * Android file chooser. Choose the image entry immediately so the phone gets the image picker
+     * without an extra menu tap. The menu is React-owned; a MutationObserver clicks its image row
+     * as soon as it mounts.
+     */
+    function installImageUploadDefault() {
+      if (window.__dshImageUploadDefault) return;
+      window.__dshImageUploadDefault = true;
+      let pending = false;
+      const isImageItem = (node) => {
+        const text = ((node.innerText || "") + " " + (node.getAttribute("aria-label") || "")).trim();
+        return /上传图片|上传照片|upload image|upload photo/i.test(text);
+      };
+      document.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target === null) return;
+        if (target.closest(".dsh-attachment-picker-trigger, [aria-label*='上传附件'], [aria-label*='Upload attachment']")) {
+          pending = true;
+        }
+      }, true);
+      try {
+        new MutationObserver(() => {
+          if (!pending) return;
+          const item = [...document.querySelectorAll("button, [role='menuitem']")]
+            .find((node) => node.offsetWidth > 0 && isImageItem(node));
+          if (item === undefined) return;
+          pending = false;
+          item.click();
+        }).observe(document.body, { subtree: true, childList: true });
+      } catch (e) {}
     }
 
     /**

@@ -324,8 +324,11 @@
     <string name="notif_channel_completions">Completions</string>
     <string name="notif_channel_action">Needs your action</string>
     <string name="notif_channel_connection">Connection status</string>
-    <string name="notif_connected_title">Connected to harness</string>
-    <string name="notif_connected_text">Keeping the connection to %1$s alive.</string>
+    <string name="notif_connected_title">Remote</string>
+    <string name="notif_connected_text">Connected to %1$s</string>
+    <string name="notif_connecting_text">Connecting to %1$s</string>
+    <string name="notif_reconnecting_text">Reconnecting to %1$s</string>
+    <string name="notif_disconnect">Disconnect</string>
     <string name="notif_turn_complete">Turn complete — %1$s</string>
     <string name="notif_goal_complete">Goal complete — %1$s</string>
     <string name="notif_goal_blocked">Goal blocked — %1$s</string>

@@ -285,6 +285,10 @@ class WebShellActivity : AppCompatActivity() {
         }
         webView.webViewClient = shellClient
         webView.webChromeClient = shellChromeClient
+        val currentUa = webView.settings.userAgentString ?: ""
+        if (!currentUa.contains("DSHAndroidShell")) {
+            webView.settings.userAgentString = "$currentUa DSHAndroidShell"
+        }
         // Keep the renderer warm while the app is in the background; the page must keep its
         // WebSocket alive so returning to the app does not trigger a full reload.
         webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)

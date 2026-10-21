@@ -8,11 +8,19 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.notify.DshNotifications
+import com.labteto.dshmobile.webshell.ShellDevices
 import com.labteto.dshmobile.webshell.WebShellActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 /**
  * Foreground service that keeps the WebSocket connection alive while the app
@@ -25,38 +33,66 @@ class ConnectionService : Service() {
 
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var notifications: DshNotifications
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var observing = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            connectionManager.disconnect()
             stopSelf()
             return START_NOT_STICKY
         }
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification(connectionManager.state.value.phase))
+        if (!observing) {
+            observing = true
+            serviceScope.launch {
+                connectionManager.state.collect { state ->
+                    NotificationManagerCompat.from(this@ConnectionService)
+                        .notify(NOTIFICATION_ID, buildNotification(state.phase))
+                }
+            }
+        }
         return START_STICKY
     }
 
     override fun onDestroy() {
-        // The service dying does not tear the connection down; the manager owns it.
+        serviceScope.cancel()
         super.onDestroy()
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(phase: ConnectionPhase): Notification {
         val host = connectionManager.state.value.host
+        val shellDevices = ShellDevices(this)
+        val deviceName = shellDevices.load()
+            .firstOrNull { it.id == shellDevices.currentId() }
+            ?.name
+            ?: host?.name
+            ?: getString(R.string.common_connected)
         val openIntent = PendingIntent.getActivity(
             this,
             0,
             Intent(this, WebShellActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val text = host?.let { getString(R.string.notif_connected_text, it.authority) }
-            ?: getString(R.string.common_connected)
+        val disconnectIntent = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, ConnectionService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val text = when (phase) {
+            ConnectionPhase.CONNECTED -> getString(R.string.notif_connected_text, deviceName)
+            ConnectionPhase.RECONNECTING -> getString(R.string.notif_reconnecting_text, deviceName)
+            else -> getString(R.string.notif_connecting_text, deviceName)
+        }
         return NotificationCompat.Builder(this, DshNotifications.CHANNEL_CONNECTION)
             .setSmallIcon(R.drawable.ic_notification_whale)
             .setContentTitle(getString(R.string.notif_connected_title))
             .setContentText(text)
             .setContentIntent(openIntent)
+            .addAction(0, getString(R.string.notif_disconnect), disconnectIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
