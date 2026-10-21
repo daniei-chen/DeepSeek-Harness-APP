@@ -23,15 +23,29 @@ workspace file panel.
 
 ## Install into a DSH profile
 
-The package is a DSH bundle (`dsh.bundle.patch` inserts the `file-ops` row).
+The package is a DSH bundle (`dsh.bundle.patch` inserts the `file-ops` row). Choose one route:
 
-From the profile directory:
+### Plugin manager
+
+Pack the directory and install the tarball through the DSH plugin manager:
+
+```bash
+npm pack
+```
+
+Then **Settings → Plugins → Install from file** and select the generated
+`dsh-android-dsh-file-ops-bundle-0.1.0.tgz`.
+
+### Profile dependency
+
+From the profile directory, add the package and select the bundle:
 
 ```bash
 pnpm add file:/absolute/path/to/host-plugin
 ```
 
-or install the packed tarball through the DSH plugin manager. The bundle row is:
+Add `@dsh-android/dsh-file-ops-bundle` to `dsh.profile.bundles` in the profile
+`package.json`, or use the plugin manager's enable toggle. The bundle's patch contributes:
 
 ```yaml
 - insert:
