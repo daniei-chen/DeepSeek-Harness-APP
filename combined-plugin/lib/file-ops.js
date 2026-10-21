@@ -144,10 +144,21 @@ export function apply(ctx) {
         }
     };
 
-    ctx.effect(() => ctx.webServer.register({
-        kind: "exact",
-        path: "/dsh-file-ops",
-        handler,
-    }), "dsh-file-ops.route");
+    ctx.effect(() => {
+        try {
+            return ctx.webServer.register({
+                kind: "exact",
+                path: "/dsh-file-ops",
+                handler,
+            });
+        } catch (error) {
+            // A previously activated copy may still own the route during a live plugin swap.
+            if (String(error).includes("duplicate exact route")) {
+                ctx.logger?.warn?.("dsh-file-ops: route already owned by a previous activation; reusing it");
+                return () => {};
+            }
+            throw error;
+        }
+    }, "dsh-file-ops.route");
     ctx.logger?.info?.("dsh-file-ops: /dsh-file-ops ready (roots: " + roots.join(", ") + ")");
 }
