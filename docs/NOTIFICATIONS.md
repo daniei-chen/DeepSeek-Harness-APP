@@ -39,6 +39,10 @@ swiped away”, the user must run their own push path:
 The repository includes `notify-plugin/` for the host-side ntfy publisher. Configure it with
 `DSH_NTFY_URL`, `DSH_NTFY_TOPIC` and optionally `DSH_NTFY_TOKEN`; see that package's README.
 
+The Android app can subscribe to the same topic directly: **Settings → Notifications → Self-hosted
+ntfy push**, enter `https://your-ntfy/topic`. It runs an opt-in foreground service and posts the
+received events as local notifications. Leaving the field empty disables the subscription.
+
 The app must never ship a public ntfy topic, relay URL or push credential. Setup is documented as a
 manual, self-hosted step.
 

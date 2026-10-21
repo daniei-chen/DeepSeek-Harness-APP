@@ -38,7 +38,11 @@ pieces a browser cannot provide.
   through the internal `host-plugin/`.
 - Android notification channels and test notification; native DSH event connection for
   approval/question notifications while the app is alive.
-- In-app update check against GitHub Releases, APK download and Android installer hand-off.
+- In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
+  terminal/approval events published by `notify-plugin/`.
+- Multi-device failover: when the current profile fails to load, the next saved profile is tried.
+- In-app update check against GitHub Releases; APK download tries the direct asset and
+  `gh-proxy.com` / `ghproxy.net` mirrors before falling back to the release page.
 - Multiple connection routes: LAN, your own HTTPS address, or a tunnel you run yourself
   (Cloudflare Tunnel / frp / Tailscale). No official relay.
 - No account, no telemetry, no ads, no monetization.

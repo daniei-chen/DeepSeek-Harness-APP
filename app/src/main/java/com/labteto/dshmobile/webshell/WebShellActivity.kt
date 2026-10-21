@@ -832,7 +832,7 @@ class WebShellActivity : AppCompatActivity() {
                     stopService(Intent(this, NtfySubscriberService::class.java))
                     true
                 } else {
-                    val endpoint = NtfyConfig.save(this, raw) ?: return@showTextDialog false
+                    if (NtfyConfig.save(this, raw) == null) return@showTextDialog false
                     startNtfyService()
                     true
                 }
@@ -885,33 +885,48 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun downloadUpdate(update: com.labteto.dshmobile.update.AvailableUpdate) {
-        val url = update.apk?.url
-        if (url == null) {
+        val direct = update.apk?.url
+        if (direct == null) {
             openExternalUri(Uri.parse(update.url))
             return
         }
+        val candidates = listOf(
+            direct,
+            "https://gh-proxy.com/$direct",
+            "https://ghproxy.net/$direct",
+        ).distinct()
         Toast.makeText(this, R.string.shell_settings_downloading, Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             val file = withContext(Dispatchers.IO) {
-                runCatching {
-                    val request = okhttp3.Request.Builder().url(url).build()
-                    okhttp3.OkHttpClient().newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) error("HTTP ${response.code}")
-                        val body = response.body ?: error("empty response")
-                        val dir = File(cacheDir, "updates").apply { mkdirs() }
-                        val target = File(dir, "update.apk")
-                        body.byteStream().use { input ->
-                            target.outputStream().use { output -> input.copyTo(output) }
-                        }
-                        target
-                    }
-                }.getOrNull()
+                for (candidate in candidates) {
+                    val downloaded = runCatching { downloadApk(candidate) }.getOrNull()
+                    if (downloaded != null) return@withContext downloaded
+                }
+                null
             }
             if (file == null) {
                 Toast.makeText(this@WebShellActivity, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
                 return@launch
             }
             installUpdate(file)
+        }
+    }
+
+    private fun downloadApk(url: String): File {
+        val request = okhttp3.Request.Builder().url(url).build()
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("HTTP ${response.code}")
+            val body = response.body ?: error("empty response")
+            val dir = File(cacheDir, "updates").apply { mkdirs() }
+            val target = File(dir, "update.apk")
+            body.byteStream().use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            return target
         }
     }
 

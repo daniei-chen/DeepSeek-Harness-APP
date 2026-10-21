@@ -163,18 +163,27 @@ class UpdateChecker @Inject constructor(
     }
 
     private suspend fun fetchLatest(): GithubRelease? = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(LATEST_RELEASE_API)
-            .header("Accept", "application/vnd.github+json")
-            .get()
-            .build()
-        runCatching {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use null
-                val body = response.body?.string() ?: return@use null
-                json.decodeFromString(GithubRelease.serializer(), body)
-            }
-        }.getOrNull()
+        val urls = listOf(
+            LATEST_RELEASE_API,
+            "https://gh-proxy.com/$LATEST_RELEASE_API",
+            "https://ghproxy.net/$LATEST_RELEASE_API",
+        )
+        for (url in urls) {
+            val request = Request.Builder()
+                .url(url)
+                .header("Accept", "application/vnd.github+json")
+                .get()
+                .build()
+            val release = runCatching {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    val body = response.body?.string() ?: return@use null
+                    json.decodeFromString(GithubRelease.serializer(), body)
+                }
+            }.getOrNull()
+            if (release != null) return@withContext release
+        }
+        null
     }
 
     /** What a check found. */

@@ -121,6 +121,13 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
+      // This bundle is shared by the desktop Harness app and the Android WebView. The phone
+      // tweaks (compact stats, model label, file actions) must never run in the desktop window,
+      // where they would hide the native speed/identity indicators. Only the Android shell has
+      // the DshShellBridge (or a WebView user agent).
+      const androidShell = !!window.DshShellBridge || /;\s*wv\)/i.test(navigator.userAgent);
+      if (!androidShell) return;
+      document.documentElement.setAttribute("data-dsh-android-shell", "1");
       document.documentElement.setAttribute("data-dsh-mobile-tweaks", "1");
       window.__dshMobileTweaks = true;
 
