@@ -127,6 +127,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       // the DshShellBridge (or a WebView user agent).
       const androidShell = !!window.DshShellBridge ||
         /DSHAndroidShell/i.test(navigator.userAgent) ||
+        new URLSearchParams(location.search).get("dsh_android") === "1" ||
         /;\s*wv\)/i.test(navigator.userAgent);
       if (!androidShell) return;
       document.documentElement.setAttribute("data-dsh-android-shell", "1");

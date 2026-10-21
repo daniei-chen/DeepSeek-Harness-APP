@@ -759,6 +759,9 @@
     <string name="shell_settings_section_connection">连接</string>
     <string name="shell_settings_section_notifications">通知</string>
     <string name="shell_settings_section_background">后台运行</string>
+    <string name="shell_settings_about_app_name">🐳 DeepSeek Harness APP</string>
+    <string name="shell_settings_about_github">github.com/daniei-chen/DeepSeek-Harness-APP</string>
+    <string name="shell_settings_about_intro">把自托管 DeepSeek Harness 装进口袋。无云、无账号、无遥测。</string>
     <string name="shell_settings_section_about">关于</string>
     <string name="shell_settings_page_back">返回</string>
     <string name="shell_settings_connection_hint">设备、局域网扫描与连接测试</string>
@@ -816,6 +819,10 @@
     <string name="shell_settings_install">下载并安装</string>
     <string name="shell_settings_release_page">打开发布页</string>
     <string name="shell_settings_downloading">正在下载更新…</string>
+    <string name="shell_update_failed_title">检查更新失败</string>
+    <string name="shell_update_failed_message">无法连接更新服务器。可以打开发布页手动下载最新 APK。</string>
+    <string name="shell_update_open_release">打开发布页</string>
+    <string name="shell_update_later">稍后</string>
     <string name="shell_settings_update_failed">检查更新失败</string>
     <string name="shell_settings_up_to_date">已是最新版本</string>
     <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>

@@ -317,7 +317,8 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onConnection: () -> Unit,
         onNotifications: () -> Unit,
         onBackground: () -> Unit,
-        onAbout: () -> Unit,
+        onCheckUpdate: () -> Unit,
+        onSource: () -> Unit,
         onRefresh: () -> Unit,
         onExit: () -> Unit,
     ) {
@@ -372,15 +373,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onBackground()
             },
         )
+        card.addView(divider(colors))
+        card.addView(aboutCard(colors, versionName, onSource))
         card.addView(
             settingsRow(
                 colors = colors,
-                iconRes = R.drawable.ic_shell_check,
-                title = activity.getString(R.string.shell_settings_section_about),
-                subtitle = activity.getString(R.string.shell_settings_version, versionName),
+                iconRes = R.drawable.ic_shell_refresh,
+                title = activity.getString(R.string.shell_settings_check_update),
+                subtitle = activity.getString(R.string.shell_settings_update_hint),
             ) {
                 dialog.dismiss()
-                onAbout()
+                onCheckUpdate()
             },
         )
         card.addView(divider(colors))
@@ -533,6 +536,47 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_version, versionName), activity.getString(R.string.shell_settings_source_hint)) { dialog.dismiss(); onSource() })
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    private fun aboutCard(colors: Colors, versionName: String, onSource: () -> Unit): LinearLayout {
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 14)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_about_app_name)
+                textSize = 15f
+                setTextColor(colors.primary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_about_intro)
+                textSize = 12f
+                setPadding(0, dp(4), 0, dp(2))
+                setTextColor(colors.secondary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_version, versionName)
+                textSize = 11f
+                setTextColor(colors.secondary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_about_github)
+                textSize = 11f
+                setPadding(0, dp(4), 0, 0)
+                setTextColor(ACCENT)
+                isClickable = true
+                setOnClickListener { onSource() }
+            },
+        )
+        return card
     }
 
     private fun pageHeader(colors: Colors, title: String, onClose: () -> Unit): LinearLayout {

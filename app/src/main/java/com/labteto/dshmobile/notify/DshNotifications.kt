@@ -36,6 +36,13 @@ class DshNotifications @Inject constructor(
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_CONNECTION, context.getString(R.string.notif_channel_connection), NotificationManager.IMPORTANCE_LOW),
         )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_CONNECTION_LIVE, context.getString(R.string.notif_channel_connection), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+            },
+        )
     }
 
     fun canPost(): Boolean =
@@ -87,6 +94,7 @@ class DshNotifications @Inject constructor(
         const val CHANNEL_COMPLETIONS = "completions"
         const val CHANNEL_ACTION = "needs_action"
         const val CHANNEL_CONNECTION = "connection"
+        const val CHANNEL_CONNECTION_LIVE = "connection_live"
         const val EXTRA_SESSION_ID = "dsh_session_id"
     }
 }

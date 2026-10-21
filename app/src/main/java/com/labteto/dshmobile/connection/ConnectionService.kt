@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -21,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 /**
  * Foreground service that keeps the WebSocket connection alive while the app
@@ -87,12 +89,43 @@ class ConnectionService : Service() {
             ConnectionPhase.RECONNECTING -> getString(R.string.notif_reconnecting_text, deviceName)
             else -> getString(R.string.notif_connecting_text, deviceName)
         }
-        return NotificationCompat.Builder(this, DshNotifications.CHANNEL_CONNECTION)
+        val title = getString(R.string.notif_connected_title)
+        val focusParams = JSONObject()
+            .put("param_v2", JSONObject()
+                .put("protocol", 1)
+                .put("business", "deepseek.harness")
+                .put("enableFloat", true)
+                .put("updatable", true)
+                .put("filterWhenNoPermission", false)
+                .put("ticker", text)
+                .put("aodTitle", title)
+                .put("param_island", JSONObject()
+                    .put("islandProperty", 1)
+                    .put("bigIslandArea", JSONObject().put(
+                        "imageTextInfoLeft",
+                        JSONObject()
+                            .put("type", 1)
+                            .put("miui.focus.paramtextInfo", JSONObject()
+                                .put("frontTitle", title)
+                                .put("title", text)
+                                .put("content", "")
+                                .put("useHighLight", false)),
+                    ))
+                    .put("smallIslandArea", JSONObject()))
+                .put("baseInfo", JSONObject()
+                    .put("title", title)
+                    .put("content", text)
+                    .put("colorTitle", "#006EFF")
+                    .put("type", 2)))
+            .toString()
+        val extras = Bundle().apply { putString("miui.focus.param", focusParams) }
+        return NotificationCompat.Builder(this, DshNotifications.CHANNEL_CONNECTION_LIVE)
             .setSmallIcon(R.drawable.ic_notification_whale)
-            .setContentTitle(getString(R.string.notif_connected_title))
+            .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(openIntent)
             .addAction(0, getString(R.string.notif_disconnect), disconnectIntent)
+            .addExtras(extras)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

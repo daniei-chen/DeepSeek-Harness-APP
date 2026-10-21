@@ -40,6 +40,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
@@ -200,6 +201,9 @@ class WebShellActivity : AppCompatActivity() {
         installBackHandling()
         installInsetHandling()
         startLoading()
+        if (shellDevices.load().isNotEmpty()) {
+            mainHandler.postDelayed({ autoCheckForUpdate() }, 1800)
+        }
 
         // A page that never commits (tunnel down, captive portal that never answers) must not keep
         // the splash on screen forever. The error screen, when one is deserved, is raised by the
@@ -356,7 +360,7 @@ class WebShellActivity : AppCompatActivity() {
             prefetchDeferred = lifecycleScope.async(Dispatchers.IO) {
                 prefetchDocument(prefetchClient, resolved.url, seededForPrefetch)
             }
-            webView.loadUrl(resolved.url)
+            webView.loadUrl(markAndroidUrl(resolved.url))
         }
     }
 
@@ -687,7 +691,7 @@ class WebShellActivity : AppCompatActivity() {
         pageHadError = false
         hideError()
         interceptPrefetch = false
-        webView.loadUrl(targetUrl)
+        webView.loadUrl(markAndroidUrl(targetUrl))
     }
 
     private fun clearCacheAndReload() {
@@ -712,7 +716,7 @@ class WebShellActivity : AppCompatActivity() {
         applyPageTheme(pageDark)
         hideError()
         interceptPrefetch = false
-        webView.loadUrl(targetUrl)
+        webView.loadUrl(markAndroidUrl(targetUrl))
     }
 
     private fun handleBack() {
@@ -782,7 +786,8 @@ class WebShellActivity : AppCompatActivity() {
             onConnection = { showConnectionPage() },
             onNotifications = { showNotificationsPage() },
             onBackground = { showBackgroundPage() },
-            onAbout = { showAboutPage() },
+            onCheckUpdate = { checkForUpdate() },
+            onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
         )
@@ -1007,9 +1012,42 @@ class WebShellActivity : AppCompatActivity() {
                 is UpdateChecker.CheckOutcome.UpToDate ->
                     Toast.makeText(this@WebShellActivity, R.string.shell_settings_up_to_date, Toast.LENGTH_SHORT).show()
                 else ->
-                    Toast.makeText(this@WebShellActivity, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
+                    showUpdateFailureDialog()
             }
         }
+    }
+
+    private fun autoCheckForUpdate() {
+        val prefs = getSharedPreferences("update_check", MODE_PRIVATE)
+        val last = prefs.getLong("last_check", 0L)
+        if (System.currentTimeMillis() - last < 12L * 60L * 60L * 1000L) return
+        val current = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: return
+        prefs.edit().putLong("last_check", System.currentTimeMillis()).apply()
+        lifecycleScope.launch {
+            val outcome = withContext(Dispatchers.IO) { updateChecker.checkNow(current) }
+            if (outcome is UpdateChecker.CheckOutcome.Available) {
+                val update = outcome.update
+                chrome.showUpdateDialog(
+                    dark = pageDark,
+                    version = update.version,
+                    onInstall = { downloadUpdate(update) },
+                    onOpenRelease = { openExternalUri(Uri.parse(update.url)) },
+                )
+            }
+        }
+    }
+
+    private fun showUpdateFailureDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_update_failed_title)
+            .setMessage(R.string.shell_update_failed_message)
+            .setPositiveButton(R.string.shell_update_open_release) { _, _ ->
+                openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest"))
+            }
+            .setNegativeButton(R.string.shell_update_later, null)
+            .show()
     }
 
     private fun downloadUpdate(update: com.labteto.dshmobile.update.AvailableUpdate) {
@@ -1033,7 +1071,7 @@ class WebShellActivity : AppCompatActivity() {
                 null
             }
             if (file == null) {
-                Toast.makeText(this@WebShellActivity, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
+                showUpdateFailureDialog()
                 return@launch
             }
             installUpdate(file)
@@ -1274,6 +1312,10 @@ class WebShellActivity : AppCompatActivity() {
      * keep itself open and show its error line. The new endpoint is remembered both as the shell
      * address and as a host record, which is what lets a gateway cookie survive a switch back.
      */
+    private fun markAndroidUrl(raw: String): String = runCatching {
+        Uri.parse(raw).buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
+    }.getOrDefault(raw)
+
     private fun applyServerUrl(raw: String): Boolean {
         val target = parseServerUrl(raw) ?: return false
         lifecycleScope.launch {
@@ -1303,7 +1345,7 @@ class WebShellActivity : AppCompatActivity() {
             interceptPrefetch = false
             clearHistoryAfterLoad = true
             hideError()
-            webView.loadUrl(target.url)
+            webView.loadUrl(markAndroidUrl(target.url))
         }
         return true
     }
