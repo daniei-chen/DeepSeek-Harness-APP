@@ -1,4 +1,4 @@
-# Release 0.9.26
+# Release 0.9.27
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.26-personal.86.apk`
-- SHA-256: `12A196F317A2D0CAFBA37AD2B1015D0548416A6778212B526CE631AAE1CF373E`
+- APK: `dist/DeepSeek-Harness-0.9.27-personal.87.apk`
+- SHA-256: `FF69865AA0DCE3014C12683DD7C4D221AABBAEF6FDDF45F5D189B5B8E603F524`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -41,6 +41,8 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - optional self-hosted ntfy subscriber (`Settings → Notifications`)
 - optional UnifiedPush registration with a user-installed distributor and copyable endpoint
 - live connection notification with device name, connecting state and disconnect action
+- native **Inbox**: current-host sessions sorted by waiting approval/question, running, then recent; tap opens the session in the WebView
+- Inbox entry on the settings home shows the live count of waiting requests without opening a second connection
 - compact settings home with second-level Connection/Notifications/Background pages
 - first-run welcome screen with the official app icon
 - official app icon in the About card
@@ -58,6 +60,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
   the app uses connection profiles, direct URLs and URL-level failover.
 - Inline notification actions require the app process to still hold the live connection. If
   Android killed the process, the notification opens the app and the approval is answered there.
+- The native inbox currently covers the active host. Multi-host aggregation is the next slice.
 - Real-device QA is required for notification delivery, OEM background policies, LAN discovery
   and the Android installer flow. The release has passed compile/lint/unit-test and public APK
   checks, not a physical-device lab run.

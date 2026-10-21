@@ -63,9 +63,12 @@ import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
+import com.labteto.dshmobile.connection.ConnectionPhase
 import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.connection.AppSettings
+import com.labteto.dshmobile.data.SessionRow
+import com.labteto.dshmobile.data.SessionStore
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.notify.NtfyConfig
 import com.labteto.dshmobile.notify.NtfySubscriberService
@@ -119,6 +122,7 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var discoveryEngine: DiscoveryEngine
+    @Inject lateinit var sessionStore: SessionStore
     @Inject lateinit var updateChecker: UpdateChecker
 
     private val cookieManager: CookieManager get() = CookieManager.getInstance()
@@ -923,10 +927,12 @@ class WebShellActivity : AppCompatActivity() {
         val versionName = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull() ?: "0.0.0"
+        val inboxRows = buildInboxRows()
         chrome.showSettingsHome(
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
+            inboxCount = inboxRows.count { it.action },
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
             backgroundEnabled = runCatching {
@@ -934,6 +940,7 @@ class WebShellActivity : AppCompatActivity() {
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
             onConnection = { showConnectionPage() },
+            onInbox = { showInbox() },
             onMobileSetup = { showMobileSetupDialog() },
             onDiagnostics = { showDiagnosticsDialog() },
             onNotifications = { showNotificationsPage() },
@@ -942,6 +949,72 @@ class WebShellActivity : AppCompatActivity() {
             onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
+        )
+    }
+
+    /**
+     * Native inbox for the current host: sessions that need a decision first, then running work,
+     * then recent idle sessions. It reads the same live [SessionStore] the notification observer
+     * uses, so opening it never starts a second connection or resumes an agent.
+     */
+    private fun buildInboxRows(): List<ShellInboxRow> {
+        return sessionStore.sessions.value
+            .filterNot { it.blank }
+            .sortedWith(
+                compareByDescending<SessionRow> { it.pendingInteraction != null }
+                    .thenByDescending { it.running }
+                    .thenByDescending { it.updatedAt },
+            )
+            .take(30)
+            .map { session ->
+                val action = session.pendingInteraction != null
+                val running = session.running
+                val status = when (session.pendingInteraction) {
+                    "approval" -> getString(R.string.shell_inbox_status_approval)
+                    "question" -> getString(R.string.shell_inbox_status_question)
+                    "plan-review" -> getString(R.string.shell_inbox_status_plan)
+                    else -> if (running) {
+                        getString(R.string.shell_inbox_status_running)
+                    } else {
+                        getString(R.string.shell_inbox_status_idle)
+                    }
+                }
+                val cwd = session.cwd
+                    ?.substringAfterLast('/')
+                    ?.substringAfterLast('\\')
+                    ?.takeIf { it.isNotBlank() }
+                ShellInboxRow(
+                    sessionId = session.sessionId,
+                    title = session.title?.takeIf { it.isNotBlank() }
+                        ?: getString(R.string.shell_inbox_untitled, session.sessionId.take(8)),
+                    subtitle = listOfNotNull(status, cwd).joinToString(" · "),
+                    action = action,
+                    running = running,
+                )
+            }
+    }
+
+    private fun showInbox() {
+        val connection = connectionManager.state.value
+        val phase = when (connection.phase) {
+            ConnectionPhase.CONNECTED -> getString(R.string.shell_inbox_state_connected)
+            ConnectionPhase.CONNECTING, ConnectionPhase.RECONNECTING ->
+                getString(R.string.shell_inbox_state_connecting)
+            ConnectionPhase.DISCONNECTED -> getString(R.string.shell_inbox_state_disconnected)
+        }
+        val label = connection.host?.let { host ->
+            getString(R.string.shell_inbox_connection, host.host, phase)
+        } ?: getString(R.string.shell_inbox_disconnected)
+        chrome.showInboxPage(
+            dark = pageDark,
+            rows = buildInboxRows(),
+            connectionLabel = label,
+            onOpen = { row ->
+                pendingSessionId = row.sessionId
+                openPendingSession()
+            },
+            onRefresh = { showInbox() },
+            onBack = { showSettings() },
         )
     }
 

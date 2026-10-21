@@ -22,6 +22,15 @@ import androidx.appcompat.app.AppCompatActivity
 import com.labteto.dshmobile.R
 import kotlin.math.roundToInt
 
+/** One row in the native inbox. */
+internal data class ShellInboxRow(
+    val sessionId: String,
+    val title: String,
+    val subtitle: String,
+    val action: Boolean,
+    val running: Boolean,
+)
+
 /**
  * The shell's own chrome: the device manager and its small text-input dialogs.
  *
@@ -311,10 +320,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         currentDeviceName: String?,
         versionName: String,
+        inboxCount: Int,
         notificationsEnabled: Boolean,
         backgroundEnabled: Boolean,
         ntfyEnabled: Boolean,
         onConnection: () -> Unit,
+        onInbox: () -> Unit,
         onMobileSetup: () -> Unit,
         onDiagnostics: () -> Unit,
         onNotifications: () -> Unit,
@@ -356,6 +367,21 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onConnection()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_inbox_title),
+                subtitle = if (inboxCount > 0) {
+                    activity.getString(R.string.shell_inbox_count, inboxCount)
+                } else {
+                    activity.getString(R.string.shell_inbox_hint)
+                },
+            ) {
+                dialog.dismiss()
+                onInbox()
             },
         )
         card.addView(
@@ -466,6 +492,81 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
                 dialog.dismiss()
                 onTestConnection()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showInboxPage(
+        dark: Boolean,
+        rows: List<ShellInboxRow>,
+        connectionLabel: String,
+        onOpen: (ShellInboxRow) -> Unit,
+        onRefresh: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_inbox_title)) { dialog.dismiss(); onBack() })
+        card.addView(
+            TextView(activity).apply {
+                text = connectionLabel
+                textSize = 12f
+                setTextColor(colors.secondary)
+                setPadding(dp(14), 0, dp(14), dp(8))
+            },
+        )
+
+        if (rows.isEmpty()) {
+            card.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_inbox_empty)
+                    textSize = 13f
+                    setTextColor(colors.secondary)
+                    setPadding(dp(14), dp(14), dp(14), dp(18))
+                },
+            )
+        } else {
+            val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+            rows.forEach { row ->
+                list.addView(
+                    settingsRow(
+                        colors = colors,
+                        iconRes = when {
+                            row.action -> R.drawable.ic_shell_notifications
+                            row.running -> R.drawable.ic_shell_refresh
+                            else -> R.drawable.ic_shell_check
+                        },
+                        title = row.title,
+                        subtitle = row.subtitle,
+                    ) {
+                        dialog.dismiss()
+                        onOpen(row)
+                    },
+                )
+            }
+            val height = dp((rows.size * 64 + 24).coerceIn(120, 360))
+            card.addView(
+                ScrollView(activity).apply {
+                    isFillViewport = false
+                    addView(list, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height)
+                },
+            )
+        }
+
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_inbox_refresh)) {
+                dialog.dismiss()
+                onRefresh()
             },
         )
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))

@@ -39,6 +39,8 @@ pieces a browser cannot provide.
 - Android notification channels and test notification; native DSH event connection for
   approval/question notifications while the app is alive, including inline **Approve**/**Reject**
   actions on approval notifications.
+- Native inbox for the current host: waiting approvals/questions, running and recent sessions,
+  with tap-through to the WebView session.
 - In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
   terminal/approval events published by `notify-plugin/`.
 - Optional UnifiedPush registration with an installed distributor; the endpoint is shown in
@@ -52,7 +54,8 @@ pieces a browser cannot provide.
 
 ## Roadmap
 
-- Unified inbox across hosts and sessions: waiting approvals, questions, running and failed runs.
+- Native inbox for the current host: waiting approvals/questions, running and recent sessions.
+- Multi-host unified inbox across every paired harness.
 - **Self-hosted ntfy / UnifiedPush push** for notifications after the app is killed. This is a
   required, documented feature of the project; it is optional for each user to enable. There is
   **no official cloud push service**.
