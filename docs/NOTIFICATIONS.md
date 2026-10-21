@@ -36,6 +36,9 @@ swiped away”, the user must run their own push path:
 - **UnifiedPush**: the host publishes to the user's distributor endpoint; the app registers as a
   UnifiedPush distributor client.
 
+The repository includes `notify-plugin/` for the host-side ntfy publisher. Configure it with
+`DSH_NTFY_URL`, `DSH_NTFY_TOPIC` and optionally `DSH_NTFY_TOKEN`; see that package's README.
+
 The app must never ship a public ntfy topic, relay URL or push credential. Setup is documented as a
 manual, self-hosted step.
 

@@ -20,6 +20,8 @@ pieces a browser cannot provide.
   - recursive file/folder delete;
   - path confinement through `DSH_FILE_OPS_ROOTS`;
   - the right-side workspace file panel gets a `⋯` menu with download/delete.
+- **`notify-plugin/`** — self-hosted ntfy publisher for task/approval events. The app itself has
+  no cloud push; this plugin lets the host publish to the operator's own ntfy endpoint.
 - **`mobile-web-plugin/`** — the phone UI layer: responsive drawer, compact stats, file-panel
   actions, safe-area/keyboard handling.
 - **`docs/`** — self-hosting, connections, notifications, file operations and architecture notes.
@@ -34,6 +36,7 @@ pieces a browser cannot provide.
   through the internal `host-plugin/`.
 - Android notification channels and test notification; native DSH event connection for
   approval/question notifications while the app is alive.
+- In-app update check against GitHub Releases, APK download and Android installer hand-off.
 - Multiple connection routes: LAN, your own HTTPS address, or a tunnel you run yourself
   (Cloudflare Tunnel / frp / Tailscale). No official relay.
 - No account, no telemetry, no ads, no monetization.
