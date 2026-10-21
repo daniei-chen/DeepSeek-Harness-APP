@@ -250,6 +250,54 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       });
       installFileActions();
       installImageUploadDefault();
+      installNativeVoiceBridge();
+    }
+
+    /**
+     * Use the Android speech recognizer for the composer microphone. The experimental DSH voice
+     * plugin records PCM and sends it to a host transcription backend; on a phone that path can
+     * be unavailable. The native recognizer is a local/system fallback and inserts the transcript
+     * into the same Lexical composer.
+     */
+    function installNativeVoiceBridge() {
+      if (window.__dshNativeVoiceBridge) return;
+      window.__dshNativeVoiceBridge = true;
+      window.__dshInsertSpeech = (text) => {
+        const editor = document.querySelector('[data-composer-input="true"]');
+        if (editor === null || text === undefined || text === null) return false;
+        editor.focus();
+        try {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          document.execCommand("insertText", false, String(text));
+          editor.dispatchEvent(new InputEvent("input", {
+            bubbles: true,
+            inputType: "insertText",
+            data: String(text),
+          }));
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+      document.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target === null) return;
+        const trigger = target.closest(
+          "[aria-label*='开始录音'], [aria-label*='语音'], [aria-label*='voice'], [aria-label*='microphone']",
+        );
+        if (trigger === null) return;
+        try {
+          if (typeof window.DshShellBridge.startSpeechInput !== "function") return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          window.DshShellBridge.startSpeechInput();
+        } catch (e) {}
+      }, true);
     }
 
     /**

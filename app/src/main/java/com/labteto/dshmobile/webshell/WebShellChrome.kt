@@ -331,6 +331,19 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             setPadding(dp(8), dp(10), dp(8), dp(8))
         }
         card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_title)) { dialog.dismiss() })
+        card.addView(aboutCard(colors, versionName, onSource))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_refresh,
+                title = activity.getString(R.string.shell_settings_check_update),
+                subtitle = activity.getString(R.string.shell_settings_update_hint),
+            ) {
+                dialog.dismiss()
+                onCheckUpdate()
+            },
+        )
+        card.addView(divider(colors))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -371,19 +384,6 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onBackground()
-            },
-        )
-        card.addView(divider(colors))
-        card.addView(aboutCard(colors, versionName, onSource))
-        card.addView(
-            settingsRow(
-                colors = colors,
-                iconRes = R.drawable.ic_shell_refresh,
-                title = activity.getString(R.string.shell_settings_check_update),
-                subtitle = activity.getString(R.string.shell_settings_update_hint),
-            ) {
-                dialog.dismiss()
-                onCheckUpdate()
             },
         )
         card.addView(divider(colors))

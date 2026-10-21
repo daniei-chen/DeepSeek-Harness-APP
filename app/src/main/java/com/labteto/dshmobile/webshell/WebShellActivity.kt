@@ -15,6 +15,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -35,6 +38,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -122,6 +126,8 @@ class WebShellActivity : AppCompatActivity() {
     private var failoverInProgress = false
     private var pageHadError = false
     private var pendingSessionId: String? = null
+    private var pendingNativeSpeech = false
+    private var speechRecognizer: SpeechRecognizer? = null
     private lateinit var welcomeView: LinearLayout
     private lateinit var welcomeTitle: TextView
     private lateinit var welcomeSubtitle: TextView
@@ -161,6 +167,13 @@ class WebShellActivity : AppCompatActivity() {
         val request = pendingPermissionRequest
         pendingPermissionRequest = null
         if (request == null) {
+            if (pendingNativeSpeech) {
+                pendingNativeSpeech = false
+                if (granted) startNativeSpeech() else {
+                    Toast.makeText(this, R.string.microphone_permission_denied, Toast.LENGTH_LONG).show()
+                }
+                return@registerForActivityResult
+            }
             if (!granted) {
                 Toast.makeText(
                     this@WebShellActivity,
@@ -682,6 +695,11 @@ class WebShellActivity : AppCompatActivity() {
         fun setDark(dark: Boolean) {
             runOnUiThread { applyPageTheme(dark) }
         }
+
+        @android.webkit.JavascriptInterface
+        fun startSpeechInput() {
+            runOnUiThread { startNativeSpeech() }
+        }
     }
 
     private inner class BackBridge {
@@ -1126,15 +1144,48 @@ class WebShellActivity : AppCompatActivity() {
             "https://gh-proxy.com/$direct",
             "https://ghproxy.net/$direct",
         ).distinct()
-        Toast.makeText(this, R.string.shell_settings_downloading, Toast.LENGTH_SHORT).show()
+        val progressCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(10), dp(22), dp(4))
+        }
+        val progressLabel = TextView(this).apply {
+            text = getString(R.string.shell_update_downloading)
+            textSize = 13f
+        }
+        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 0
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(8) }
+        }
+        progressCard.addView(progressLabel)
+        progressCard.addView(progressBar)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.shell_update_downloading_title)
+            .setView(progressCard)
+            .setCancelable(false)
+            .create()
+        dialog.show()
         lifecycleScope.launch {
             val file = withContext(Dispatchers.IO) {
                 for (candidate in candidates) {
-                    val downloaded = runCatching { downloadApk(candidate) }.getOrNull()
+                    val downloaded = runCatching {
+                        downloadApk(candidate) { percent ->
+                            mainHandler.post {
+                                if (dialog.isShowing) {
+                                    progressBar.progress = percent
+                                    progressLabel.text = getString(R.string.shell_update_downloading_percent, percent)
+                                }
+                            }
+                        }
+                    }.getOrNull()
                     if (downloaded != null) return@withContext downloaded
                 }
                 null
             }
+            if (dialog.isShowing) dialog.dismiss()
             if (file == null) {
                 showUpdateFailureDialog()
                 return@launch
@@ -1143,7 +1194,7 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
-    private fun downloadApk(url: String): File {
+    private fun downloadApk(url: String, onProgress: (Int) -> Unit): File {
         val request = okhttp3.Request.Builder().url(url).build()
         val client = okhttp3.OkHttpClient.Builder()
             .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
@@ -1152,10 +1203,28 @@ class WebShellActivity : AppCompatActivity() {
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
             val body = response.body ?: error("empty response")
+            val total = body.contentLength()
             val dir = File(cacheDir, "updates").apply { mkdirs() }
             val target = File(dir, "update.apk")
             body.byteStream().use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var copied = 0L
+                    var lastPercent = -1
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        output.write(buffer, 0, read)
+                        copied += read
+                        if (total > 0) {
+                            val percent = ((copied * 100) / total).toInt().coerceIn(0, 100)
+                            if (percent != lastPercent) {
+                                lastPercent = percent
+                                onProgress(percent)
+                            }
+                        }
+                    }
+                }
             }
             return target
         }
@@ -1436,6 +1505,54 @@ class WebShellActivity : AppCompatActivity() {
         audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
     }
 
+    private fun startNativeSpeech() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingNativeSpeech = true
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, R.string.shell_voice_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        speechRecognizer?.destroy()
+        val recognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechRecognizer = recognizer
+        recognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_voice_failed, Toast.LENGTH_SHORT).show()
+                recognizer.destroy()
+                if (speechRecognizer === recognizer) speechRecognizer = null
+            }
+            override fun onResults(results: Bundle?) {
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                if (!text.isNullOrBlank() && ::webView.isInitialized) {
+                    val quoted = org.json.JSONObject.quote(text)
+                    webView.evaluateJavascript(
+                        "window.__dshInsertSpeech && window.__dshInsertSpeech($quoted)",
+                        null,
+                    )
+                }
+                recognizer.destroy()
+                if (speechRecognizer === recognizer) speechRecognizer = null
+            }
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        recognizer.startListening(intent)
+    }
+
     private fun openExternalUri(uri: Uri) {
         val scheme = uri.scheme?.lowercase()
         if (scheme.isNullOrBlank() || scheme == "javascript" || scheme == "data" || scheme == "file") return
@@ -1515,6 +1632,8 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        speechRecognizer?.destroy()
+        speechRecognizer = null
         mainHandler.removeCallbacksAndMessages(null)
         if (isFinishing && ::webView.isInitialized) {
             root.removeView(webView)

@@ -150,28 +150,32 @@ class NotificationObserver @Inject constructor(
                 if (!settings.notifyTurnComplete) return
                 Spec(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
-                    title = context.getString(R.string.notif_turn_complete, sessionTitle(event.sessionId).orEmpty()),
+                    title = context.getString(R.string.notif_turn_complete),
+                    text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
                 )
             }
             is CompletionEvent.GoalComplete -> {
                 if (!settings.notifyGoal) return
                 Spec(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
-                    title = context.getString(R.string.notif_goal_complete, event.objective.orEmpty()),
+                    title = context.getString(R.string.notif_goal_complete),
+                    text = event.objective.orEmpty().ifBlank { context.getString(R.string.notif_session_fallback) },
                 )
             }
             is CompletionEvent.GoalBlocked -> {
                 if (!settings.notifyGoal) return
                 Spec(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
-                    title = context.getString(R.string.notif_goal_blocked, event.reason.orEmpty()),
+                    title = context.getString(R.string.notif_goal_blocked),
+                    text = event.reason.orEmpty().ifBlank { context.getString(R.string.notif_session_fallback) },
                 )
             }
             is CompletionEvent.ReviewRequested -> {
                 if (!settings.notifyNeedsAction) return
                 Spec(
                     channel = DshNotifications.CHANNEL_ACTION,
-                    title = context.getString(R.string.notif_review_requested, event.toolName),
+                    title = context.getString(R.string.notif_review_requested),
+                    text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
                     actionLabel = context.getString(R.string.notif_open),
                 )
             }
@@ -179,28 +183,30 @@ class NotificationObserver @Inject constructor(
                 if (!settings.notifyNeedsAction) return
                 Spec(
                     channel = DshNotifications.CHANNEL_ACTION,
-                    title = context.getString(R.string.notif_question, event.firstQuestion.orEmpty()),
+                    title = context.getString(R.string.notif_question),
+                    text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
                 )
             }
             is CompletionEvent.SessionIdle -> {
                 if (!settings.notifyTurnComplete) return
                 Spec(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
-                    title = context.getString(R.string.notif_session_idle, sessionTitle(event.sessionId).orEmpty()),
+                    title = context.getString(R.string.notif_session_idle),
+                    text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
                 )
             }
         }
 
         if (isDuplicate(event.dedupKey)) return
 
-        val text = context.getString(R.string.notif_open)
         val id = notificationId(event.sessionId, spec.channel)
-        notifications.postSession(spec.channel, id, spec.title, text, event.sessionId, spec.actionLabel)
+        notifications.postSession(spec.channel, id, spec.title, spec.text, event.sessionId, spec.actionLabel)
     }
 
     private data class Spec(
         val channel: String,
         val title: String,
+        val text: String,
         val actionLabel: String? = null,
     )
 

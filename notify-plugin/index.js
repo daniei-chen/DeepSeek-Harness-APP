@@ -70,30 +70,32 @@ export function apply(ctx) {
         if (!terminalTypes.some((candidate) => type === candidate || type.startsWith(candidate.split("/")[0] + "/"))) {
             return;
         }
-        const title = session?.title || `Session ${session?.id || "unknown"}`;
-        const body = `${type}\n${title}`;
-        const priority = type.startsWith("ask/") || type.startsWith("question/") ? "high" : "default";
+        const title = session?.title || (session?.id ? `Session ${session.id}` : "Session");
+        const needsAction = type.startsWith("ask/") || type.startsWith("question/") || type.includes("review");
+        const notificationTitle = needsAction ? "任务需审批" : "任务已完成";
+        const body = title;
+        const priority = needsAction ? "high" : "default";
         const click = session?.id ? `dshmobile://host/current/session/${session.id}` : "";
         if (base && topic) {
-            post({ title: "DeepSeek Harness", body, priority, tags: ["dsh"], click })
+            post({ title: notificationTitle, body, priority, tags: ["dsh"], click })
                 .catch((error) => ctx.logger?.warn?.(error));
         }
-        postUnified(body).catch((error) => ctx.logger?.warn?.(error));
+        postUnified(`${notificationTitle}\n${body}`).catch((error) => ctx.logger?.warn?.(error));
     };
 
     ctx.on("session/event", (session, event) => publish(event, session));
     ctx.on("agent/error", ({ agent, error }) => {
         const session = agent?.session;
-        const title = session?.title || "DeepSeek Harness";
+        const title = session?.title || "Session";
         if (base && topic) {
             post({
-                title: "DeepSeek Harness error",
-                body: `${title}\n${error?.message || String(error)}`,
+                title: "任务出错",
+                body: title,
                 priority: "high",
                 tags: ["dsh", "error"],
             }).catch((cause) => ctx.logger?.warn?.(cause));
         }
-        postUnified(`${title}\n${error?.message || String(error)}`).catch((cause) => ctx.logger?.warn?.(cause));
+        postUnified(`任务出错\n${title}\n${error?.message || String(error)}`).catch((cause) => ctx.logger?.warn?.(cause));
     });
     ctx.logger?.info?.("dsh-mobile-notify: publishing to " + base + "/" + topic);
 }
