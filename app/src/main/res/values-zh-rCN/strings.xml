@@ -759,6 +759,11 @@
     <string name="shell_settings_section_about">关于</string>
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
+    <string name="shell_settings_scan_lan">扫描局域网</string>
+    <string name="shell_settings_scan_lan_hint">查找同一 Wi-Fi 下的 DSH 主机</string>
+    <string name="shell_settings_scanning">正在扫描局域网…</string>
+    <string name="shell_settings_scan_empty">当前网络没有发现 DSH 主机</string>
+    <string name="shell_settings_scan_found">发现 %1$d 台主机，已加入设备列表</string>
     <string name="shell_settings_current_device">当前：%1$s</string>
     <string name="shell_settings_notification_settings">通知设置</string>
     <string name="shell_settings_notification_enabled">通知已开启</string>

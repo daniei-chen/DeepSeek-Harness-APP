@@ -761,6 +761,11 @@
     <string name="shell_settings_section_about">About</string>
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
+    <string name="shell_settings_scan_lan">Scan local network</string>
+    <string name="shell_settings_scan_lan_hint">Find a DSH host on the same Wi-Fi</string>
+    <string name="shell_settings_scanning">Scanning the local network…</string>
+    <string name="shell_settings_scan_empty">No DSH host found on this network</string>
+    <string name="shell_settings_scan_found">Found %1$d host(s); added to devices</string>
     <string name="shell_settings_current_device">Current: %1$s</string>
     <string name="shell_settings_notification_settings">Notification settings</string>
     <string name="shell_settings_notification_enabled">Notifications are enabled</string>

@@ -51,6 +51,7 @@ import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
+import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.notify.DshNotifications
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
@@ -97,6 +98,7 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var harnessSessions: HarnessSessionStore
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
+    @Inject lateinit var discoveryEngine: DiscoveryEngine
 
     private val cookieManager: CookieManager get() = CookieManager.getInstance()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -730,6 +732,7 @@ class WebShellActivity : AppCompatActivity() {
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
             onManageDevices = { showDeviceManager() },
+            onScanLan = { scanLan() },
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
             onBatterySettings = { openBatterySettings() },
@@ -738,6 +741,33 @@ class WebShellActivity : AppCompatActivity() {
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
         )
+    }
+
+    private fun scanLan() {
+        Toast.makeText(this, R.string.shell_settings_scanning, Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val ports = runCatching { hostsStore.settings.first().knownPorts }.getOrDefault(listOf(3080))
+            val found = withContext(Dispatchers.IO) {
+                runCatching { discoveryEngine.scan(ports) }.getOrDefault(emptyList())
+            }
+            if (isFinishing || isDestroyed) return@launch
+            if (found.isEmpty()) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_settings_scan_empty, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            found.forEach { host ->
+                shellDevices.add(
+                    url = host.baseUrl.trimEnd('/') + "/",
+                    name = "局域网 ${host.host}",
+                )
+            }
+            Toast.makeText(
+                this@WebShellActivity,
+                getString(R.string.shell_settings_scan_found, found.size),
+                Toast.LENGTH_SHORT,
+            ).show()
+            showDeviceManager()
+        }
     }
 
     private fun openNotificationSettings() {

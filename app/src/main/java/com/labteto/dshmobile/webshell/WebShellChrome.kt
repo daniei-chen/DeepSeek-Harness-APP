@@ -42,6 +42,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         versionName: String,
         notificationsEnabled: Boolean,
         onManageDevices: () -> Unit,
+        onScanLan: () -> Unit,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
         onBatterySettings: () -> Unit,
@@ -107,6 +108,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onManageDevices()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_settings,
+                title = activity.getString(R.string.shell_settings_scan_lan),
+                subtitle = activity.getString(R.string.shell_settings_scan_lan_hint),
+            ) {
+                dialog.dismiss()
+                onScanLan()
             },
         )
 

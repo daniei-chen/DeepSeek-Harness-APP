@@ -53,9 +53,15 @@ internal class ShellDevices(context: Context) {
         return listOf(device)
     }
 
-    fun add(url: String): ShellDevice {
+    fun add(url: String): ShellDevice = add(url, null)
+
+    fun add(url: String, name: String?): ShellDevice {
         val existing = load()
-        val device = ShellDevice(UUID.randomUUID().toString(), defaultName(existing.size), url)
+        val device = ShellDevice(
+            UUID.randomUUID().toString(),
+            name?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(existing.size),
+            url,
+        )
         save(existing + device)
         setCurrent(device.id)
         return device
