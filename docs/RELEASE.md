@@ -1,4 +1,4 @@
-# Release 0.9.20
+# Release 0.9.21
 
 ## What this release is
 
@@ -8,7 +8,7 @@ no monetization.
 ## Install
 
 - APK: https://deepseek.kaogong.art/dsh-kaogong-a7f3c9.apk
-- SHA-256: `0145B4F4EE7F4684E1AA16531E94CBBFD7D11C3D419622FA5B914FFB66B3CA3C`
+- SHA-256: `0C4CC0CFBDC6A00C2E1914377C410A5E0FBBAD25D164DD6A3C76920525997914`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -34,6 +34,8 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - optional UnifiedPush registration with a user-installed distributor and copyable endpoint
 - live connection notification with device name, connecting state and disconnect action
 - compact settings home with second-level Connection/Notifications/Background pages
+- first-run welcome screen with the official app icon
+- official app icon in the About card
 - silent startup update check, manual failure dialog and release-page fallback
 - optional host-side ntfy publisher (`notify-plugin/`)
 - in-app GitHub update check and APK download through direct/GitHub mirror fallbacks
