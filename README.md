@@ -68,6 +68,25 @@ Release builds accept the optional environment variables documented in `app/buil
 (`DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`). Never commit a
 keystore or signing password.
 
+## One-command host setup
+
+The new installer wires the host side in one step: `dsh-relay` for TLS / QR pairing / device
+revocation, the combined APP plugin, the optional ntfy publisher, and the vendored responsive base.
+
+```powershell
+# Windows, from the repository root
+powershell -ExecutionPolicy Bypass -File setup/install.ps1 `
+  -Profile desktop -FileRoot "D:\AI\DeepSeek"
+```
+
+```bash
+# Linux / macOS
+./setup/install.sh --profile desktop --file-root "$HOME/workspaces"
+```
+
+Then restart DSH and open `https://127.0.0.1:3443/relay/pair` on the computer. See
+[`setup/README.md`](setup/README.md) for status, doctor and rollback.
+
 ## Host plugin installation
 
 The file-ops bundle is part of this repository:
@@ -83,6 +102,7 @@ for the client bundle.
 
 ## Documentation
 
+- [One-command host setup](setup/README.md)
 - [Self-hosting](docs/SELF_HOSTING.md)
 - [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
 - [Release 0.9.16](docs/RELEASE.md)
