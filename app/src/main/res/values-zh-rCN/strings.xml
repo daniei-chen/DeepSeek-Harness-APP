@@ -777,6 +777,13 @@
     <string name="shell_settings_ntfy_title">自建 ntfy 推送</string>
     <string name="shell_settings_ntfy_description">输入你自己的 ntfy topic 地址，例如 https://ntfy.example.com/dsh-alerts。不经过本项目的任何云服务。</string>
     <string name="shell_settings_ntfy_invalid">请输入有效的 http(s) ntfy topic 地址</string>
+    <string name="shell_settings_unifiedpush_endpoint">UnifiedPush 端点</string>
+    <string name="shell_settings_unifiedpush_copied">端点已复制</string>
+    <string name="shell_settings_unifiedpush">UnifiedPush</string>
+    <string name="shell_settings_unifiedpush_hint">使用已安装的 UnifiedPush 分发器注册</string>
+    <string name="shell_settings_unifiedpush_missing">请先安装 UnifiedPush 分发器（ntfy 可作为分发器）</string>
+    <string name="shell_settings_unifiedpush_registered">已请求 UnifiedPush 注册</string>
+    <string name="shell_settings_unifiedpush_failed">UnifiedPush 注册失败</string>
     <string name="ntfy_service_channel">ntfy 推送服务</string>
     <string name="ntfy_service_title">自建 ntfy 推送</string>
     <string name="shell_settings_enabled">已开启</string>

@@ -40,6 +40,8 @@ pieces a browser cannot provide.
   approval/question notifications while the app is alive.
 - In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
   terminal/approval events published by `notify-plugin/`.
+- Optional UnifiedPush registration with an installed distributor; the endpoint is shown in
+  Settings → Notifications → UnifiedPush endpoint and can be copied for `DSH_UNIFIEDPUSH_ENDPOINT`.
 - Multi-device failover: when the current profile fails to load, the next saved profile is tried.
 - In-app update check against GitHub Releases; APK download tries the direct asset and
   `gh-proxy.com` / `ghproxy.net` mirrors before falling back to the release page.

@@ -11,6 +11,13 @@ export DSH_NTFY_TOPIC="dsh-alerts"
 export DSH_NTFY_TOKEN="optional-token"
 ```
 
+For UnifiedPush, install a distributor in the app, register under
+**Settings → Notifications → UnifiedPush**, copy the endpoint and set:
+
+```bash
+export DSH_UNIFIEDPUSH_ENDPOINT="https://distributor.example/endpoint/..."
+```
+
 Then install this bundle into the DSH profile and reload the host. DSH posts:
 
 - `turn/end`, `turn/error`, `turn/failed`

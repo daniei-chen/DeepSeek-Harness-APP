@@ -180,6 +180,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.unifiedpush.connector)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
     // QR scanning for relay pairing. ZXing rather than ML Kit: it needs no Google Play Services, so

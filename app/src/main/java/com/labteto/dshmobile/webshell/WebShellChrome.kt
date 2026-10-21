@@ -445,12 +445,15 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         actionNotifications: Boolean,
         goalNotifications: Boolean,
         ntfyEnabled: Boolean,
+        unifiedPushEndpoint: String?,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
         onToggleTurn: () -> Unit,
         onToggleAction: () -> Unit,
         onToggleGoal: () -> Unit,
         onConfigureNtfy: () -> Unit,
+        onRegisterUnifiedPush: () -> Unit,
+        onCopyUnifiedPushEndpoint: () -> Unit,
         onBack: () -> Unit,
     ) {
         val colors = Colors(dark)
@@ -478,6 +481,10 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_notify_action), enabledLabel(actionNotifications)) { dialog.dismiss(); onToggleAction() })
         card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_notify_goal), enabledLabel(goalNotifications)) { dialog.dismiss(); onToggleGoal() })
         card.addView(settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_ntfy), if (ntfyEnabled) enabledLabel(true) else activity.getString(R.string.shell_settings_ntfy_hint)) { dialog.dismiss(); onConfigureNtfy() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_unifiedpush), activity.getString(R.string.shell_settings_unifiedpush_hint)) { dialog.dismiss(); onRegisterUnifiedPush() })
+        if (!unifiedPushEndpoint.isNullOrBlank()) {
+            card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_unifiedpush_endpoint), unifiedPushEndpoint) { dialog.dismiss(); onCopyUnifiedPushEndpoint() })
+        }
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         show(dialog, root, gravity = Gravity.CENTER)
     }

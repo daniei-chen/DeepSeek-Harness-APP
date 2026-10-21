@@ -31,9 +31,10 @@ export function apply(ctx) {
     const base = (process.env.DSH_NTFY_URL || "").replace(/\/+$/, "");
     const topic = process.env.DSH_NTFY_TOPIC || "";
     const token = process.env.DSH_NTFY_TOKEN || "";
+    const unifiedEndpoint = process.env.DSH_UNIFIEDPUSH_ENDPOINT || "";
 
-    if (!base || !topic) {
-        ctx.logger?.info?.("dsh-mobile-notify: DSH_NTFY_URL/DSH_NTFY_TOPIC not set; publisher idle");
+    if ((!base || !topic) && !unifiedEndpoint) {
+        ctx.logger?.info?.("dsh-mobile-notify: DSH_NTFY_URL/DSH_NTFY_TOPIC and DSH_UNIFIEDPUSH_ENDPOINT are unset; publisher idle");
         return;
     }
 
@@ -54,6 +55,16 @@ export function apply(ctx) {
         if (!response.ok) throw new Error(`ntfy ${response.status}: ${await response.text()}`);
     };
 
+    const postUnified = async (body) => {
+        if (!unifiedEndpoint) return;
+        const response = await fetch(unifiedEndpoint, {
+            method: "POST",
+            headers: { "content-type": "text/plain; charset=utf-8" },
+            body,
+        });
+        if (!response.ok) throw new Error(`UnifiedPush ${response.status}: ${await response.text()}`);
+    };
+
     const publish = (event, session) => {
         const type = String(event?.type || "");
         if (!terminalTypes.some((candidate) => type === candidate || type.startsWith(candidate.split("/")[0] + "/"))) {
@@ -63,20 +74,26 @@ export function apply(ctx) {
         const body = `${type}\n${title}`;
         const priority = type.startsWith("ask/") || type.startsWith("question/") ? "high" : "default";
         const click = session?.id ? `dshmobile://host/current/session/${session.id}` : "";
-        post({ title: "DeepSeek Harness", body, priority, tags: ["dsh"], click })
-            .catch((error) => ctx.logger?.warn?.(error));
+        if (base && topic) {
+            post({ title: "DeepSeek Harness", body, priority, tags: ["dsh"], click })
+                .catch((error) => ctx.logger?.warn?.(error));
+        }
+        postUnified(body).catch((error) => ctx.logger?.warn?.(error));
     };
 
     ctx.on("session/event", (session, event) => publish(event, session));
     ctx.on("agent/error", ({ agent, error }) => {
         const session = agent?.session;
         const title = session?.title || "DeepSeek Harness";
-        post({
-            title: "DeepSeek Harness error",
-            body: `${title}\n${error?.message || String(error)}`,
-            priority: "high",
-            tags: ["dsh", "error"],
-        }).catch((cause) => ctx.logger?.warn?.(cause));
+        if (base && topic) {
+            post({
+                title: "DeepSeek Harness error",
+                body: `${title}\n${error?.message || String(error)}`,
+                priority: "high",
+                tags: ["dsh", "error"],
+            }).catch((cause) => ctx.logger?.warn?.(cause));
+        }
+        postUnified(`${title}\n${error?.message || String(error)}`).catch((cause) => ctx.logger?.warn?.(cause));
     });
     ctx.logger?.info?.("dsh-mobile-notify: publishing to " + base + "/" + topic);
 }

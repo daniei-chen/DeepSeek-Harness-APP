@@ -779,6 +779,13 @@
     <string name="shell_settings_ntfy_title">Self-hosted ntfy push</string>
     <string name="shell_settings_ntfy_description">Enter your own ntfy topic URL, for example https://ntfy.example.com/dsh-alerts. No project cloud is used.</string>
     <string name="shell_settings_ntfy_invalid">Enter a valid http(s) ntfy topic URL</string>
+    <string name="shell_settings_unifiedpush_endpoint">UnifiedPush endpoint</string>
+    <string name="shell_settings_unifiedpush_copied">Endpoint copied</string>
+    <string name="shell_settings_unifiedpush">UnifiedPush</string>
+    <string name="shell_settings_unifiedpush_hint">Register with an installed UnifiedPush distributor</string>
+    <string name="shell_settings_unifiedpush_missing">Install a UnifiedPush distributor first (ntfy can act as one)</string>
+    <string name="shell_settings_unifiedpush_registered">UnifiedPush registration requested</string>
+    <string name="shell_settings_unifiedpush_failed">UnifiedPush registration failed</string>
     <string name="ntfy_service_channel">ntfy push service</string>
     <string name="ntfy_service_title">Self-hosted ntfy push</string>
     <string name="shell_settings_enabled">Enabled</string>

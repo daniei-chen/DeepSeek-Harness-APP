@@ -43,6 +43,10 @@ The Android app can subscribe to the same topic directly: **Settings → Notific
 ntfy push**, enter `https://your-ntfy/topic`. It runs an opt-in foreground service and posts the
 received events as local notifications. Leaving the field empty disables the subscription.
 
+For a real UnifiedPush distributor (ntfy can act as one), install the distributor, tap
+**Settings → Notifications → UnifiedPush**, then copy the **UnifiedPush endpoint** row. Set it on
+the host as `DSH_UNIFIEDPUSH_ENDPOINT`; `notify-plugin/` posts the same events there.
+
 The app must never ship a public ntfy topic, relay URL or push credential. Setup is documented as a
 manual, self-hosted step.
 

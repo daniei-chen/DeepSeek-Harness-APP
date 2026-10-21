@@ -113,6 +113,14 @@
             android:name=".termux.TermuxResultReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".notify.UnifiedPushReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+            </intent-filter>
+        </receiver>
+
         <!--
             Opts into AppCompat's own storage for the per-app language. Below API 33 the framework
             has no LocaleManager to remember the choice, and without this the library only holds it

@@ -3,6 +3,8 @@ package com.labteto.dshmobile.webshell
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -58,7 +60,9 @@ import com.labteto.dshmobile.connection.AppSettings
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.notify.NtfyConfig
 import com.labteto.dshmobile.notify.NtfySubscriberService
+import com.labteto.dshmobile.notify.UnifiedPushConfig
 import com.labteto.dshmobile.update.UpdateChecker
+import org.unifiedpush.android.connector.UnifiedPush
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -800,12 +804,15 @@ class WebShellActivity : AppCompatActivity() {
             actionNotifications = settings.notifyNeedsAction,
             goalNotifications = settings.notifyGoal,
             ntfyEnabled = NtfyConfig.load(this) != null,
+            unifiedPushEndpoint = UnifiedPushConfig.load(this),
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
             onToggleTurn = { toggleNotificationSetting { it.copy(notifyTurnComplete = !it.notifyTurnComplete) } },
             onToggleAction = { toggleNotificationSetting { it.copy(notifyNeedsAction = !it.notifyNeedsAction) } },
             onToggleGoal = { toggleNotificationSetting { it.copy(notifyGoal = !it.notifyGoal) } },
             onConfigureNtfy = { configureNtfy() },
+            onRegisterUnifiedPush = { registerUnifiedPush() },
+            onCopyUnifiedPushEndpoint = { copyUnifiedPushEndpoint() },
             onBack = { showSettings() },
         )
     }
@@ -930,6 +937,29 @@ class WebShellActivity : AppCompatActivity() {
     private fun startNtfyService() {
         runCatching {
             ContextCompat.startForegroundService(this, Intent(this, NtfySubscriberService::class.java))
+        }
+    }
+
+    private fun registerUnifiedPush() {
+        val distributors = runCatching { UnifiedPush.getDistributors(this) }.getOrDefault(emptyList())
+        if (distributors.isEmpty()) {
+            Toast.makeText(this, R.string.shell_settings_unifiedpush_missing, Toast.LENGTH_LONG).show()
+            return
+        }
+        runCatching {
+            UnifiedPush.register(this, "dsh-mobile", distributors.first(), null)
+            Toast.makeText(this, R.string.shell_settings_unifiedpush_registered, Toast.LENGTH_LONG).show()
+        }.onFailure {
+            Toast.makeText(this, R.string.shell_settings_unifiedpush_failed, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun copyUnifiedPushEndpoint() {
+        val endpoint = UnifiedPushConfig.load(this) ?: return
+        runCatching {
+            getSystemService(ClipboardManager::class.java)
+                .setPrimaryClip(ClipData.newPlainText("UnifiedPush endpoint", endpoint))
+            Toast.makeText(this, R.string.shell_settings_unifiedpush_copied, Toast.LENGTH_SHORT).show()
         }
     }
 
