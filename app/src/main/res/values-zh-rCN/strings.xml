@@ -739,6 +739,10 @@
     <string name="webshell_error_network">网络不可用，或者你的电脑暂时没有回应。</string>
     <string name="webshell_error_http">服务器返回 HTTP %1$d。</string>
     <string name="webshell_error_ssl">服务器证书校验失败。</string>
+    <string name="webshell_reload_loop_title">网页在反复刷新</string>
+    <string name="webshell_reload_loop_message">Harness 页面在一分钟内重新加载了多次。常见原因是某个插件启动失败、登录 Cookie 没有被接受，或 WebView 渲染进程内存不足。先清除一次缓存；如果仍然出现，请在电脑上打开“设置 → 插件”，检查是否有加载失败的插件。</string>
+    <string name="webshell_renderer_loop_title">网页渲染进程反复崩溃</string>
+    <string name="webshell_renderer_loop_message">Android 多次重启了 WebView 渲染进程。请关闭其他应用后重新加载；如果仍然出现，清除缓存或重新打开 App。主机和你的会话不受影响。</string>
     <string name="webshell_open_failed">无法打开链接</string>
     <string name="webshell_downloading">正在下载…</string>
     <string name="webshell_download_started">正在下载 %1$s</string>
@@ -785,6 +789,13 @@
     <string name="shell_settings_section_about">关于</string>
     <string name="shell_settings_page_back">返回</string>
     <string name="shell_settings_connection_hint">设备、局域网扫描与连接测试</string>
+    <string name="shell_mobile_access">手机访问</string>
+    <string name="shell_mobile_access_hint">安装电脑端组件，并把手机接入你的 Harness。</string>
+    <string name="shell_mobile_setup_title">设置手机访问</string>
+    <string name="shell_mobile_setup_message">在运行 DSH 的电脑上执行以下任一命令：\n\n%1$s\n\n重启 DSH 后，在“设备”里添加地址。完整的配对和防火墙步骤见安装说明。</string>
+    <string name="shell_mobile_setup_copy">复制命令</string>
+    <string name="shell_mobile_setup_copied">命令已复制</string>
+    <string name="shell_mobile_setup_docs">安装说明</string>
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
     <string name="shell_settings_scan_lan">扫描局域网</string>

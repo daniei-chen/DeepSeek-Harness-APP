@@ -15,10 +15,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -55,6 +57,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.labteto.dshmobile.BuildConfig
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
@@ -153,6 +156,12 @@ class WebShellActivity : AppCompatActivity() {
     private var pageDark = false
     private var clearHistoryAfterLoad = false
     private var micPermissionAsked = false
+
+    /** Wall-clock timestamps of main-document loads, used to break a WebView reload loop. */
+    private val pageLoadTimes = java.util.ArrayDeque<Long>()
+    /** Timestamps of renderer crashes; repeated crashes must not become an automatic reload loop. */
+    private val rendererCrashTimes = java.util.ArrayDeque<Long>()
+    private var reloadLoopNoticeShown = false
 
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
@@ -342,6 +351,7 @@ class WebShellActivity : AppCompatActivity() {
     // ---- WebView ------------------------------------------------------------
 
     private fun configureWebView() {
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         webView.setBackgroundColor(Color.WHITE)
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         webView.isVerticalScrollBarEnabled = false
@@ -473,6 +483,34 @@ class WebShellActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Detect a pathological main-document reload loop.
+     *
+     * A normal SPA load finishes once. Four document loads inside a minute means the page is
+     * reloading itself (or the renderer is being torn down) faster than anyone can use it. Stop
+     * hiding the error surface and tell the reader what happened instead of repainting the same
+     * skeleton forever.
+     */
+    private fun recordPageLoad(url: String?): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        synchronized(pageLoadTimes) {
+            pageLoadTimes.addLast(now)
+            while (pageLoadTimes.isNotEmpty() && now - pageLoadTimes.first() > 60_000L) {
+                pageLoadTimes.removeFirst()
+            }
+            if (pageLoadTimes.size < 4) return false
+        }
+        Log.w(TAG, "web page reload loop detected: url=$url")
+        if (!reloadLoopNoticeShown) {
+            reloadLoopNoticeShown = true
+            showError(
+                getString(R.string.webshell_reload_loop_title),
+                getString(R.string.webshell_reload_loop_message),
+            )
+        }
+        return true
+    }
+
     private fun markPageReady() {
         pageReady.set(true)
     }
@@ -523,13 +561,14 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            val reloadLoop = recordPageLoad(url)
             if (!pageHadError) {
                 failoverTried.clear()
                 failoverInProgress = false
             }
             pageHadError = false
             markPageReady()
-            hideError()
+            if (!reloadLoop) hideError()
             injectPageScripts()
             openPendingSession()
             applyInsetsToPage()
@@ -613,6 +652,21 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+            val now = SystemClock.elapsedRealtime()
+            synchronized(rendererCrashTimes) {
+                rendererCrashTimes.addLast(now)
+                while (rendererCrashTimes.isNotEmpty() && now - rendererCrashTimes.first() > 120_000L) {
+                    rendererCrashTimes.removeFirst()
+                }
+                if (rendererCrashTimes.size >= 3) {
+                    Log.e(TAG, "renderer crashed repeatedly; refusing another automatic reload")
+                    showError(
+                        getString(R.string.webshell_renderer_loop_title),
+                        getString(R.string.webshell_renderer_loop_message),
+                    )
+                    return true
+                }
+            }
             recreateWebView()
             return true
         }
@@ -772,6 +826,8 @@ class WebShellActivity : AppCompatActivity() {
         failoverTried.clear()
         failoverInProgress = false
         pageHadError = false
+        reloadLoopNoticeShown = false
+        synchronized(pageLoadTimes) { pageLoadTimes.clear() }
         hideError()
         interceptPrefetch = false
         webView.loadUrl(markAndroidUrl(targetUrl))
@@ -867,6 +923,7 @@ class WebShellActivity : AppCompatActivity() {
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
             onConnection = { showConnectionPage() },
+            onMobileSetup = { showMobileSetupDialog() },
             onNotifications = { showNotificationsPage() },
             onBackground = { showBackgroundPage() },
             onCheckUpdate = { checkForUpdate() },
@@ -884,6 +941,27 @@ class WebShellActivity : AppCompatActivity() {
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
         )
+    }
+
+    private fun showMobileSetupDialog() {
+        val command = "powershell -ExecutionPolicy Bypass -File setup/install.ps1 " +
+            "-Profile desktop -FileRoot \"D:\\your-workspace\"\n\n" +
+            "./setup/install.sh --profile desktop --file-root \"\$HOME/workspaces\""
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_mobile_setup_title)
+            .setMessage(getString(R.string.shell_mobile_setup_message, command))
+            .setPositiveButton(R.string.shell_mobile_setup_copy) { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    .setPrimaryClip(ClipData.newPlainText("DSH host setup", command))
+                Toast.makeText(this, R.string.shell_mobile_setup_copied, Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton(R.string.shell_mobile_setup_docs) { _, _ ->
+                openExternalUri(
+                    Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP/blob/main/setup/README.md"),
+                )
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
     }
 
     private fun showNotificationsPage() {
@@ -1468,7 +1546,9 @@ class WebShellActivity : AppCompatActivity() {
      * address and as a host record, which is what lets a gateway cookie survive a switch back.
      */
     private fun markAndroidUrl(raw: String): String = runCatching {
-        Uri.parse(raw).buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
+        val uri = Uri.parse(raw)
+        if (uri.getQueryParameter("dsh_android") == "1") raw
+        else uri.buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
     }.getOrDefault(raw)
 
     private fun applyServerUrl(raw: String): Boolean {
@@ -1698,6 +1778,7 @@ class WebShellActivity : AppCompatActivity() {
     private data class InsetsDp(val top: Float, val bottom: Float, val ime: Float)
 
     private companion object {
+        const val TAG = "DshWebShell"
         const val SPLASH_TIMEOUT_MS = 8_000L
 
         /**

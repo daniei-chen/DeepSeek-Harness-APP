@@ -315,6 +315,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         backgroundEnabled: Boolean,
         ntfyEnabled: Boolean,
         onConnection: () -> Unit,
+        onMobileSetup: () -> Unit,
         onNotifications: () -> Unit,
         onBackground: () -> Unit,
         onCheckUpdate: () -> Unit,
@@ -354,6 +355,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onConnection()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_device,
+                title = activity.getString(R.string.shell_mobile_access),
+                subtitle = activity.getString(R.string.shell_mobile_access_hint),
+            ) {
+                dialog.dismiss()
+                onMobileSetup()
             },
         )
         card.addView(

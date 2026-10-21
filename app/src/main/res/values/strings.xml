@@ -741,6 +741,10 @@
     <string name="webshell_error_network">The network is unavailable, or the harness did not answer.</string>
     <string name="webshell_error_http">The server answered HTTP %1$d.</string>
     <string name="webshell_error_ssl">The server certificate could not be verified.</string>
+    <string name="webshell_reload_loop_title">The page keeps reloading</string>
+    <string name="webshell_reload_loop_message">The harness page reloaded several times in a minute. This usually means a plugin failed to boot, the session cookie is not being accepted, or the WebView renderer is running out of memory. Clear the cache once; if it returns, open Settings → Plugins on the computer and check for a failed plugin.</string>
+    <string name="webshell_renderer_loop_title">The page renderer keeps crashing</string>
+    <string name="webshell_renderer_loop_message">Android restarted the WebView renderer repeatedly. Close other apps, then reload; if it keeps happening, clear the cache or reopen the app. The host and your sessions are unaffected.</string>
     <string name="webshell_open_failed">Could not open that link</string>
     <string name="webshell_downloading">Downloading…</string>
     <string name="webshell_download_started">Downloading %1$s</string>
@@ -787,6 +791,13 @@
     <string name="shell_settings_section_about">About</string>
     <string name="shell_settings_page_back">Back</string>
     <string name="shell_settings_connection_hint">Devices, LAN scan and connection test</string>
+    <string name="shell_mobile_access">Phone access</string>
+    <string name="shell_mobile_access_hint">Install the host pieces and pair this phone.</string>
+    <string name="shell_mobile_setup_title">Set up phone access</string>
+    <string name="shell_mobile_setup_message">Run one of these on the computer that runs DSH:\n\n%1$s\n\nThen restart DSH and add the address under Devices. The setup guide has the full pairing and firewall steps.</string>
+    <string name="shell_mobile_setup_copy">Copy command</string>
+    <string name="shell_mobile_setup_copied">Command copied</string>
+    <string name="shell_mobile_setup_docs">Setup guide</string>
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
     <string name="shell_settings_scan_lan">Scan local network</string>
