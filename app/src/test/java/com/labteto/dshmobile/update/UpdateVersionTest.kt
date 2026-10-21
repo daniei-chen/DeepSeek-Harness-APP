@@ -1,5 +1,6 @@
 package com.labteto.dshmobile.update
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -79,5 +80,36 @@ class UpdateVersionTest {
     @Test
     fun `a release is still offered when the running version is unparseable`() {
         assertTrue(isNewerVersion("0.2.1", "unknown"))
+    }
+
+    /** Plugin releases share the repository but are not app versions. */
+    @Test
+    fun `plugin tags are not app versions`() {
+        assertEquals("0.9.35", appVersionOf("v0.9.35"))
+        assertEquals("0.9.35", appVersionOf("0.9.35"))
+        assertEquals("0.9.35", appVersionOf("v0.9.35-rc1"))
+        assertEquals(null, appVersionOf("app-plugin-v0.1.8"))
+        assertEquals(null, appVersionOf("nightly"))
+    }
+
+    /**
+     * The regression this guards: a plugin release published after an app release becomes
+     * GitHub's "latest release", and the checker must still pick the app release.
+     */
+    @Test
+    fun `a newer plugin release does not hide an app release`() {
+        val releases = listOf(
+            GithubRelease("v0.9.35", "https://example/0.9.35"),
+            GithubRelease("app-plugin-v0.1.8", "https://example/plugin"),
+            GithubRelease("v0.9.34", "https://example/0.9.34"),
+        )
+        val picked = pickLatestAppRelease(releases)
+        assertEquals("v0.9.35", picked?.tagName)
+    }
+
+    @Test
+    fun `only plugin releases means no app release`() {
+        val releases = listOf(GithubRelease("app-plugin-v0.1.8", "https://example/plugin"))
+        assertEquals(null, pickLatestAppRelease(releases))
     }
 }

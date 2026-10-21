@@ -16,20 +16,50 @@ import javax.inject.Singleton
 
 /** The subset of a GitHub release this app reads. */
 @Serializable
-private data class GithubRelease(
+internal data class GithubRelease(
     @SerialName("tag_name") val tagName: String = "",
     @SerialName("html_url") val htmlUrl: String = "",
     val assets: List<GithubAsset> = emptyList(),
 )
 
 @Serializable
-private data class GithubAsset(
+internal data class GithubAsset(
     val name: String = "",
     @SerialName("browser_download_url") val downloadUrl: String = "",
 )
 
 /** One file attached to a release, by the name GitHub lists it under. */
 data class ReleaseAsset(val name: String, val url: String)
+
+/**
+ * Only tags shaped like an app version are candidates: `v0.9.35`, `0.9.35`, `0.9.35-rc1`.
+ *
+ * The repository also publishes `app-plugin-v0.1.8`-style releases. GitHub's "latest release"
+ * endpoint is ordered by creation time, not by version, so the plugin release published after an
+ * app release becomes "latest" — and a checker that trusts it compares `0.1.8` with `0.9.35` and
+ * reports "up to date" while an update is sitting right there.
+ */
+internal val APP_VERSION_TAG = Regex("^v?(\\d+)\\.(\\d+)\\.(\\d+)(?:[-+].*)?$")
+
+/** The `x.y.z` core of an app release tag, or null for any other tag. */
+internal fun appVersionOf(tag: String): String? {
+    val match = APP_VERSION_TAG.matchEntire(tag.trim()) ?: return null
+    return "${match.groupValues[1]}.${match.groupValues[2]}.${match.groupValues[3]}"
+}
+
+/** The highest app-version release in [releases], ignoring plugin and other non-app tags. */
+internal fun pickLatestAppRelease(releases: List<GithubRelease>): GithubRelease? {
+    var best: GithubRelease? = null
+    var bestVersion: String? = null
+    for (release in releases) {
+        val version = appVersionOf(release.tagName) ?: continue
+        if (bestVersion == null || isNewerVersion(version, bestVersion)) {
+            best = release
+            bestVersion = version
+        }
+    }
+    return best
+}
 
 /**
  * A release newer than the running build.
@@ -162,15 +192,36 @@ class UpdateChecker @Inject constructor(
         runCatching { hostsStore.setDismissedUpdate(version) }
     }
 
+    /**
+     * The newest **app** release, not simply GitHub's "latest release".
+     *
+     * `/releases/latest` is ordered by creation time, and this repository also publishes host
+     * plugin releases. A plugin release published after an app release therefore wins that
+     * endpoint, and comparing `app-plugin-v0.1.8` against `0.9.35` reads as "up to date". Reading
+     * the list and keeping only app-shaped tags removes the ordering dependency entirely.
+     */
     private suspend fun fetchLatest(): GithubRelease? = withContext(Dispatchers.IO) {
-        val urls = listOf(
-            LATEST_RELEASE_API,
-            "https://gh-proxy.com/$LATEST_RELEASE_API",
-            "https://ghproxy.net/$LATEST_RELEASE_API",
-        )
-        for (url in urls) {
+        for (base in API_BASES) {
             val request = Request.Builder()
-                .url(url)
+                .url("$base/repos/$REPO/releases?per_page=50")
+                .header("Accept", "application/vnd.github+json")
+                .get()
+                .build()
+            val releases = runCatching {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use null
+                    val body = response.body?.string() ?: return@use null
+                    json.decodeFromString<List<GithubRelease>>(body)
+                }
+            }.getOrNull()
+            val newest = releases?.let(::pickLatestAppRelease)
+            if (newest != null) return@withContext newest
+        }
+        // Older mirrors may not proxy the list endpoint; a direct single-release read still works
+        // whenever GitHub's newest release happens to be an app one.
+        for (base in API_BASES) {
+            val request = Request.Builder()
+                .url("$base/repos/$REPO/releases/latest")
                 .header("Accept", "application/vnd.github+json")
                 .get()
                 .build()
@@ -181,7 +232,7 @@ class UpdateChecker @Inject constructor(
                     json.decodeFromString(GithubRelease.serializer(), body)
                 }
             }.getOrNull()
-            if (release != null) return@withContext release
+            if (release != null && appVersionOf(release.tagName) != null) return@withContext release
         }
         null
     }
@@ -198,7 +249,11 @@ class UpdateChecker @Inject constructor(
         /** Six hours: often enough to notice a release the same day, rare enough to be free. */
         const val AUTO_CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000
         const val REPO = "daniei-chen/DeepSeek-Harness-APP"
-        const val LATEST_RELEASE_API = "https://api.github.com/repos/$REPO/releases/latest"
+        val API_BASES = listOf(
+            "https://api.github.com",
+            "https://gh-proxy.com/https://api.github.com",
+            "https://ghproxy.net/https://api.github.com",
+        )
         const val RELEASES_URL = "https://github.com/$REPO/releases/latest"
     }
 }

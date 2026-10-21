@@ -1,4 +1,4 @@
-# Release 0.9.35
+# Release 0.9.36
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.35-personal.95.apk`
-- SHA-256: `E2ACA1B5098EF136D358025FBEEC2819075900D1A3218240303C7ECB3C09AAB3`
+- APK: `dist/DeepSeek-Harness-0.9.36-personal.96.apk`
+- SHA-256: `BEFEC0C721444F0CF6395BCA8E90EEB45A27D5D4105381E45491364F41A2B4F7`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,6 +27,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Update check:** reads the release list and keeps only app-shaped tags (`v0.9.36`), so a host-plugin release published after an app release can no longer become GitHub's "latest" and make the app report "up to date" while an update exists. Plugin releases are also published as pre-releases so older clients keep working.
 - **Layout recovery:** back to `adjustResize`, plus a real 1px view-resize nudge (the only thing that makes the renderer re-read the viewport), a `min-height` repair pass, and an automatic repair on resume, after the keyboard closes and after page load. `Settings → Diagnostics → Repair page layout` forces a full repaint.
 - **Settings → 远控 (Remote access):** the relay pairing QR is drawn inside the app from the live invitation, with the 8-digit code, remaining validity, copy pairing link/code, relay addresses and a shortcut to the paired-device page. Requires host plugin **0.1.8**; on an older host the page says which side to update.
 - Bloom theme note: `dsh-bloom-theme` can leave the WebView painting only part of the page. 0.9.35 repairs it automatically; if it recurs, either disable Bloom for the phone or tap `修复界面排版`.
