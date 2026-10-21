@@ -3,7 +3,7 @@
 合并后的单一插件包：
 
 - Android WebView 手机适配层（抽屉、安全区、输入法、返回栈、图片直传、语音兜底）
-- Host 文件操作 `/dsh-file-ops`（下载、zip、递归删除、重命名、新建文件夹、上传）
+- Host 文件操作 `/dsh-file-ops`（下载、zip、递归删除、重命名、新建文件夹、上传、审计日志）
 - 设置 → 手机访问：真实监听地址、局域网候选、relay 健康状态（`/dsh-mobile/info`）
 - BrowserSkill 的 `browser_*` 浏览器自动化工具
 
@@ -13,7 +13,7 @@
 
 ```bash
 # 在 DSH profile 目录安装 tarball
-pnpm add file:/path/to/dsh-android-deepseek-harness-app-plugin-0.1.5.tgz
+pnpm add file:/path/to/dsh-android-deepseek-harness-app-plugin-0.1.7.tgz
 ```
 
 把 `@dsh-android/deepseek-harness-app-plugin` 加入 profile 的 `dsh.profile.bundles`，并停用原来的：

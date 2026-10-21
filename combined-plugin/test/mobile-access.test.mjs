@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
-import { apply, collectInfo, localIpv4s, probeRelayHealth } from "../lib/mobile-access.js";
+import { apply, collectInfo, localIpv4s, probeRelayHealth, readAudit } from "../lib/mobile-access.js";
 
 function context(host, port) {
     return {
@@ -36,6 +39,20 @@ test("relay health probe fails closed on a closed port", async () => {
     assert.equal(result.ok, false);
 });
 
+test("readAudit returns the newest valid entries", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "dsh-audit-"));
+    const file = path.join(root, "audit.jsonl");
+    await fs.writeFile(file, [
+        JSON.stringify({ time: "2026-01-01T00:00:00Z", action: "delete", path: "a" }),
+        "partial",
+        JSON.stringify({ time: "2026-01-01T00:00:01Z", action: "upload", path: "b" }),
+    ].join("\n"));
+    const result = await readAudit({ auditLog: file }, 1);
+    assert.equal(result.configured, true);
+    assert.equal(result.entries.length, 1);
+    assert.equal(result.entries[0].action, "upload");
+});
+
 test("apply registers the read-only info route", async () => {
     const routes = [];
     const ctx = {
@@ -52,9 +69,10 @@ test("apply registers the read-only info route", async () => {
         logger: { info: () => {}, warn: () => {} },
     };
     apply(ctx, { relayPort: 1 });
-    assert.equal(routes.length, 1);
-    assert.equal(routes[0].path, "/dsh-mobile/info");
-    assert.equal(routes[0].kind, "exact");
+    assert.equal(routes.length, 2);
+    const infoRoute = routes.find((route) => route.path === "/dsh-mobile/info");
+    assert.equal(infoRoute.kind, "exact");
+    assert.equal(routes.some((route) => route.path === "/dsh-mobile/audit"), true);
 
     let body = "";
     const res = {
@@ -63,7 +81,7 @@ test("apply registers the read-only info route", async () => {
             body += chunk;
         },
     };
-    await routes[0].handler({ method: "GET" }, res);
+    await infoRoute.handler({ method: "GET" }, res);
     const parsed = JSON.parse(body);
     assert.equal(parsed.ok, true);
     assert.equal(parsed.loopbackOnly, true);

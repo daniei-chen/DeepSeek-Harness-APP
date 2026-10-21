@@ -1,6 +1,6 @@
 import { createReadStream, createWriteStream } from "node:fs";
 import { execFile } from "node:child_process";
-import { lstat, mkdir, mkdtemp, realpath, rename, rm, stat } from "node:fs/promises";
+import { appendFile, lstat, mkdir, mkdtemp, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -25,6 +25,25 @@ export function apply(ctx, config = {}) {
         ...(Array.isArray(config.fileOpsRoots) ? config.fileOpsRoots : []),
     ].filter(Boolean);
     const roots = (configured.length > 0 ? configured : [process.cwd()]).map((root) => path.resolve(root));
+    const auditLog = String(config.auditLog || process.env.DSH_MOBILE_AUDIT_LOG || "").trim();
+    if (auditLog !== "") {
+        mkdir(path.dirname(path.resolve(auditLog)), { recursive: true })
+            .catch((error) => ctx.logger?.warn?.(error));
+    }
+
+    /** Append-only local audit trail; a failure to write it must never fail the file action. */
+    const audit = (req, action, target, result) => {
+        if (auditLog === "") return;
+        const entry = {
+            time: new Date().toISOString(),
+            action,
+            path: target,
+            result,
+            remote: req.socket?.remoteAddress || "",
+            agent: String(req.headers?.["user-agent"] || "").slice(0, 200),
+        };
+        appendFile(auditLog, JSON.stringify(entry) + "\n").catch((error) => ctx.logger?.warn?.(error));
+    };
 
     const insideRoots = (target) => {
         const normalized = path.resolve(target);
@@ -88,9 +107,11 @@ export function apply(ctx, config = {}) {
                 }
                 if (action === "mkdir") {
                     await mkdir(destination);
+                    audit(req, "mkdir", destination, "ok");
                     json(res, 201, { ok: true, path: destination });
                 } else {
                     await rename(targetPath, destination);
+                    audit(req, "rename", destination, "ok");
                     json(res, 200, { ok: true, path: destination });
                 }
                 return;
@@ -123,6 +144,7 @@ export function apply(ctx, config = {}) {
                     req.on("error", reject);
                     req.pipe(output);
                 });
+                audit(req, "upload", destination, "ok");
                 json(res, 201, { ok: true, path: destination });
                 return;
             }
@@ -153,6 +175,7 @@ export function apply(ctx, config = {}) {
                     return;
                 }
                 await rm(resolved, { recursive: true, force: false });
+                audit(req, "delete", resolved, "ok");
                 json(res, 200, { ok: true, path: resolved });
                 return;
             }
@@ -212,6 +235,7 @@ export function apply(ctx, config = {}) {
                 "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
                 "cache-control": "no-store",
             });
+            audit(req, "download", real, "ok");
             createReadStream(real).pipe(res);
         } catch (error) {
             ctx.logger?.warn?.(error);

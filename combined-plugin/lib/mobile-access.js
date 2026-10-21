@@ -3,6 +3,7 @@ import https from "node:https";
 import os from "node:os";
 import path from "node:path";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 /**
  * Host-side facts for the Settings → 手机访问 panel.
@@ -111,6 +112,32 @@ function configuredRoots(config) {
     return [...fromEnv, ...fromConfig].filter(Boolean).map((root) => path.resolve(root));
 }
 
+function auditPath(config) {
+    return String(config?.auditLog || process.env.DSH_MOBILE_AUDIT_LOG || "").trim();
+}
+
+/** Read the newest audit entries; malformed trailing lines are ignored rather than fatal. */
+export async function readAudit(config, limit = 20) {
+    const file = auditPath(config);
+    if (file === "") return { configured: false, entries: [] };
+    let text = "";
+    try {
+        text = await readFile(file, "utf8");
+    } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+    }
+    const entries = [];
+    for (const line of text.split("\n")) {
+        if (line.trim() === "") continue;
+        try {
+            entries.push(JSON.parse(line));
+        } catch {
+            // A process killed mid-append may leave one partial line; it is not actionable.
+        }
+    }
+    return { configured: true, entries: entries.slice(-Math.max(1, Math.min(100, limit))) };
+}
+
 /** Build the panel's read-only snapshot. Exported so the shape can be unit-tested. */
 export async function collectInfo(ctx, config = {}) {
     const webServer = ctx?.webServer;
@@ -178,10 +205,33 @@ export function apply(ctx, config = {}) {
         }
     };
 
+    const auditHandler = async (req, res) => {
+        if (req.method !== "GET" && req.method !== "HEAD") {
+            json(res, 405, { ok: false, error: "GET required" });
+            return;
+        }
+        try {
+            const url = new URL(req.url || "/", "http://localhost");
+            const limit = Number(url.searchParams.get("limit")) || 20;
+            json(res, 200, { ok: true, ...(await readAudit(config, limit)) });
+        } catch (error) {
+            ctx.logger?.warn?.(error);
+            json(res, 500, {
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+            });
+        }
+    };
+
     ctx.effect(() => ctx.webServer.register({
         kind: "exact",
         path: "/dsh-mobile/info",
         handler,
     }), "dsh-mobile-access.info-route");
-    ctx.logger?.info?.("dsh-mobile-access: /dsh-mobile/info ready");
+    ctx.effect(() => ctx.webServer.register({
+        kind: "exact",
+        path: "/dsh-mobile/audit",
+        handler: auditHandler,
+    }), "dsh-mobile-access.audit-route");
+    ctx.logger?.info?.("dsh-mobile-access: /dsh-mobile/info and /dsh-mobile/audit ready");
 }

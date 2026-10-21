@@ -204,7 +204,7 @@ export function yamlQuote(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-export function buildManagedBlock({ fileRoots, relayPort, relayStateDir, publicHostnames = [], relay = true }) {
+export function buildManagedBlock({ fileRoots, relayPort, relayStateDir, publicHostnames = [], relay = true, auditLog = null }) {
   const roots = fileRoots.length > 0 ? fileRoots : [os.homedir()];
   const lines = [
     MANAGED_START,
@@ -215,6 +215,7 @@ export function buildManagedBlock({ fileRoots, relayPort, relayStateDir, publicH
     "    fileOpsRoots:",
     ...roots.map((root) => `      - ${yamlQuote(root)}`),
   ];
+  if (auditLog) lines.push(`    auditLog: ${yamlQuote(auditLog)}`);
 
   if (relay) {
     lines.push(
@@ -230,6 +231,9 @@ export function buildManagedBlock({ fileRoots, relayPort, relayStateDir, publicH
         : "    publicHostnames: []",
       ...publicHostnames.map((host) => `      - ${yamlQuote(host)}`),
       "    privilegedMethods: 'allow-authenticated'",
+      "    extraProxyPaths:",
+      "      - /dsh-file-ops",
+      "      - /dsh-mobile",
       "    compat:",
       "      addressGrants: false",
     );
@@ -583,12 +587,14 @@ export function installPlan(ctx, opts, materialized) {
       ? opts.fileRoots.map((root) => path.resolve(root))
       : [os.homedir()];
   const relayStateDir = path.join(ctx.profileDir, ".dsh-mobile", "relay");
+  const auditLog = path.join(ctx.profileDir, ".dsh-mobile", "audit.jsonl");
   const block = buildManagedBlock({
     fileRoots: roots,
     relayPort: opts.relayPort,
     relayStateDir,
     publicHostnames: opts.publicHostnames,
     relay: opts.relay,
+    auditLog,
   });
   return {
     profile: ctx.profile,

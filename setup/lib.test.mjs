@@ -52,12 +52,16 @@ test("managed block contains file roots, relay settings and hostnames", () => {
     relayStateDir: "C:\\Users\\me\\.dsh\\profiles\\desktop\\.dsh-mobile\\relay",
     publicHostnames: ["dsh.example.com"],
     relay: true,
+    auditLog: "C:\\Users\\me\\.dsh\\profiles\\desktop\\.dsh-mobile\\audit.jsonl",
   });
   assert.match(block, /fileOpsRoots:/);
   assert.match(block, /- 'D:\\AI\\DeepSeek'/);
   assert.match(block, /port: 3443/);
   assert.match(block, /addressGrants: false/);
+  assert.match(block, /extraProxyPaths:/);
+  assert.match(block, /\/dsh-file-ops/);
   assert.match(block, /- 'dsh\.example\.com'/);
+  assert.ok(block.includes("auditLog: 'C:\\Users\\me\\.dsh\\profiles\\desktop\\.dsh-mobile\\audit.jsonl'"));
 });
 
 test("managed block can omit relay", () => {

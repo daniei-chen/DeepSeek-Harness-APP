@@ -5871,8 +5871,7 @@ window.__ModuleLoader__.load({
 	}
 });
 
-// ---- generated from mobile-access-client.js (Settings -> 手机访问) ----
-
+// ---- generated from mobile-access-client.js (Settings -> 手机访问)
 /**
  * Settings → 手机访问.
  *
@@ -5977,6 +5976,16 @@ window.__ModuleLoader__.load({
         lineHeight: 1.6,
         margin: 0,
       },
+      auditRow: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        padding: "7px 0",
+        borderTop: "1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.14))",
+        fontSize: "11.5px",
+        lineHeight: 1.5,
+      },
+      auditMeta: { color: "var(--dsw-alias-label-secondary, #666)", fontSize: "11px" },
       spinner: { fontSize: "12px", color: "var(--dsw-alias-label-secondary, #666)" },
       muted: { color: "var(--dsw-alias-label-secondary, #666)" },
       monoList: {
@@ -6060,6 +6069,7 @@ window.__ModuleLoader__.load({
 
     function MobileAccessSection() {
       const [info, setInfo] = React.useState(null);
+      const [audit, setAudit] = React.useState(null);
       const [error, setError] = React.useState("");
       const [loading, setLoading] = React.useState(true);
       const [notice, setNotice] = React.useState("");
@@ -6077,6 +6087,18 @@ window.__ModuleLoader__.load({
           const next = await response.json();
           if (!next || next.ok !== true) throw new Error(next?.error || "invalid response");
           setInfo(next);
+          try {
+            const auditResponse = await fetch("/dsh-mobile/audit?limit=8", {
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (auditResponse.ok) {
+              const auditValue = await auditResponse.json();
+              if (auditValue?.ok === true) setAudit(auditValue);
+            }
+          } catch {
+            // The audit route is additive; a plugin version without it must not break this panel.
+          }
         } catch (cause) {
           setError(cause instanceof Error ? cause.message : String(cause));
         } finally {
@@ -6184,6 +6206,34 @@ window.__ModuleLoader__.load({
                     notice ? h("p", { style: S.hint }, notice) : null,
                   )
                 : null,
+        ),
+        h(
+          "div",
+          { style: S.card },
+          h("h3", { style: S.title }, "最近文件操作"),
+          audit === null
+            ? h("p", { style: S.hint }, "审计日志未启用或当前插件版本不支持。")
+            : audit.configured === false
+              ? h("p", { style: S.hint }, "未配置 auditLog；在 deepseek-app 的 config 里设置 auditLog 后生效。")
+              : audit.entries?.length
+                ? h(
+                    "div",
+                    { style: { display: "flex", flexDirection: "column" } },
+                    ...[...audit.entries].reverse().map((entry, index) =>
+                      h(
+                        "div",
+                        { style: S.auditRow, key: `${entry.time || ""}:${index}` },
+                        h("div", null, `${entry.action || "?"} · ${entry.result || ""}`),
+                        h(
+                          "div",
+                          { style: S.auditMeta },
+                          `${entry.time ? new Date(entry.time).toLocaleString() : ""}${entry.remote ? " · " + entry.remote : ""}`,
+                        ),
+                        h("code", { style: S.code }, String(entry.path || "")),
+                      ),
+                    ),
+                  )
+                : h("p", { style: S.hint }, "暂无文件操作记录。"),
         ),
         h(
           "div",

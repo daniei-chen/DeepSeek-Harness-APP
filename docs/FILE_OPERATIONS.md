@@ -26,6 +26,14 @@ folder**, and every row gets a `⋯` menu:
 - **Upload** — multi-file picker from the phone, streamed as `application/octet-stream`; existing names are refused (`wx`).
 - **New folder** — one child under the current directory.
 
+## Audit log
+
+Set `auditLog` in the plugin config (and `DSH_MOBILE_AUDIT_LOG` when running the host manually) to
+an append-only JSONL path outside the workspace roots, for example
+`<profile>/.dsh-mobile/audit.jsonl`. Each successful file action records time, action, path, result,
+remote address and a short user-agent. **Settings → 手机访问 → 最近文件操作** shows the newest
+entries. An audit-write failure never fails the file action.
+
 ## Security boundaries
 
 - The route has no second cookie gate; keep it behind the DSH front gate, relay, or your own

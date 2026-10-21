@@ -6,7 +6,7 @@ import { Readable } from "node:stream";
 import test from "node:test";
 import { apply } from "../lib/file-ops.js";
 
-async function harness() {
+async function harness(extra = {}) {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "dsh-file-ops-"));
     const routes = [];
     const ctx = {
@@ -19,7 +19,11 @@ async function harness() {
         effect: (fn) => fn(),
         logger: { info: () => {}, warn: () => {} },
     };
-    apply(ctx, { fileOpsRoots: [root] });
+    const config = { fileOpsRoots: [root], ...extra };
+    if (typeof config.auditLog === "string" && !path.isAbsolute(config.auditLog)) {
+        config.auditLog = path.join(root, config.auditLog);
+    }
+    apply(ctx, config);
     return { root, route: routes[0] };
 }
 
@@ -79,6 +83,20 @@ test("upload writes bytes and refuses traversal names", async () => {
         badResponse,
     );
     assert.equal(badResponse.status, 400);
+});
+
+test("file actions append an audit entry when auditLog is configured", async () => {
+    const { root, route } = await harness({ auditLog: "audit.jsonl" });
+    const auditLog = path.join(root, "audit.jsonl");
+    const result = response();
+    await route.handler(
+        request("POST", JSON.stringify({ path: root, name: "audited" }), "/dsh-file-ops?action=mkdir"),
+        result,
+    );
+    assert.equal(result.status, 201);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const lines = (await fs.readFile(auditLog, "utf8")).trim().split("\n");
+    assert.equal(JSON.parse(lines[0]).action, "mkdir");
 });
 
 test("delete still refuses to remove a workspace root", async () => {
