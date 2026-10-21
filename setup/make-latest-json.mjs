@@ -29,7 +29,7 @@ export function versionCodeFor(version) {
         .filter((part) => Number.isFinite(part));
     const [major = 0, minor = 0, patch = 0] = parts;
     const base = major * 10_000 + minor * 100 + patch;
-    return cleaned.startsWith("0.") ? base + 31_000 : base;
+    return cleaned.startsWith("0.") ? base + 31_000 : base + 40_000;
 }
 
 function arg(name, fallback = undefined) {

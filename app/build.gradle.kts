@@ -31,8 +31,15 @@ val dshVersionCode: Int = System.getenv("DSH_VERSION_CODE")?.toIntOrNull() ?: ds
     }
     .coerceAtLeast(1)
     // The visible version restarted at 0.0.0, but versionCode must keep rising past the old 3.x
-    // installs; offset the 0.x line so 0.0.1 => 31001, 0.1.0 => 31100.
-    .let { base -> if (dshVersionName.startsWith("0.")) base + 31_000 else base }
+    // installs; offset the 0.x line so 0.0.1 => 31001, 0.1.0 => 31100. The 1.x line is offset
+    // higher (1.0.0 => 50000) so a 1.0 release is an upgrade over every 0.x build — a bare
+    // 10000 would read as a downgrade to Android.
+    .let { base ->
+        when {
+            dshVersionName.startsWith("0.") -> base + 31_000
+            else -> base + 40_000
+        }
+    }
 
 android {
     namespace = "com.labteto.dshmobile"
