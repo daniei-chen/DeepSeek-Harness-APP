@@ -15,7 +15,8 @@ export const inject = ["webServer"];
  *
  * The shipped workspaceFiles API is read-only (list/stat/read/readBytes/changes). This route adds
  * exactly the two missing verbs — download and delete — and confines every path to the configured
- * workspace roots. It lives behind the same gate cookie as the rest of the harness.
+ * workspace roots. The route is mounted behind the self-hosted server's own front gate; this plugin
+ * does not add a second cookie check, so a reverse proxy can terminate authentication before it.
  */
 export function apply(ctx) {
     const configured = (process.env.DSH_FILE_OPS_ROOTS || "").split(path.delimiter).filter(Boolean);
@@ -44,11 +45,6 @@ export function apply(ctx) {
 
     const handler = async (req, res) => {
         try {
-            const cookie = String(req.headers.cookie || "");
-            if (!cookie.includes("dsh_gate=")) {
-                json(res, 401, { error: "gate cookie required" });
-                return;
-            }
             const url = new URL(req.url || "/", "http://localhost");
             const action = url.searchParams.get("action") || "";
             let target = "";

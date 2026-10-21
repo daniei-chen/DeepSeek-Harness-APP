@@ -69,7 +69,8 @@ export DSH_FILE_OPS_ROOTS="$HOME/workspaces"
 
 ## Security
 
-- The route is behind the same DSH gate cookie as the rest of the harness.
+- This plugin does not add a second gate-cookie check; mount it behind your reverse proxy or
+  DSH access gate.
 - Only paths under configured roots are accepted.
-- Do not expose `/dsh-file-ops` without the gate/reverse-proxy authentication.
+- Do not expose `/dsh-file-ops` publicly without authentication at the proxy/server layer.
 - The web client's file menu is the only intended caller.

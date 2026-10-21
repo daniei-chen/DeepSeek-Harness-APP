@@ -13,6 +13,6 @@ export const name = "deepseek-harness-app-plugin";
 export const inject = [...new Set(fileOpsInject)];
 
 export function apply(ctx, config = {}, options = {}) {
-    applyFileOps(ctx);
+    applyFileOps(ctx, config);
     return applyBrowserSkill(ctx, config, options);
 }
