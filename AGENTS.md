@@ -17,13 +17,13 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-22):
 
-- APK **0.9.36**, `versionCode` **31936**, `DeepSeek-Harness-0.9.36-personal.96.apk`
+- APK **0.9.37**, `versionCode` **31937**, `DeepSeek-Harness-0.9.37-personal.97.apk`
 - Host plugin **0.1.8**, `dsh-android-deepseek-harness-app-plugin-0.1.8.tgz`
 - DSH tested against `0.2.1`
 
 ## Hard rules
 
-1. **`versionCode` must strictly increase.** `0.9.36` computes to `31936` (`936 + 31000`). Build
+1. **`versionCode` must strictly increase.** `0.9.37` computes to `31937` (`937 + 31000`). Build
    with `DSH_VERSION_NAME` only; never pass a lower `DSH_VERSION_CODE`, or Android rejects the
    install with `INSTALL_FAILED_VERSION_DOWNGRADE` (this happened in 0.9.35).
 2. **The host plugin only loads at DSH start.** After changing `node_modules` or `package.json`,
@@ -49,7 +49,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=0.9.36 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=0.9.37 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

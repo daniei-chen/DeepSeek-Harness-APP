@@ -813,6 +813,10 @@
     <string name="shell_diagnostics_copied">Diagnostics copied</string>
     <string name="shell_diagnostics_clear_cache">Clear cache and reload</string>
     <string name="shell_diagnostics_layout">Layout: %1$s</string>
+    <string name="shell_glass_compat">Glass theme compatibility</string>
+    <string name="shell_glass_auto">Auto-detect</string>
+    <string name="shell_glass_force">Always off</string>
+    <string name="shell_glass_off">Leave the page alone</string>
     <string name="shell_diagnostics_repair">Repair page layout</string>
     <string name="shell_diagnostics_repaired">Page layout reset</string>
     <string name="shell_remote">Remote access</string>
@@ -935,6 +939,13 @@
     <string name="shell_settings_copied">Copied</string>
     <string name="shell_settings_test_connection">Test current connection</string>
     <string name="shell_settings_test_connection_hint">Check URL reachability and latency</string>
+    <string name="shell_doctor">Connection doctor</string>
+    <string name="shell_doctor_hint">DNS, port, certificate, login and host plugin, one step at a time</string>
+    <string name="shell_doctor_title">Connection doctor</string>
+    <string name="shell_doctor_running">Checking the connection…</string>
+    <string name="shell_doctor_rerun">Run again</string>
+    <string name="shell_doctor_copy">Copy report</string>
+    <string name="shell_doctor_copied">Report copied</string>
     <string name="shell_settings_test_connection_ok">Connected: HTTP %1$d, %2$d ms</string>
     <string name="shell_settings_test_connection_failed">Connection failed</string>
     <string name="shell_settings_no_device">Add a device first</string>

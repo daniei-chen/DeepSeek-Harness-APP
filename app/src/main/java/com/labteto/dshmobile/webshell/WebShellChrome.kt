@@ -21,6 +21,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.labteto.dshmobile.R
+import com.labteto.dshmobile.connection.DoctorReport
+import com.labteto.dshmobile.connection.DoctorStatus
 import kotlin.math.roundToInt
 
 /** One saved shell device and the result of the last health probe. */
@@ -502,6 +504,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onFleet: () -> Unit,
         onFleetInbox: () -> Unit,
         onDeviceHealth: () -> Unit,
+        onDoctor: () -> Unit,
         onTestConnection: () -> Unit,
         onBack: () -> Unit,
     ) {
@@ -557,6 +560,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
         card.addView(
+            settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_doctor), activity.getString(R.string.shell_doctor_hint)) {
+                dialog.dismiss()
+                onDoctor()
+            },
+        )
+        card.addView(
             settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
                 dialog.dismiss()
                 onTestConnection()
@@ -569,8 +578,10 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     fun showDiagnosticsPage(
         dark: Boolean,
         message: String,
+        glassCompatLabel: String,
         onCopy: () -> Unit,
         onClearCache: () -> Unit,
+        onGlassCompat: () -> Unit,
         onRepair: () -> Unit,
         onBack: () -> Unit,
     ) {
@@ -597,6 +608,15 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             dialog.dismiss()
             onCopy()
         })
+        card.addView(settingsRow(
+            colors,
+            R.drawable.ic_shell_settings,
+            activity.getString(R.string.shell_glass_compat),
+            glassCompatLabel,
+        ) {
+            dialog.dismiss()
+            onGlassCompat()
+        })
         card.addView(menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_diagnostics_clear_cache)) {
             dialog.dismiss()
             onClearCache()
@@ -604,6 +624,132 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(menuRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_diagnostics_repair)) {
             dialog.dismiss()
             onRepair()
+        })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    /**
+     * The connection doctor: one row per probe, in the order the connection is built.
+     *
+     * A failing row carries the fix in the same line, because "TCP 失败" without a next step is
+     * the same dead end as no diagnostics at all.
+     */
+    fun showDoctorPage(
+        dark: Boolean,
+        target: String,
+        report: DoctorReport,
+        onRerun: () -> Unit,
+        onCopy: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_doctor_title)) { dialog.dismiss(); onBack() })
+
+        val column = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), 0, dp(8), dp(6))
+        }
+
+        column.addView(
+            TextView(activity).apply {
+                text = target
+                textSize = 11.5f
+                setTextColor(colors.secondary)
+                typeface = android.graphics.Typeface.MONOSPACE
+                setPadding(dp(8), dp(2), dp(8), dp(6))
+            },
+        )
+        val headlineColor = when {
+            report.failures > 0 -> colors.danger
+            report.warnings > 0 -> colors.warn
+            else -> colors.ok
+        }
+        column.addView(
+            TextView(activity).apply {
+                text = report.summary
+                textSize = 15f
+                setTextColor(headlineColor)
+                setPadding(dp(8), 0, dp(8), dp(8))
+            },
+        )
+
+        report.steps.forEach { step ->
+            val tone = when (step.status) {
+                DoctorStatus.OK -> colors.ok
+                DoctorStatus.WARN -> colors.warn
+                DoctorStatus.FAIL -> colors.danger
+                DoctorStatus.SKIP -> colors.secondary
+            }
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(7), dp(8), dp(7))
+            }
+            val title = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            title.addView(
+                View(activity).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(tone)
+                    }
+                    layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply { rightMargin = dp(9) }
+                },
+            )
+            title.addView(
+                TextView(activity).apply {
+                    text = step.label
+                    textSize = 13.5f
+                    setTextColor(colors.primary)
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            row.addView(title)
+            row.addView(
+                TextView(activity).apply {
+                    text = step.detail
+                    textSize = 12f
+                    setTextColor(if (step.status == DoctorStatus.FAIL) colors.danger else colors.secondary)
+                    setPadding(dp(17), dp(2), 0, 0)
+                },
+            )
+            if (!step.action.isNullOrBlank()) {
+                row.addView(
+                    TextView(activity).apply {
+                        text = "→ ${step.action}"
+                        textSize = 11.5f
+                        setTextColor(colors.secondary)
+                        setPadding(dp(17), dp(3), 0, 0)
+                    },
+                )
+            }
+            column.addView(row)
+        }
+
+        val cap = (activity.resources.displayMetrics.heightPixels - dp(190)).coerceAtLeast(dp(300))
+        val scroll = ScrollView(activity).apply {
+            isFillViewport = false
+            addView(column, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cap)
+        }
+        card.addView(scroll, 1)
+
+        card.addView(divider(colors))
+        card.addView(menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_doctor_rerun)) {
+            dialog.dismiss()
+            onRerun()
+        })
+        card.addView(menuRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_doctor_copy)) {
+            onCopy()
         })
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         show(dialog, root, gravity = Gravity.CENTER)
@@ -1926,6 +2072,8 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         val divider: Int = if (dark) Color.parseColor("#33FFFFFF") else Color.parseColor("#14000000")
         val ripple: Int = if (dark) Color.parseColor("#33FFFFFF") else Color.parseColor("#14000000")
         val danger: Int = if (dark) Color.parseColor("#F2555A") else Color.parseColor("#E5484D")
+        val ok: Int = if (dark) Color.parseColor("#3DD68C") else Color.parseColor("#1A7F37")
+        val warn: Int = if (dark) Color.parseColor("#F5A524") else Color.parseColor("#B54708")
     }
 
     private companion object {

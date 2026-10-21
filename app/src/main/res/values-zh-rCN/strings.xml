@@ -811,6 +811,10 @@
     <string name="shell_diagnostics_copied">诊断信息已复制</string>
     <string name="shell_diagnostics_clear_cache">清除缓存并重载</string>
     <string name="shell_diagnostics_layout">界面尺寸：%1$s</string>
+    <string name="shell_glass_compat">磨砂玻璃兼容</string>
+    <string name="shell_glass_auto">自动检测</string>
+    <string name="shell_glass_force">强制关闭磨砂</string>
+    <string name="shell_glass_off">不处理页面</string>
     <string name="shell_diagnostics_repair">修复界面排版</string>
     <string name="shell_diagnostics_repaired">界面已重新排布</string>
     <string name="shell_remote">远控</string>
@@ -933,6 +937,13 @@
     <string name="shell_settings_copied">已复制</string>
     <string name="shell_settings_test_connection">测试当前连接</string>
     <string name="shell_settings_test_connection_hint">检查地址可达性与延迟</string>
+    <string name="shell_doctor">连接体检</string>
+    <string name="shell_doctor_hint">逐项检查 DNS、端口、证书、登录和主机插件</string>
+    <string name="shell_doctor_title">连接体检</string>
+    <string name="shell_doctor_running">正在体检…</string>
+    <string name="shell_doctor_rerun">重新检查</string>
+    <string name="shell_doctor_copy">复制体检结果</string>
+    <string name="shell_doctor_copied">已复制体检结果</string>
     <string name="shell_settings_test_connection_ok">连接成功：HTTP %1$d，%2$d ms</string>
     <string name="shell_settings_test_connection_failed">连接失败</string>
     <string name="shell_settings_no_device">请先添加设备</string>

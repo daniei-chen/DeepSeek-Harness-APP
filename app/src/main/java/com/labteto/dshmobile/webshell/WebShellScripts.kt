@@ -227,6 +227,72 @@ internal object WebShellScripts {
     """.trimIndent()
 
     /**
+     * Mark the page when a third-party glass theme makes `position: fixed` overlays local.
+     *
+     * `backdrop-filter`, `filter`, `contain`, `perspective` and `will-change: transform` each turn
+     * an element into the containing block of its fixed descendants. A theme that puts any of
+     * them on the app shell therefore moves the sidebar drawer and dialogs relative to itself —
+     * the page then paints in a band and the drawer sits at an offset. The stylesheet that ships
+     * with this plugin drops only the frosted layer under `html[data-dsh-glass="off"]`, so the
+     * theme keeps its palette and the geometry goes back to the viewport.
+     */
+    fun glassCompat(mode: String): String = """
+        (function () {
+          try {
+            var root = document.documentElement;
+            if (!root) { return; }
+            // Ship the rule with the shell, not only with the host plugin: the layout must be
+            // repairable even when the host still runs an older plugin build.
+            if (!document.getElementById('dsh-shell-glass')) {
+              var style = document.createElement('style');
+              style.id = 'dsh-shell-glass';
+              style.textContent =
+                'html[data-dsh-glass="off"] *,html[data-dsh-glass="off"] *::before,html[data-dsh-glass="off"] *::after{' +
+                'backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}' +
+                'html[data-dsh-glass="off"] body::before,html[data-dsh-glass="off"] body::after{' +
+                'filter:none !important;animation-duration:0s !important;}';
+              (document.head || root).appendChild(style);
+            }
+            var decide = function () {
+              var mode = '${mode}';
+              var off = mode === 'force';
+              if (mode === 'auto') {
+                var seeds = [document.getElementById('root')];
+                var sidebar = document.querySelector('[class*="_sidebarCol"]');
+                if (sidebar) { seeds.push(sidebar); }
+                var bad = /backdrop|blur|contain|perspective|transform/i;
+                for (var i = 0; i < seeds.length && !off; i++) {
+                  var node = seeds[i];
+                  while (node && node !== document.body && node !== root) {
+                    var style = window.getComputedStyle(node);
+                    var backdrop = style.backdropFilter || style.webkitBackdropFilter || 'none';
+                    var filter = style.filter || 'none';
+                    var contain = style.contain || 'none';
+                    var perspective = style.perspective || 'none';
+                    var willChange = style.willChange || 'auto';
+                    if ((backdrop !== 'none') ||
+                        (filter !== 'none' && bad.test(filter)) ||
+                        (contain !== 'none') ||
+                        (perspective !== 'none') ||
+                        (willChange !== 'auto' && /transform/i.test(willChange))) {
+                      off = true;
+                      break;
+                    }
+                    node = node.parentElement;
+                  }
+                }
+              }
+              root.setAttribute('data-dsh-glass', off ? 'off' : 'on');
+            };
+            decide();
+            setTimeout(decide, 800);
+            setTimeout(decide, 2400);
+            setTimeout(decide, 5000);
+          } catch (e) {}
+        })();
+    """.trimIndent()
+
+    /**
      * Push the current system-bar / IME insets into the page as CSS variables.
      *
      * `@dsh-android/dsh-client-ui-responsive` consumes exactly these three names: its mobile top bar
