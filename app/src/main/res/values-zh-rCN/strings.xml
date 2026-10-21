@@ -754,12 +754,15 @@
     <string name="device_at_least_one">至少保留一个设备</string>
     <string name="device_save">保存</string>
     <string name="microphone_permission_denied">麦克风权限未开启，请在系统设置中允许后使用语音输入。</string>
+    <string name="shell_welcome_title">DeepSeek Harness</string>
+    <string name="shell_welcome_subtitle">把自托管 Harness 装进口袋。先添加你自己的设备地址。</string>
+    <string name="shell_welcome_action">添加设备</string>
     <string name="shell_settings_title">设置</string>
     <string name="shell_settings_subtitle">连接、通知与后台运行</string>
     <string name="shell_settings_section_connection">连接</string>
     <string name="shell_settings_section_notifications">通知</string>
     <string name="shell_settings_section_background">后台运行</string>
-    <string name="shell_settings_about_app_name">🐳 DeepSeek Harness APP</string>
+    <string name="shell_settings_about_app_name">DeepSeek Harness APP</string>
     <string name="shell_settings_about_github">github.com/daniei-chen/DeepSeek-Harness-APP</string>
     <string name="shell_settings_about_intro">把自托管 DeepSeek Harness 装进口袋。无云、无账号、无遥测。</string>
     <string name="shell_settings_section_about">关于</string>

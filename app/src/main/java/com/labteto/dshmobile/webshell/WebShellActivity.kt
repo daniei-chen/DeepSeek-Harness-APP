@@ -33,6 +33,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -121,6 +122,9 @@ class WebShellActivity : AppCompatActivity() {
     private var failoverInProgress = false
     private var pageHadError = false
     private var pendingSessionId: String? = null
+    private lateinit var welcomeView: LinearLayout
+    private lateinit var welcomeTitle: TextView
+    private lateinit var welcomeSubtitle: TextView
     private val prefetchClient by lazy { newPrefetchClient() }
     private val chrome by lazy { WebShellChrome(this) }
     private val shellDevices by lazy { ShellDevices(this) }
@@ -227,8 +231,62 @@ class WebShellActivity : AppCompatActivity() {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
         )
         errorScroll.visibility = View.GONE
+        welcomeView = buildWelcomeView()
+        root.addView(
+            welcomeView,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+        )
+        welcomeView.visibility = View.GONE
         setContentView(root)
         applyPageTheme(dark = isNightUi())
+    }
+
+    private fun buildWelcomeView(): LinearLayout {
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(32), dp(32), dp(32), dp(32))
+        }
+        column.addView(
+            ImageView(this).apply {
+                setImageResource(R.mipmap.ic_launcher)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams = LinearLayout.LayoutParams(dp(82), dp(82))
+            },
+        )
+        welcomeTitle = TextView(this).apply {
+            text = getString(R.string.shell_welcome_title)
+            textSize = 23f
+            gravity = Gravity.CENTER
+            setPadding(0, dp(18), 0, 0)
+        }
+        welcomeSubtitle = TextView(this).apply {
+            text = getString(R.string.shell_welcome_subtitle)
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(22))
+        }
+        column.addView(welcomeTitle)
+        column.addView(welcomeSubtitle)
+        column.addView(
+            Button(this).apply {
+                setText(R.string.shell_welcome_action)
+                isAllCaps = false
+                setOnClickListener { showSettings() }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
+        return column
+    }
+
+    private fun showWelcome() {
+        if (!::welcomeView.isInitialized) return
+        welcomeView.visibility = View.VISIBLE
+        if (::errorScroll.isInitialized) errorScroll.visibility = View.GONE
+    }
+
+    private fun hideWelcome() {
+        if (::welcomeView.isInitialized) welcomeView.visibility = View.GONE
     }
 
     private fun buildErrorView(): ScrollView {
@@ -338,10 +396,12 @@ class WebShellActivity : AppCompatActivity() {
             if (resolved == null) {
                 // First run: there is no device yet. Open Settings as the product's landing
                 // surface instead of loading a fabricated personal URL.
+                showWelcome()
                 markPageReady()
                 showSettings()
                 return@launch
             }
+            hideWelcome()
             targetHost = resolved.host
             targetUrl = resolved.url
             // Keep the native event/notification pipeline connected alongside the WebView. The
@@ -647,6 +707,11 @@ class WebShellActivity : AppCompatActivity() {
     private fun applyPageTheme(dark: Boolean) {
         pageDark = dark
         if (::root.isInitialized) root.setBackgroundColor(if (dark) DARK_BACKGROUND else Color.WHITE)
+        if (::welcomeView.isInitialized) {
+            welcomeView.setBackgroundColor(if (dark) DARK_BACKGROUND else Color.WHITE)
+            if (::welcomeTitle.isInitialized) welcomeTitle.setTextColor(if (dark) DARK_TEXT else LIGHT_TEXT)
+            if (::welcomeSubtitle.isInitialized) welcomeSubtitle.setTextColor(if (dark) DARK_SECONDARY else LIGHT_SECONDARY)
+        }
         if (::webView.isInitialized) webView.setBackgroundColor(if (dark) DARK_BACKGROUND else Color.WHITE)
         if (::errorScroll.isInitialized) {
             errorScroll.setBackgroundColor(if (dark) DARK_BACKGROUND else Color.WHITE)

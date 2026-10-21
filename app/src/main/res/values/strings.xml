@@ -756,12 +756,15 @@
     <string name="device_at_least_one">Keep at least one device</string>
     <string name="device_save">Save</string>
     <string name="microphone_permission_denied">Microphone permission is off. Allow it in system settings to use voice input.</string>
+    <string name="shell_welcome_title">DeepSeek Harness</string>
+    <string name="shell_welcome_subtitle">A pocket client for your self-hosted Harness. Add your own device to start.</string>
+    <string name="shell_welcome_action">Add device</string>
     <string name="shell_settings_title">Settings</string>
     <string name="shell_settings_subtitle">Connection, notifications and background behaviour</string>
     <string name="shell_settings_section_connection">Connection</string>
     <string name="shell_settings_section_notifications">Notifications</string>
     <string name="shell_settings_section_background">Background</string>
-    <string name="shell_settings_about_app_name">🐳 DeepSeek Harness APP</string>
+    <string name="shell_settings_about_app_name">DeepSeek Harness APP</string>
     <string name="shell_settings_about_github">github.com/daniei-chen/DeepSeek-Harness-APP</string>
     <string name="shell_settings_about_intro">A tiny, self-hosted home for DeepSeek Harness. No cloud, no account, no telemetry.</string>
     <string name="shell_settings_section_about">About</string>

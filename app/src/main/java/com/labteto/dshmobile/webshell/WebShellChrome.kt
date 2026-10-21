@@ -544,18 +544,33 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             background = cardBackground(colors, radiusDp = 14)
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
-        card.addView(
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(
+            ImageView(activity).apply {
+                setImageResource(R.mipmap.ic_launcher)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply {
+                    rightMargin = dp(8)
+                }
+                contentDescription = activity.getString(R.string.shell_settings_about_app_name)
+            },
+        )
+        header.addView(
             TextView(activity).apply {
                 text = activity.getString(R.string.shell_settings_about_app_name)
                 textSize = 15f
                 setTextColor(colors.primary)
             },
         )
+        card.addView(header)
         card.addView(
             TextView(activity).apply {
                 text = activity.getString(R.string.shell_settings_about_intro)
                 textSize = 12f
-                setPadding(0, dp(4), 0, dp(2))
+                setPadding(0, dp(6), 0, dp(2))
                 setTextColor(colors.secondary)
             },
         )
