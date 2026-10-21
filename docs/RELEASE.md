@@ -8,7 +8,7 @@ no monetization.
 ## Install
 
 - APK: `dist/DeepSeek-Harness-0.9.36-personal.96.apk`
-- SHA-256: `BEFEC0C721444F0CF6395BCA8E90EEB45A27D5D4105381E45491364F41A2B4F7`
+- SHA-256: `E9A62462F7DF8912011937559F83E41E841AA1035FD418A35CF2CD48F71AF585`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
