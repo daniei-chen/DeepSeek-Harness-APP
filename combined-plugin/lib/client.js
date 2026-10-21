@@ -378,6 +378,13 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         }
         .dsh-file-menu button:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127,127,127,.2)); }
         .dsh-file-menu button.danger { color: var(--dsw-alias-label-danger, #f2555a); }
+        .dsh-file-tools { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+        .dsh-file-tool {
+          border: 1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.3));
+          border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary, #999);
+          font: 11px/1.2 sans-serif; padding: 4px 6px; cursor: pointer;
+        }
+        .dsh-file-tool:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127,127,127,.2)); }
       `;
       style.dataset.plugin = "@dsh-android/dsh-file-actions";
       document.head.appendChild(style);
@@ -426,6 +433,82 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         else console.warn("dsh-file-ops: refresh button not found; keeping the page as is");
       };
 
+      const fileRequest = async (action, payload) => {
+        const response = await fetch("/dsh-file-ops?action=" + action, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
+      };
+
+      const newFolder = async () => {
+        const name = window.prompt("新建文件夹名称");
+        if (name === null || name.trim() === "") return;
+        try {
+          await fileRequest("mkdir", { path: rootPath(), name: name.trim() });
+          refreshFiles();
+        } catch (error) {
+          window.alert("新建文件夹失败：" + (error instanceof Error ? error.message : String(error)));
+        }
+      };
+
+      const uploadFiles = () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.multiple = true;
+        input.style.display = "none";
+        document.body.appendChild(input);
+        input.addEventListener("change", async () => {
+          const files = [...(input.files || [])];
+          if (files.length === 0) {
+            input.remove();
+            return;
+          }
+          try {
+            for (const file of files) {
+              const url = "/dsh-file-ops?action=upload&path=" + encodeURIComponent(rootPath()) +
+                "&name=" + encodeURIComponent(file.name);
+              const response = await fetch(url, {
+                method: "POST",
+                credentials: "include",
+                headers: { "content-type": "application/octet-stream" },
+                body: file,
+              });
+              if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
+            }
+            refreshFiles();
+          } catch (error) {
+            window.alert("上传失败：" + (error instanceof Error ? error.message : String(error)));
+          } finally {
+            input.remove();
+          }
+        });
+        input.click();
+      };
+
+      const installHeaderTools = () => {
+        const header = document.querySelector('[class*="Woyo-G_header"]');
+        if (header === null || header.querySelector(".dsh-file-tools") !== null) return;
+        const tools = document.createElement("span");
+        tools.className = "dsh-file-tools";
+        const makeButton = (text, handler) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "dsh-file-tool";
+          button.textContent = text;
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handler();
+          });
+          return button;
+        };
+        tools.append(makeButton("上传", uploadFiles), makeButton("新建", newFolder));
+        header.appendChild(tools);
+      };
+
       const showMenu = (row, filePath) => {
         closeMenu();
         const menu = document.createElement("div");
@@ -454,6 +537,21 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
             })
             .catch((error) => window.alert("下载失败：" + (error instanceof Error ? error.message : String(error))));
         });
+        const rename = document.createElement("button");
+        rename.textContent = "重命名";
+        rename.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeMenu();
+          const name = window.prompt("重命名为", label(row));
+          if (name === null || name.trim() === "") return;
+          try {
+            await fileRequest("rename", { path: filePath, name: name.trim() });
+            refreshFiles();
+          } catch (error) {
+            window.alert("重命名失败：" + (error instanceof Error ? error.message : String(error)));
+          }
+        });
         const remove = document.createElement("button");
         remove.className = "danger";
         remove.textContent = "删除";
@@ -477,12 +575,12 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
             window.alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
           }
         });
-        menu.append(download, remove);
+        menu.append(download, rename, remove);
         document.body.appendChild(menu);
         const rect = row.getBoundingClientRect();
         const width = 140;
         const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
-        const top = Math.min(rect.bottom + 4, window.innerHeight - 90);
+        const top = Math.min(rect.bottom + 4, window.innerHeight - 130);
         menu.style.left = left + "px";
         menu.style.top = top + "px";
         openMenu = menu;
@@ -510,6 +608,7 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
             refreshFiles();
           }
         }
+        installHeaderTools();
         document.querySelectorAll('[class*="Woyo-G_row"]').forEach((row) => {
           if (row.dataset.dshFileActions === "1") return;
           row.dataset.dshFileActions = "1";

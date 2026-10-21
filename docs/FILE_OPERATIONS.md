@@ -1,12 +1,13 @@
 # File operations
 
 The workspace file panel is read-only in the stock DSH `workspaceFiles` API. This project adds the
-missing download/delete experience through the **internal** `host-plugin/` bundle
-(`@dsh-android/dsh-file-ops-bundle`).
+missing file verbs through the combined APP plugin's `/dsh-file-ops` route
+(`@dsh-android/deepseek-harness-app-plugin`). The legacy `host-plugin/` bundle covers the original
+download/delete pair only.
 
 ## Install
 
-Install `host-plugin/` into the DSH profile and reload the host. Set:
+Install the combined plugin into the DSH profile and reload the host. Set:
 
 ```text
 DSH_FILE_OPS_ROOTS=<path-delimiter-separated workspace roots>
@@ -16,15 +17,22 @@ If unset, the plugin falls back to the DSH process working directory.
 
 ## UI
 
-With `mobile-web-plugin/` installed, every row in **Workspace files** gets a `⋯` menu:
+With the combined plugin installed, the **Workspace files** header gets **Upload** and **New
+folder**, and every row gets a `⋯` menu:
 
 - **Download** — files stream with `Content-Disposition`; folders are zipped.
-- **Delete** — recursive delete after confirmation; the file tree refreshes.
+- **Rename** — one level, same parent, name is a single path segment.
+- **Delete** — recursive delete, no confirmation; the row is removed immediately and the tree refreshes.
+- **Upload** — multi-file picker from the phone, streamed as `application/octet-stream`; existing names are refused (`wx`).
+- **New folder** — one child under the current directory.
 
 ## Security boundaries
 
-- Requests require the DSH gate cookie.
+- The route has no second cookie gate; keep it behind the DSH front gate, relay, or your own
+  authenticated reverse proxy.
 - Paths are resolved and confined to `DSH_FILE_OPS_ROOTS`.
-- Workspace roots cannot be deleted.
+- Workspace roots cannot be deleted or renamed.
+- Names are single path segments; `..` and path separators are rejected.
 - Symbolic-link downloads are rejected.
+- Uploads refuse to overwrite an existing file.
 - Never expose `/dsh-file-ops` without the gate/reverse-proxy auth.
