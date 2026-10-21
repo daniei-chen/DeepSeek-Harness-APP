@@ -296,6 +296,29 @@ internal object WebShellScripts {
                     node = node.parentElement;
                   }
                 }
+                // Theme glass often lives on a full-screen pseudo-element (Bloom's aurora layer
+                // is body::before with filter: blur(76px)), which the ancestor walk cannot see.
+                // A 76px full-viewport blur is also a GPU-memory hog on a phone, so it is worth
+                // catching even when the geometry looks fine.
+                if (!off) {
+                  var pseudoBlur = function (node, which) {
+                    try {
+                      var s = window.getComputedStyle(node, which);
+                      var f = s.filter || 'none';
+                      var b = s.backdropFilter || s.webkitBackdropFilter || 'none';
+                      return (f !== 'none' && bad.test(f)) || (b !== 'none');
+                    } catch (e) { return false; }
+                  };
+                  var bodyEl = document.body;
+                  var appEl = document.getElementById('root');
+                  off = pseudoBlur(bodyEl, '::before') || pseudoBlur(bodyEl, '::after') ||
+                        pseudoBlur(root, '::before') || (appEl !== null && pseudoBlur(appEl, '::before'));
+                  if (!off) {
+                    var bodyStyle = window.getComputedStyle(bodyEl);
+                    var bodyFilter = bodyStyle.filter || 'none';
+                    off = bodyFilter !== 'none' && bad.test(bodyFilter);
+                  }
+                }
               }
               var next = off ? 'off' : 'on';
               // Attribute writes are mutations too: the harness observes the document, so only

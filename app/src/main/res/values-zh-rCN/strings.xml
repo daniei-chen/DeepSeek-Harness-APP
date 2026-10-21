@@ -811,6 +811,7 @@
     <string name="shell_diagnostics_copied">诊断信息已复制</string>
     <string name="shell_diagnostics_clear_cache">清除缓存并重载</string>
     <string name="shell_diagnostics_layout">界面尺寸：%1$s</string>
+    <string name="shell_diagnostics_events">最近页面事件</string>
     <string name="shell_glass_compat">磨砂玻璃兼容</string>
     <string name="shell_glass_auto">自动检测</string>
     <string name="shell_glass_force">强制关闭磨砂</string>
