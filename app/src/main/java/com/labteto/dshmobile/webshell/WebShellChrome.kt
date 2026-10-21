@@ -644,6 +644,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
      */
     fun showDoctorPage(
         dark: Boolean,
+        title: String,
         target: String,
         report: DoctorReport,
         onRerun: () -> Unit,
@@ -658,7 +659,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             background = cardBackground(colors, radiusDp = 20)
             setPadding(dp(8), dp(10), dp(8), dp(8))
         }
-        card.addView(pageHeader(colors, activity.getString(R.string.shell_doctor_title)) { dialog.dismiss(); onBack() })
+        card.addView(pageHeader(colors, title) { dialog.dismiss(); onBack() })
 
         val column = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -1251,6 +1252,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         unifiedPushEndpoint: String?,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
+        onCheck: () -> Unit,
         onToggleTurn: () -> Unit,
         onToggleAction: () -> Unit,
         onToggleGoal: () -> Unit,
@@ -1278,6 +1280,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_test_notification), activity.getString(R.string.shell_settings_test_notification_hint)) {
                 dialog.dismiss()
                 onTestNotification()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_search, activity.getString(R.string.shell_notify_check), activity.getString(R.string.shell_notify_check_hint)) {
+                dialog.dismiss()
+                onCheck()
             },
         )
         card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_notify_turn), enabledLabel(turnNotifications)) { dialog.dismiss(); onToggleTurn() })

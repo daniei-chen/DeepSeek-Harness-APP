@@ -734,6 +734,24 @@ html[data-dsh-glass="off"] body::after {
             if (filePath !== "") showMenu(row, filePath);
           });
           row.appendChild(more);
+          // Expanding a folder is the one navigation DSH does not paint on the first try: the
+          // row opens and the request finishes, but no child rows appear until something asks
+          // the list to re-read. A manual refresh is what fixes it; do it automatically, once,
+          // and only when the expansion produced nothing.
+          row.addEventListener("click", () => {
+            const before = document.querySelectorAll('[class*="Woyo-G_row"]').length;
+            const looksFolder =
+              row.getAttribute("aria-expanded") === "true" ||
+              row.querySelector('[aria-expanded="true"]') !== null ||
+              /folder|directory|文件夹|目录/i.test(
+                (row.getAttribute("aria-label") || "") + " " + (row.textContent || ""),
+              );
+            if (!looksFolder) return;
+            window.setTimeout(() => {
+              const after = document.querySelectorAll('[class*="Woyo-G_row"]').length;
+              if (after <= before) refreshFiles();
+            }, 900);
+          }, true);
         });
       };
 
