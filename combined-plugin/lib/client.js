@@ -176,7 +176,6 @@ html[data-dsh-glass="off"] body::after {
         if ((rootStyle.getPropertyValue(name) || "") !== quoted) rootStyle.setProperty(name, quoted);
       };
 
-      let speedMissingSince = 0;
       const compactActivity = () => {
         const root = document.querySelector('[data-composer-stat="activity"]');
         if (root === null) return;
@@ -200,20 +199,14 @@ html[data-dsh-glass="off"] body::after {
           }
         }
         if (speed !== undefined && speed !== "") {
-          speedMissingSince = 0;
-          if (root.style.display !== "") root.style.display = "";
           setVar("--dsh-mobile-speed", speed);
           return;
         }
-        // No speed available yet: keep the last reading for a moment instead of blinking
-        // between the activity pill and an empty slot on every stream gap.
-        const now = Date.now();
-        if (speedMissingSince === 0) speedMissingSince = now;
-        // Long enough to survive a tool call or a stream pause; shorter values made the speed
-        // pill blink between readings, which reads as the composer reloading.
-        if (now - speedMissingSince < 6000) return;
-        if (root.style.display !== "none") root.style.display = "none";
-        setVar("--dsh-mobile-speed", "");
+        // No speed in this frame: keep the last reading and leave the pill's layout alone.
+        // Hiding and re-showing it was a real layout change on every stream gap — the "it
+        // refreshes by itself" the phone reported — and a stale number for a second is honest
+        // enough while the next reading is on its way.
+        return;
       };
 
       const compactUsage = () => {
@@ -255,7 +248,39 @@ html[data-dsh-glass="off"] body::after {
 
       let dockObserver = null;
       let observedDock = null;
+      let cardObserver = null;
+      let observedCard = null;
+
+      /**
+       * Watch the composer card as well as the stats dock.
+       *
+       * The model label lives on the card, outside the dock subtree. Without an observer the
+       * only way to notice it change was a poll — and that poll also re-read the speed twice a
+       * second, which is what made the bottom row look like it refreshed on its own.
+       */
+      const observeCard = () => {
+        const card = document.querySelector("[data-composer-card]");
+        if (card === null || card === observedCard) return;
+        try {
+          cardObserver?.disconnect();
+        } catch (e) {}
+        observedCard = card;
+        try {
+          cardObserver = new MutationObserver(schedule);
+          cardObserver.observe(card, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ["aria-label"],
+          });
+        } catch (e) {
+          cardObserver = null;
+        }
+      };
+
       const observe = () => {
+        observeCard();
         const dock = document.querySelector('[data-slot="conversation.composer.dock"]') || document.querySelector("[data-composer-seat]");
         if (dock === null) return;
         if (dock === observedDock && dockObserver !== null) return;
@@ -273,8 +298,10 @@ html[data-dsh-glass="off"] body::after {
       };
 
       observe();
+      // Only a structural check every three seconds; the readings themselves are event-driven.
+      // The old two-second `compactStats` poll re-applied the model/speed values on a timer and
+      // was the source of the periodic "refresh" at the bottom of the composer.
       window.setInterval(observe, 3000);
-      window.setInterval(compactStats, 2000);
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "hidden") compactStats();
       });

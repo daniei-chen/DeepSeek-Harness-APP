@@ -47,8 +47,8 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 | APK file | `DeepSeek-Harness-1.0.0-personal.1.apk` |
 | APK `versionCode` | **50000** — must be **greater** than the installed one |
 | APK SHA-256 | `54C59A80E8A650D541B787E11AE1D2C204F9F38DE42AAB4CFBBAA07BDCEFA4F0` |
-| Host plugin | **0.1.10** |
-| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.10.tgz` |
+| Host plugin | **0.1.11** |
+| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.11.tgz` |
 | Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
 | Responsive base (vendor) | `vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` |
 | DSH tested against | `0.2.1` (desktop profile; `0.2.1-rc.2` also works) |
@@ -58,14 +58,14 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 Direct downloads:
 
 - APK: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.0/DeepSeek-Harness-1.0.0-personal.1.apk>
-- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.10/dsh-android-deepseek-harness-app-plugin-0.1.10.tgz>
+- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.11/dsh-android-deepseek-harness-app-plugin-0.1.11.tgz>
 
 Checksums:
 
 ```bash
 sha256sum DeepSeek-Harness-1.0.0-personal.1.apk
 # 54C59A80E8A650D541B787E11AE1D2C204F9F38DE42AAB4CFBBAA07BDCEFA4F0
-sha256sum dsh-android-deepseek-harness-app-plugin-0.1.10.tgz
+sha256sum dsh-android-deepseek-harness-app-plugin-0.1.11.tgz
 # 3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5
 ```
 
@@ -97,7 +97,7 @@ node setup/dsh-mobile-setup.mjs install \
 
 ```bash
 curl -L -o /tmp/dsh-app-plugin.tgz \
-  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.10/dsh-android-deepseek-harness-app-plugin-0.1.10.tgz
+  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.11/dsh-android-deepseek-harness-app-plugin-0.1.11.tgz
 node setup/dsh-mobile-setup.mjs install --profile desktop \
   --app-plugin /tmp/dsh-app-plugin.tgz --file-root "$HOME" --relay-port 3443 --yes
 ```
@@ -236,7 +236,7 @@ The app has **no built-in URL** — this is deliberate.
 
 ### 3.3 The in-app pairing QR (`设置 → 远控`)
 
-Available **after** the phone is connected once, and only with host plugin **0.1.10+**. It shows a
+Available **after** the phone is connected once, and only with host plugin **0.1.11+**. It shows a
 fresh relay invitation drawn on the phone (code, expiry, copy link/code, paired devices) so a
 second device can be paired without opening the desktop page.
 
