@@ -37,7 +37,8 @@ pieces a browser cannot provide.
 - Workspace file panel: preview HTML/PDF/Word/PPT, download files/folders, delete files/folders
   through the internal `host-plugin/`.
 - Android notification channels and test notification; native DSH event connection for
-  approval/question notifications while the app is alive.
+  approval/question notifications while the app is alive, including inline **Approve**/**Reject**
+  actions on approval notifications.
 - In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
   terminal/approval events published by `notify-plugin/`.
 - Optional UnifiedPush registration with an installed distributor; the endpoint is shown in
@@ -45,17 +46,17 @@ pieces a browser cannot provide.
 - Multi-device failover: when the current profile fails to load, the next saved profile is tried.
 - In-app update check against GitHub Releases; APK download tries the direct asset and
   `gh-proxy.com` / `ghproxy.net` mirrors before falling back to the release page.
-- Multiple connection routes: LAN, your own HTTPS address, or a tunnel you run yourself
-  (Cloudflare Tunnel / frp / Tailscale). No official relay.
+- Multiple connection routes: LAN direct, your own HTTPS address, a tunnel you run yourself
+  (Cloudflare Tunnel / frp / Tailscale), or a self-hosted `dsh-relay`. No project-operated relay.
 - No account, no telemetry, no ads, no monetization.
 
 ## Roadmap
 
-- Full task completion/pause notifications with deep links and per-session grouping.
+- Unified inbox across hosts and sessions: waiting approvals, questions, running and failed runs.
 - **Self-hosted ntfy / UnifiedPush push** for notifications after the app is killed. This is a
   required, documented feature of the project; it is optional for each user to enable. There is
   **no official cloud push service**.
-- LAN discovery and a future local gateway for transport failover.
+- LAN discovery, relay pairing and a future local gateway for transport failover.
 
 
 ## Build
