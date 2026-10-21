@@ -41,6 +41,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -53,6 +54,7 @@ import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
 import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.notify.DshNotifications
+import com.labteto.dshmobile.update.UpdateChecker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -99,6 +102,7 @@ class WebShellActivity : AppCompatActivity() {
     @Inject lateinit var notifications: DshNotifications
     @Inject lateinit var connectionManager: ConnectionManager
     @Inject lateinit var discoveryEngine: DiscoveryEngine
+    @Inject lateinit var updateChecker: UpdateChecker
 
     private val cookieManager: CookieManager get() = CookieManager.getInstance()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -737,6 +741,7 @@ class WebShellActivity : AppCompatActivity() {
             onTestNotification = { sendTestNotification() },
             onBatterySettings = { openBatterySettings() },
             onAutostart = { openAutostartSettings() },
+            onCheckUpdate = { checkForUpdate() },
             onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
@@ -777,6 +782,74 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    private fun checkForUpdate() {
+        val current = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: return
+        lifecycleScope.launch {
+            val outcome = withContext(Dispatchers.IO) { updateChecker.checkNow(current) }
+            when (outcome) {
+                is UpdateChecker.CheckOutcome.Available -> {
+                    val update = outcome.update
+                    chrome.showUpdateDialog(
+                        dark = pageDark,
+                        version = update.version,
+                        onInstall = { downloadUpdate(update) },
+                        onOpenRelease = { openExternalUri(Uri.parse(update.url)) },
+                    )
+                }
+                is UpdateChecker.CheckOutcome.UpToDate ->
+                    Toast.makeText(this@WebShellActivity, R.string.shell_settings_up_to_date, Toast.LENGTH_SHORT).show()
+                else ->
+                    Toast.makeText(this@WebShellActivity, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun downloadUpdate(update: com.labteto.dshmobile.update.AvailableUpdate) {
+        val url = update.apk?.url
+        if (url == null) {
+            openExternalUri(Uri.parse(update.url))
+            return
+        }
+        Toast.makeText(this, R.string.shell_settings_downloading, Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val file = withContext(Dispatchers.IO) {
+                runCatching {
+                    val request = okhttp3.Request.Builder().url(url).build()
+                    okhttp3.OkHttpClient().newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) error("HTTP ${response.code}")
+                        val body = response.body ?: error("empty response")
+                        val dir = File(cacheDir, "updates").apply { mkdirs() }
+                        val target = File(dir, "update.apk")
+                        body.byteStream().use { input ->
+                            target.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        target
+                    }
+                }.getOrNull()
+            }
+            if (file == null) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            installUpdate(file)
+        }
+    }
+
+    private fun installUpdate(file: File) {
+        runCatching {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.onFailure {
+            Toast.makeText(this, R.string.shell_settings_update_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun sendTestNotification() {

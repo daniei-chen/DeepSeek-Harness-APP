@@ -1,0 +1,3 @@
+- insert:
+    - id: mobile-notify
+      name: "@dsh-android/dsh-mobile-notify-bundle"

@@ -776,6 +776,15 @@
     <string name="shell_settings_autostart">自启动设置</string>
     <string name="shell_settings_autostart_hint">打开对应厂商的自启动管理页</string>
     <string name="shell_settings_version">版本 %1$s</string>
+    <string name="shell_settings_check_update">检查更新</string>
+    <string name="shell_settings_update_hint">从 GitHub Releases 检查新版本</string>
+    <string name="shell_settings_update_title">发现新版本</string>
+    <string name="shell_settings_update_message">新版本 %1$s 可用。</string>
+    <string name="shell_settings_install">下载并安装</string>
+    <string name="shell_settings_release_page">打开发布页</string>
+    <string name="shell_settings_downloading">正在下载更新…</string>
+    <string name="shell_settings_update_failed">检查更新失败</string>
+    <string name="shell_settings_up_to_date">已是最新版本</string>
     <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
 </resources>
 

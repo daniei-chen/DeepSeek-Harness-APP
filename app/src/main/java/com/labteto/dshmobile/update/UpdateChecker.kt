@@ -188,7 +188,7 @@ class UpdateChecker @Inject constructor(
     private companion object {
         /** Six hours: often enough to notice a release the same day, rare enough to be free. */
         const val AUTO_CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000
-        const val REPO = "sorsama/deepseek-harness-mobile"
+        const val REPO = "daniei-chen/DeepSeek-Harness-APP"
         const val LATEST_RELEASE_API = "https://api.github.com/repos/$REPO/releases/latest"
         const val RELEASES_URL = "https://github.com/$REPO/releases/latest"
     }

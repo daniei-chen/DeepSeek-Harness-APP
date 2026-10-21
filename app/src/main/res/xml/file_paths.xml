@@ -3,4 +3,5 @@
      uploaded; nothing outside the app can address these files. -->
 <paths>
     <cache-path name="camera" path="images/" />
+    <cache-path name="updates" path="updates/" />
 </paths>

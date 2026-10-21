@@ -778,6 +778,15 @@
     <string name="shell_settings_autostart">Autostart settings</string>
     <string name="shell_settings_autostart_hint">Open the vendor autostart page when available</string>
     <string name="shell_settings_version">Version %1$s</string>
+    <string name="shell_settings_check_update">Check for updates</string>
+    <string name="shell_settings_update_hint">Check GitHub Releases for a newer APK</string>
+    <string name="shell_settings_update_title">New version available</string>
+    <string name="shell_settings_update_message">Version %1$s is available.</string>
+    <string name="shell_settings_install">Download and install</string>
+    <string name="shell_settings_release_page">Open release page</string>
+    <string name="shell_settings_downloading">Downloading update…</string>
+    <string name="shell_settings_update_failed">Could not check for updates</string>
+    <string name="shell_settings_up_to_date">You are on the latest version</string>
     <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
 </resources>
 

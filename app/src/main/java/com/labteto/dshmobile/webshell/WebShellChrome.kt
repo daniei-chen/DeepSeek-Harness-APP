@@ -47,6 +47,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onTestNotification: () -> Unit,
         onBatterySettings: () -> Unit,
         onAutostart: () -> Unit,
+        onCheckUpdate: () -> Unit,
         onSource: () -> Unit,
         onRefresh: () -> Unit,
         onExit: () -> Unit,
@@ -178,6 +179,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(
             settingsRow(
                 colors = colors,
+                iconRes = R.drawable.ic_shell_refresh,
+                title = activity.getString(R.string.shell_settings_check_update),
+                subtitle = activity.getString(R.string.shell_settings_update_hint),
+            ) {
+                dialog.dismiss()
+                onCheckUpdate()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
                 iconRes = R.drawable.ic_shell_device,
                 title = activity.getString(R.string.shell_settings_version, versionName),
                 subtitle = activity.getString(R.string.shell_settings_source_hint),
@@ -201,6 +213,82 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
 
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    // ---- update dialog ------------------------------------------------------
+
+    fun showUpdateDialog(
+        dark: Boolean,
+        version: String,
+        onInstall: () -> Unit,
+        onOpenRelease: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(18), dp(18), dp(18), dp(18)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(20), dp(18), dp(20), dp(16))
+        }
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_update_title)
+                textSize = 17f
+                setTextColor(colors.primary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_update_message, version)
+                textSize = 13f
+                setPadding(0, dp(6), 0, dp(14))
+                setTextColor(colors.secondary)
+            },
+        )
+        val buttons = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+        }
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_release_page)
+                textSize = 13f
+                setTextColor(colors.secondary)
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                isClickable = true
+                setOnClickListener {
+                    dialog.dismiss()
+                    onOpenRelease()
+                }
+            },
+        )
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_install)
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                setPadding(dp(16), dp(10), dp(16), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(ACCENT)
+                }
+                isClickable = true
+                setOnClickListener {
+                    dialog.dismiss()
+                    onInstall()
+                }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                leftMargin = dp(4)
+            },
+        )
+        card.addView(buttons, matchWidth())
         root.addView(
             card,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
