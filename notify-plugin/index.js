@@ -37,13 +37,14 @@ export function apply(ctx) {
         return;
     }
 
-    const post = async ({ title, body, priority = "default", tags = [] }) => {
+    const post = async ({ title, body, priority = "default", tags = [], click = "" }) => {
         const headers = {
             "content-type": "text/plain; charset=utf-8",
             "Title": title,
             "Priority": priority,
             "Tags": tags.join(","),
         };
+        if (click) headers.Click = click;
         if (token) headers.Authorization = `Bearer ${token}`;
         const response = await fetch(`${base}/${encodeURIComponent(topic)}`, {
             method: "POST",
@@ -61,7 +62,8 @@ export function apply(ctx) {
         const title = session?.title || `Session ${session?.id || "unknown"}`;
         const body = `${type}\n${title}`;
         const priority = type.startsWith("ask/") || type.startsWith("question/") ? "high" : "default";
-        post({ title: "DeepSeek Harness", body, priority, tags: ["dsh"] })
+        const click = session?.id ? `dshmobile://host/current/session/${session.id}` : "";
+        post({ title: "DeepSeek Harness", body, priority, tags: ["dsh"], click })
             .catch((error) => ctx.logger?.warn?.(error));
     };
 

@@ -102,10 +102,13 @@ class NtfySubscriberService : Service() {
             return
         }
         val title = json.optString("title").ifBlank { getString(R.string.app_name) }
+        val click = json.optString("click")
         val open = PendingIntent.getActivity(
             this,
             nextId.get(),
-            Intent(this, WebShellActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            Intent(this, WebShellActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).apply {
+                if (click.isNotBlank()) setData(android.net.Uri.parse(click))
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(this, CHANNEL_MESSAGE)

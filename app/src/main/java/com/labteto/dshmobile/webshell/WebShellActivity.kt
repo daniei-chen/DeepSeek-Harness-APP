@@ -114,6 +114,7 @@ class WebShellActivity : AppCompatActivity() {
     private val failoverTried = mutableSetOf<String>()
     private var failoverInProgress = false
     private var pageHadError = false
+    private var pendingSessionId: String? = null
     private val prefetchClient by lazy { newPrefetchClient() }
     private val chrome by lazy { WebShellChrome(this) }
     private val shellDevices by lazy { ShellDevices(this) }
@@ -184,6 +185,7 @@ class WebShellActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         splashScreen.setKeepOnScreenCondition { !pageReady.get() }
         enableEdgeToEdge()
+        pendingSessionId = sessionIdFromIntent(intent)
 
         notifications.ensureChannels()
         if (NtfyConfig.load(this) != null) startNtfyService()
@@ -429,6 +431,7 @@ class WebShellActivity : AppCompatActivity() {
             markPageReady()
             hideError()
             injectPageScripts()
+            openPendingSession()
             applyInsetsToPage()
         }
 
@@ -442,6 +445,7 @@ class WebShellActivity : AppCompatActivity() {
             markPageReady()
             hideError()
             injectPageScripts()
+            openPendingSession()
             applyInsetsToPage()
             persistGatewayCookie()
             if (clearHistoryAfterLoad) {
@@ -1242,6 +1246,33 @@ class WebShellActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (::webView.isInitialized) webView.onResume()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        sessionIdFromIntent(intent)?.let {
+            pendingSessionId = it
+            openPendingSession()
+        }
+    }
+
+    private fun sessionIdFromIntent(intent: Intent?): String? {
+        if (intent == null) return null
+        val extra = intent.getStringExtra(DshNotifications.EXTRA_SESSION_ID)
+        if (!extra.isNullOrBlank()) return extra
+        return intent.data?.pathSegments?.lastOrNull()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun openPendingSession() {
+        val id = pendingSessionId ?: return
+        if (!::webView.isInitialized || !pageReady.get()) return
+        val quoted = org.json.JSONObject.quote(id)
+        webView.evaluateJavascript(
+            "(function(){try{if(window.__dshOpenSession){window.__dshOpenSession($quoted);return '1';}}catch(e){}return '0';})()",
+        ) { result ->
+            if (result?.contains("1") == true) pendingSessionId = null
+        }
     }
 
     override fun onPause() {

@@ -130,6 +130,11 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
       document.documentElement.setAttribute("data-dsh-android-shell", "1");
       document.documentElement.setAttribute("data-dsh-mobile-tweaks", "1");
       window.__dshMobileTweaks = true;
+      try {
+        if (ctx.uiWorkspace && typeof ctx.uiWorkspace.openSession === "function") {
+          window.__dshOpenSession = (sessionId) => ctx.uiWorkspace.openSession(String(sessionId));
+        }
+      } catch (e) {}
 
       const style = document.createElement("style");
       style.dataset.plugin = "@dsh-android/dsh-client-ui-responsive-bundle";
