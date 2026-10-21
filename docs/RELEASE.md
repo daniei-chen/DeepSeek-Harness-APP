@@ -1,4 +1,4 @@
-# Release 0.9.27
+# Release 0.9.28
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.27-personal.87.apk`
-- SHA-256: `FF69865AA0DCE3014C12683DD7C4D221AABBAEF6FDDF45F5D189B5B8E603F524`
+- APK: `dist/DeepSeek-Harness-0.9.28-personal.88.apk`
+- SHA-256: `63B5FAA3EAB6AABB2589C296F8E207A6B15E58EB62F90078B714E65FF9AD402B`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -43,6 +43,9 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - live connection notification with device name, connecting state and disconnect action
 - native **Inbox**: current-host sessions sorted by waiting approval/question, running, then recent; tap opens the session in the WebView
 - Inbox entry on the settings home shows the live count of waiting requests without opening a second connection
+- **Session cockpit** from an inbox row's Details button: model, input/output/cache tokens, decode speed, mean TTFT, context pressure, turns/steps
+- Cockpit actions: open in WebView, stop the current turn (with confirmation), fork the session, refresh details
+- relay 0.2.1's optional browser settings card is disabled on DSH 0.2.1 because its client asks for a `settingsScope` service this DSH core does not expose; the relay host and `/relay/health` are unaffected
 - compact settings home with second-level Connection/Notifications/Background pages
 - first-run welcome screen with the official app icon
 - official app icon in the About card
@@ -61,6 +64,8 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - Inline notification actions require the app process to still hold the live connection. If
   Android killed the process, the notification opens the app and the approval is answered there.
 - The native inbox currently covers the active host. Multi-host aggregation is the next slice.
+- Cockpit metrics come from the session's projections. A cold session can show `—` until its
+  follow snapshot arrives; use Refresh details.
 - Real-device QA is required for notification delivery, OEM background policies, LAN discovery
   and the Android installer flow. The release has passed compile/lint/unit-test and public APK
   checks, not a physical-device lab run.

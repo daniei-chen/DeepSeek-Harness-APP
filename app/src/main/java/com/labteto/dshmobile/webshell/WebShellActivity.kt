@@ -1013,9 +1013,112 @@ class WebShellActivity : AppCompatActivity() {
                 pendingSessionId = row.sessionId
                 openPendingSession()
             },
+            onDetails = { row -> loadSessionCockpit(row) },
             onRefresh = { showInbox() },
             onBack = { showSettings() },
         )
+    }
+
+    /** Load the native transcript first, then show the cockpit for that session. */
+    private fun loadSessionCockpit(row: ShellInboxRow) {
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_cockpit_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { sessionStore.openSession(row.sessionId) }
+            }
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            showSessionCockpit(row)
+        }
+    }
+
+    private fun showSessionCockpit(row: ShellInboxRow) {
+        val session = sessionStore.sessions.value.firstOrNull { it.sessionId == row.sessionId }
+        val currentRow = buildInboxRows().firstOrNull { it.sessionId == row.sessionId } ?: row
+        val usage = sessionStore.tokenUsage.value
+        val stats = sessionStore.sessionStats.value
+        val pressure = sessionStore.contextPressure.value
+        val model = sessionStore.models.value?.current
+        val contextWindow = pressure?.contextWindow
+        val context = if (contextWindow != null) {
+            val used = pressure?.projectedTokens ?: pressure?.pressureTokens ?: 0L
+            val ratio = pressure?.usedRatio
+            buildString {
+                append(compactNumber(used))
+                append(" / ")
+                append(compactNumber(contextWindow))
+                if (ratio != null) {
+                    append(" (")
+                    append((ratio * 100).roundToInt())
+                    append("%)")
+                }
+            }
+        } else {
+            "—"
+        }
+        val details = listOf(
+            getString(R.string.shell_cockpit_label_status) to currentRow.subtitle,
+            getString(R.string.shell_cockpit_label_model) to (model?.let { "${it.provider} / ${it.model}" } ?: "—"),
+            getString(R.string.shell_cockpit_label_input) to (usage?.inputTokens?.let(::compactNumber) ?: "—"),
+            getString(R.string.shell_cockpit_label_output) to (usage?.outputTokens?.let(::compactNumber) ?: "—"),
+            getString(R.string.shell_cockpit_label_cache) to (usage?.cacheHitRatio?.let { "${(it * 100).roundToInt()}%" } ?: "—"),
+            getString(R.string.shell_cockpit_label_speed) to (stats?.tokensPerSecond?.let {
+                String.format(java.util.Locale.US, "%.1f tok/s", it)
+            } ?: "—"),
+            getString(R.string.shell_cockpit_label_ttft) to (stats?.meanTtftMs?.let { "$it ms" } ?: "—"),
+            getString(R.string.shell_cockpit_label_context) to context,
+            getString(R.string.shell_cockpit_label_turns) to (stats?.let { "${it.turns} / ${it.steps}" } ?: "—"),
+        )
+        chrome.showSessionCockpit(
+            dark = pageDark,
+            title = currentRow.title,
+            status = currentRow.subtitle,
+            details = details,
+            running = session?.running == true,
+            onOpen = {
+                pendingSessionId = row.sessionId
+                openPendingSession()
+            },
+            onStop = { confirmStopSession(row) },
+            onFork = {
+                lifecycleScope.launch {
+                    runCatching { sessionStore.forkSession(row.sessionId) }
+                    Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_forked, Toast.LENGTH_SHORT).show()
+                    showSessionCockpit(row)
+                }
+            },
+            onRefresh = { showSessionCockpit(row) },
+            onBack = { showInbox() },
+        )
+    }
+
+    private fun confirmStopSession(row: ShellInboxRow) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_cockpit_stop_title)
+            .setMessage(R.string.shell_cockpit_stop_message)
+            .setPositiveButton(R.string.shell_cockpit_stop_confirm) { _, _ ->
+                lifecycleScope.launch {
+                    if (sessionStore.currentSessionId.value != row.sessionId) {
+                        Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_not_open, Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    runCatching { sessionStore.cancelTurn() }
+                    Toast.makeText(this@WebShellActivity, R.string.shell_cockpit_stopped, Toast.LENGTH_SHORT).show()
+                    showSessionCockpit(row)
+                }
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun compactNumber(value: Long): String = when {
+        value >= 1_000_000 -> String.format(java.util.Locale.US, "%.1fM", value / 1_000_000.0)
+        value >= 1_000 -> String.format(java.util.Locale.US, "%.1fk", value / 1_000.0)
+        else -> value.toString()
     }
 
     private fun showConnectionPage() {

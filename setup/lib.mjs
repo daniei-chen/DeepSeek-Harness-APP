@@ -314,6 +314,26 @@ async function writeTextAtomic(filePath, value) {
   await fsp.rename(temp, filePath);
 }
 
+/**
+ * DSH 0.2.1's client runtime does not expose the `settingsScope` service that dsh-relay 0.2.1's
+ * optional settings card injects. The relay's host half is fine and keeps listening; only the
+ * browser card hangs the client-module sync with "waiting for activation". The app has its own
+ * Settings → 手机访问 panel for the same facts, so removing the card metadata is the safe
+ * compatibility step: the relay stays fully functional, and the plugin page can finish syncing.
+ *
+ * This is deliberately a narrow package-metadata edit, not a fork of the relay. Reinstalling the
+ * relay restores the field, which is why the installer runs this after every install.
+ */
+export async function disableRelayClientCard(profileDir) {
+  const packagePath = path.join(profileDir, "node_modules", "dsh-relay", "package.json");
+  if (!(await exists(packagePath))) return false;
+  const pkg = await readJson(packagePath);
+  if (!pkg?.dsh?.client) return false;
+  delete pkg.dsh.client;
+  await writeJsonAtomic(packagePath, pkg);
+  return true;
+}
+
 export async function assertProfile(ctx) {
   if (!(await exists(ctx.packageJsonPath))) {
     throw new Error(
@@ -626,6 +646,9 @@ export async function install(opts) {
     if (addCode !== 0) {
       throw new Error(`dsh plugin add failed with exit code ${addCode}`);
     }
+    const relayClientDisabled = opts.relay
+      ? await disableRelayClientCard(ctx.profileDir)
+      : false;
 
     const pkg = await readJson(ctx.packageJsonPath);
     const ensured = ensureBundles(pkg, plan.bundles);
@@ -643,6 +666,7 @@ export async function install(opts) {
       installedAt: new Date().toISOString(),
       backupDir: backup.backupDir,
       bundlesAdded: ensured.added,
+      relayClientDisabled,
     };
     await writeJsonAtomic(path.join(ctx.stateDir, "install.json"), manifest);
     return { ok: true, ...manifest, backupDir: backup.backupDir };

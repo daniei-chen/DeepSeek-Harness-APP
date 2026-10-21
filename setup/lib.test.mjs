@@ -9,6 +9,7 @@ import {
   backupProfile,
   buildManagedBlock,
   bundleNamesFor,
+  disableRelayClientCard,
   ensureBundles,
   materializeSpec,
   parseArgs,
@@ -20,6 +21,28 @@ import {
 test("yamlQuote preserves Windows paths and escapes quotes", () => {
   assert.equal(yamlQuote("D:\\AI\\DeepSeek"), "'D:\\AI\\DeepSeek'");
   assert.equal(yamlQuote("it's"), "'it''s'");
+});
+
+test("disableRelayClientCard removes only the optional client metadata", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "dsh-relay-card-"));
+  const pkgDir = path.join(root, "node_modules", "dsh-relay");
+  await fs.mkdir(pkgDir, { recursive: true });
+  await fs.writeFile(
+    path.join(pkgDir, "package.json"),
+    JSON.stringify({
+      name: "dsh-relay",
+      version: "0.2.1",
+      dsh: {
+        bundle: { patch: "./cordis.patch.yml" },
+        client: { platform: "web", inject: ["@deepseek-ai/dsh-client-ui-settings-plugins"] },
+      },
+    }),
+    "utf8",
+  );
+  assert.equal(await disableRelayClientCard(root), true);
+  const patched = JSON.parse(await fs.readFile(path.join(pkgDir, "package.json"), "utf8"));
+  assert.deepEqual(patched.dsh, { bundle: { patch: "./cordis.patch.yml" } });
+  assert.equal(await disableRelayClientCard(root), false);
 });
 
 test("managed block contains file roots, relay settings and hostnames", () => {

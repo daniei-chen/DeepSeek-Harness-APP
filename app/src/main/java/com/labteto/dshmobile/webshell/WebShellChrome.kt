@@ -503,6 +503,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         rows: List<ShellInboxRow>,
         connectionLabel: String,
         onOpen: (ShellInboxRow) -> Unit,
+        onDetails: (ShellInboxRow) -> Unit,
         onRefresh: () -> Unit,
         onBack: () -> Unit,
     ) {
@@ -537,19 +538,18 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             rows.forEach { row ->
                 list.addView(
-                    settingsRow(
+                    inboxRow(
                         colors = colors,
-                        iconRes = when {
-                            row.action -> R.drawable.ic_shell_notifications
-                            row.running -> R.drawable.ic_shell_refresh
-                            else -> R.drawable.ic_shell_check
+                        row = row,
+                        onOpen = {
+                            dialog.dismiss()
+                            onOpen(row)
                         },
-                        title = row.title,
-                        subtitle = row.subtitle,
-                    ) {
-                        dialog.dismiss()
-                        onOpen(row)
-                    },
+                        onDetails = {
+                            dialog.dismiss()
+                            onDetails(row)
+                        },
+                    ),
                 )
             }
             val height = dp((rows.size * 64 + 24).coerceIn(120, 360))
@@ -565,6 +565,76 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(divider(colors))
         card.addView(
             menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_inbox_refresh)) {
+                dialog.dismiss()
+                onRefresh()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showSessionCockpit(
+        dark: Boolean,
+        title: String,
+        status: String,
+        details: List<Pair<String, String>>,
+        running: Boolean,
+        onOpen: () -> Unit,
+        onStop: () -> Unit,
+        onFork: () -> Unit,
+        onRefresh: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_cockpit_title)) { dialog.dismiss(); onBack() })
+        card.addView(
+            TextView(activity).apply {
+                text = title
+                textSize = 17f
+                setTextColor(colors.primary)
+                maxLines = 2
+                setPadding(dp(14), dp(6), dp(14), dp(2))
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = status
+                textSize = 12f
+                setTextColor(colors.secondary)
+                setPadding(dp(14), 0, dp(14), dp(10))
+            },
+        )
+        details.forEach { (label, value) -> card.addView(infoRow(colors, label, value)) }
+        card.addView(divider(colors))
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_cockpit_open)) {
+                dialog.dismiss()
+                onOpen()
+            },
+        )
+        if (running) {
+            card.addView(
+                menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_cockpit_stop), destructive = true) {
+                    dialog.dismiss()
+                    onStop()
+                },
+            )
+        }
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_edit, activity.getString(R.string.shell_cockpit_fork)) {
+                dialog.dismiss()
+                onFork()
+            },
+        )
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_cockpit_refresh)) {
                 dialog.dismiss()
                 onRefresh()
             },
@@ -1227,6 +1297,102 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     private fun enabledLabel(enabled: Boolean): String = activity.getString(
         if (enabled) R.string.shell_settings_enabled else R.string.shell_settings_disabled,
     )
+
+    private fun infoRow(colors: Colors, label: String, value: String): View = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(42)
+        setPadding(dp(14), dp(5), dp(14), dp(5))
+        addView(
+            TextView(activity).apply {
+                text = label
+                textSize = 12f
+                setTextColor(colors.secondary)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.42f)
+            },
+        )
+        addView(
+            TextView(activity).apply {
+                text = value
+                textSize = 12.5f
+                setTextColor(colors.primary)
+                gravity = Gravity.END
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.58f)
+            },
+        )
+    }
+
+    private fun inboxRow(
+        colors: Colors,
+        row: ShellInboxRow,
+        onOpen: () -> Unit,
+        onDetails: () -> Unit,
+    ): View {
+        val container = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(62)
+            setPadding(dp(14), dp(6), dp(8), dp(6))
+            background = rowRipple(colors)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onOpen() }
+        }
+        container.addView(
+            ImageView(activity).apply {
+                setImageResource(
+                    when {
+                        row.action -> R.drawable.ic_shell_notifications
+                        row.running -> R.drawable.ic_shell_refresh
+                        else -> R.drawable.ic_shell_check
+                    },
+                )
+                setColorFilter(if (row.action) ACCENT else colors.secondary)
+                layoutParams = LinearLayout.LayoutParams(dp(21), dp(21))
+            },
+        )
+        val copy = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(13), 0, dp(8), 0)
+        }
+        copy.addView(
+            TextView(activity).apply {
+                text = row.title
+                textSize = 15f
+                setTextColor(colors.primary)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+        )
+        copy.addView(
+            TextView(activity).apply {
+                text = row.subtitle
+                textSize = 11.5f
+                setTextColor(if (row.action) ACCENT else colors.secondary)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, dp(2), 0, 0)
+            },
+        )
+        container.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        container.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_inbox_details)
+                textSize = 12f
+                setTextColor(ACCENT)
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    it.isPressed = false
+                    onDetails()
+                }
+            },
+        )
+        return container
+    }
 
     private fun settingsRow(
         colors: Colors,

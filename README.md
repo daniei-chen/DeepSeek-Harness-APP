@@ -41,6 +41,8 @@ pieces a browser cannot provide.
   actions on approval notifications.
 - Native inbox for the current host: waiting approvals/questions, running and recent sessions,
   with tap-through to the WebView session.
+- Session cockpit from an inbox row: model, token accounting, cache hit, decode speed, TTFT,
+  context pressure and turns/steps; open, stop, fork and refresh from the same sheet.
 - In-app self-hosted ntfy subscription (Settings → Notifications → Self-hosted ntfy push) for
   terminal/approval events published by `notify-plugin/`.
 - Optional UnifiedPush registration with an installed distributor; the endpoint is shown in
