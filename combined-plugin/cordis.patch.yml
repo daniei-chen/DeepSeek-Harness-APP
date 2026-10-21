@@ -7,3 +7,5 @@
 - insert:
     - id: deepseek-app
       name: "@dsh-android/deepseek-harness-app-plugin"
+    - id: ui-responsive
+      name: "@dsh-android/dsh-client-ui-responsive"

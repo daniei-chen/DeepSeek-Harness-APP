@@ -1,8 +1,5 @@
 import { apply as applyFileOps, inject as fileOpsInject } from "./lib/file-ops.js";
-import {
-  apply as applyBrowserSkill,
-  inject as browserSkillInject,
-} from "@wxg-prc-cpg/browser-skill-dsh-plugin";
+import { apply as applyBrowserSkill } from "@wxg-prc-cpg/browser-skill-dsh-plugin";
 
 /**
  * One installable bundle for the Android shell:
@@ -13,7 +10,7 @@ import {
  * The theme plugin is intentionally separate.
  */
 export const name = "deepseek-harness-app-plugin";
-export const inject = [...new Set([...fileOpsInject, ...browserSkillInject])];
+export const inject = [...new Set(fileOpsInject)];
 
 export function apply(ctx, config = {}, options = {}) {
     applyFileOps(ctx);
