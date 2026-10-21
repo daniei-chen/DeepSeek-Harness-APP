@@ -1140,9 +1140,9 @@ class WebShellActivity : AppCompatActivity() {
             return
         }
         val candidates = listOf(
-            direct,
             "https://gh-proxy.com/$direct",
             "https://ghproxy.net/$direct",
+            direct,
         ).distinct()
         val progressCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1155,6 +1155,7 @@ class WebShellActivity : AppCompatActivity() {
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             progress = 0
+            isIndeterminate = true
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1175,8 +1176,14 @@ class WebShellActivity : AppCompatActivity() {
                         downloadApk(candidate) { percent ->
                             mainHandler.post {
                                 if (dialog.isShowing) {
-                                    progressBar.progress = percent
-                                    progressLabel.text = getString(R.string.shell_update_downloading_percent, percent)
+                                    if (percent < 0) {
+                                        progressBar.isIndeterminate = true
+                                        progressLabel.text = getString(R.string.shell_update_downloading)
+                                    } else {
+                                        progressBar.isIndeterminate = false
+                                        progressBar.progress = percent
+                                        progressLabel.text = getString(R.string.shell_update_downloading_percent, percent)
+                                    }
                                 }
                             }
                         }
@@ -1197,11 +1204,13 @@ class WebShellActivity : AppCompatActivity() {
     private fun downloadApk(url: String, onProgress: (Int) -> Unit): File {
         val request = okhttp3.Request.Builder().url(url).build()
         val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
             .build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
+            val contentType = response.header("Content-Type").orEmpty()
+            if (contentType.contains("text/html", ignoreCase = true)) error("HTML response")
             val body = response.body ?: error("empty response")
             val total = body.contentLength()
             val dir = File(cacheDir, "updates").apply { mkdirs() }
@@ -1211,6 +1220,7 @@ class WebShellActivity : AppCompatActivity() {
                     val buffer = ByteArray(64 * 1024)
                     var copied = 0L
                     var lastPercent = -1
+                    if (total <= 0) onProgress(-1)
                     while (true) {
                         val read = input.read(buffer)
                         if (read <= 0) break
@@ -1226,9 +1236,20 @@ class WebShellActivity : AppCompatActivity() {
                     }
                 }
             }
+            if (target.length() < 1_000_000L || !looksLikeApk(target)) {
+                target.delete()
+                error("not an APK")
+            }
             return target
         }
     }
+
+    private fun looksLikeApk(file: File): Boolean = runCatching {
+        java.io.FileInputStream(file).use { input ->
+            val magic = ByteArray(4)
+            input.read(magic) == 4 && magic[0] == 'P'.code.toByte() && magic[1] == 'K'.code.toByte()
+        }
+    }.getOrDefault(false)
 
     private fun installUpdate(file: File) {
         runCatching {
@@ -1492,6 +1513,25 @@ class WebShellActivity : AppCompatActivity() {
      * granted. Asking here, before the user presses the microphone, leaves that callback with a
      * straight grant.
      */
+    private fun showSpeechPermissionDialog(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_voice_permission_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.shell_voice_open_settings) { _, _ -> openSpeechEngineSettings() }
+            .setNegativeButton(R.string.shell_update_later, null)
+            .show()
+    }
+
+    private fun openSpeechEngineSettings() {
+        val service = packageManager.queryIntentServices(Intent("android.speech.RecognitionService"), 0).firstOrNull()
+        val intent = if (service != null) {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${service.serviceInfo.packageName}"))
+        } else {
+            Intent(Settings.ACTION_SETTINGS)
+        }
+        runCatching { startActivity(intent) }
+    }
+
     private fun ensureMicrophonePermission() {
         if (micPermissionAsked) return
         val granted = ContextCompat.checkSelfPermission(
@@ -1512,7 +1552,7 @@ class WebShellActivity : AppCompatActivity() {
             return
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            Toast.makeText(this, R.string.shell_voice_unavailable, Toast.LENGTH_LONG).show()
+            showSpeechPermissionDialog(getString(R.string.shell_voice_unavailable))
             return
         }
         speechRecognizer?.destroy()
@@ -1525,7 +1565,11 @@ class WebShellActivity : AppCompatActivity() {
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                Toast.makeText(this@WebShellActivity, R.string.shell_voice_failed, Toast.LENGTH_SHORT).show()
+                if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    showSpeechPermissionDialog(getString(R.string.shell_voice_permission_message))
+                } else {
+                    Toast.makeText(this@WebShellActivity, R.string.shell_voice_failed, Toast.LENGTH_SHORT).show()
+                }
                 recognizer.destroy()
                 if (speechRecognizer === recognizer) speechRecognizer = null
             }

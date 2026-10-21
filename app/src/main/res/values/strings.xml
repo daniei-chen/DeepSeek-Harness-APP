@@ -756,6 +756,9 @@
     <string name="device_name_invalid">The device name must not be empty</string>
     <string name="device_at_least_one">Keep at least one device</string>
     <string name="device_save">Save</string>
+    <string name="shell_voice_permission_title">Voice engine permission</string>
+    <string name="shell_voice_permission_message">The system speech engine needs microphone access. Allow it for Google / your speech service or keyboard, or use the keyboard voice input.</string>
+    <string name="shell_voice_open_settings">Open speech engine settings</string>
     <string name="shell_voice_unavailable">No speech recognition service is available. Use keyboard voice input.</string>
     <string name="shell_voice_failed">Speech recognition failed. Try again or use keyboard voice input.</string>
     <string name="microphone_permission_denied">Microphone permission is off. Allow it in system settings to use voice input.</string>

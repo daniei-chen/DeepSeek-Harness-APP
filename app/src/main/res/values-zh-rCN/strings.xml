@@ -754,6 +754,9 @@
     <string name="device_name_invalid">设备名称不能为空</string>
     <string name="device_at_least_one">至少保留一个设备</string>
     <string name="device_save">保存</string>
+    <string name="shell_voice_permission_title">语音引擎需要授权</string>
+    <string name="shell_voice_permission_message">系统语音引擎需要麦克风权限。请到系统设置里允许 Google/系统语音服务或输入法使用麦克风，也可以直接用输入法的语音输入。</string>
+    <string name="shell_voice_open_settings">打开语音引擎设置</string>
     <string name="shell_voice_unavailable">当前设备没有可用的语音识别服务，请使用输入法的语音输入。</string>
     <string name="shell_voice_failed">语音识别失败，请重试或使用输入法的语音输入。</string>
     <string name="microphone_permission_denied">麦克风权限未开启，请在系统设置中允许后使用语音输入。</string>
