@@ -461,7 +461,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
           event.preventDefault();
           event.stopPropagation();
           closeMenu();
-          if (!window.confirm("删除这个文件/文件夹？\\n" + filePath)) return;
           try {
             const response = await fetch("/dsh-file-ops?action=delete", {
               method: "POST",
