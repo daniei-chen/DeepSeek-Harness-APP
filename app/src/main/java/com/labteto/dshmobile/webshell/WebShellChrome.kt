@@ -499,6 +499,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         onManageDevices: () -> Unit,
         onScanQr: () -> Unit,
+        onPairCode: () -> Unit,
         onScanLan: () -> Unit,
         onNetworkInfo: () -> Unit,
         onFleet: () -> Unit,
@@ -527,6 +528,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_scan_qr), activity.getString(R.string.shell_settings_scan_qr_hint)) {
                 dialog.dismiss()
                 onScanQr()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_edit, activity.getString(R.string.shell_pair_row), activity.getString(R.string.shell_pair_row_hint)) {
+                dialog.dismiss()
+                onPairCode()
             },
         )
         card.addView(
@@ -1806,6 +1813,147 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         )
         dialog.setOnShowListener {
             field.requestFocus()
+            dialog.window?.setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+            )
+        }
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    /**
+     * Pairing without a camera: the relay address plus the eight-digit code.
+     *
+     * The address is the relay's own origin (`https://<lan-ip>:3443`), not the DSH port — the
+     * claim endpoint belongs to the relay. Both fields are validated by the caller so this dialog
+     * stays a dumb form.
+     */
+    fun showPairingDialog(
+        dark: Boolean,
+        initialAddress: String,
+        onSubmit: (String, String) -> Boolean,
+        onScan: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(18), dp(18), dp(18), dp(18)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(20), dp(18), dp(20), dp(16))
+        }
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_pair_title)
+                textSize = 17f
+                setTextColor(colors.primary)
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_pair_description)
+                textSize = 13f
+                setPadding(0, dp(6), 0, dp(14))
+                setTextColor(colors.secondary)
+            },
+        )
+        val address = EditText(activity).apply {
+            setText(initialAddress)
+            setSelection(text.length)
+            textSize = 14f
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            imeOptions = EditorInfo.IME_ACTION_NEXT
+            maxLines = 1
+            setSingleLine(true)
+            setTextColor(colors.primary)
+            setHintTextColor(colors.secondary)
+            hint = activity.getString(R.string.shell_pair_address_hint)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            background = fieldBackground(colors)
+        }
+        val code = EditText(activity).apply {
+            textSize = 18f
+            letterSpacing = 0.18f
+            inputType = InputType.TYPE_CLASS_NUMBER
+            imeOptions = EditorInfo.IME_ACTION_DONE
+            maxLines = 1
+            setSingleLine(true)
+            setTextColor(colors.primary)
+            setHintTextColor(colors.secondary)
+            hint = activity.getString(R.string.shell_pair_code_hint)
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            background = fieldBackground(colors)
+        }
+        val error = TextView(activity).apply {
+            text = activity.getString(R.string.shell_pair_invalid)
+            textSize = 12f
+            setTextColor(colors.danger)
+            setPadding(0, dp(8), 0, 0)
+            visibility = View.GONE
+        }
+        card.addView(address, matchWidth())
+        card.addView(code, matchWidth(9))
+        card.addView(error, matchWidth())
+
+        val buttons = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+            setPadding(0, dp(16), 0, 0)
+        }
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(android.R.string.cancel)
+                textSize = 14f
+                setTextColor(colors.secondary)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                isClickable = true
+                setOnClickListener { dialog.dismiss() }
+            },
+        )
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_pair_scan)
+                textSize = 14f
+                setTextColor(colors.primary)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                isClickable = true
+                setOnClickListener {
+                    dialog.dismiss()
+                    onScan()
+                }
+            },
+        )
+        buttons.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_pair_connect)
+                textSize = 14f
+                setTextColor(Color.WHITE)
+                setPadding(dp(18), dp(10), dp(18), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12).toFloat()
+                    setColor(ACCENT)
+                }
+                isClickable = true
+                setOnClickListener {
+                    val accepted = runCatching { onSubmit(address.text.toString(), code.text.toString()) }
+                        .getOrDefault(false)
+                    if (accepted) {
+                        dialog.dismiss()
+                    } else {
+                        error.visibility = View.VISIBLE
+                    }
+                }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                leftMargin = dp(4)
+            },
+        )
+        card.addView(buttons, matchWidth())
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        dialog.setOnShowListener {
+            address.requestFocus()
             dialog.window?.setSoftInputMode(
                 WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
             )

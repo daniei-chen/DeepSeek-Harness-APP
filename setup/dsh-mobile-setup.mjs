@@ -7,6 +7,7 @@ import {
   install,
   listBackups,
   parseArgs,
+  readPairing,
   readStatus,
   resolveContext,
   uninstall,
@@ -89,6 +90,29 @@ async function main(argv) {
     if (opts.json) printJson(result);
     else console.log(formatDoctor(result));
     if (!result.ok) process.exitCode = 1;
+    return;
+  }
+
+  if (opts.command === "pair") {
+    const result = await readPairing(opts);
+    if (opts.json) {
+      printJson(result);
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+    if (!result.ok) {
+      console.error(`error: ${result.error}${result.message ? ` (${result.message})` : ""}`);
+      console.error("Start dsh-relay first: the pairing page is served by the relay, not by DSH itself.");
+      process.exitCode = 1;
+      return;
+    }
+    console.log("Pair a device (no camera needed):");
+    console.log(`  Relay address: ${result.payload.url}`);
+    console.log(`  Pairing code:  ${result.payload.code}`);
+    console.log(`  Expires in:    ${result.expiresInSeconds ?? "?"} seconds, single use`);
+    console.log(`  Pair page:     ${result.pairPage}`);
+    console.log("");
+    console.log("On the phone: Settings → Connection → Pair with a code, then enter the address and code.");
     return;
   }
 

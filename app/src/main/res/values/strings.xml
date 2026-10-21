@@ -939,6 +939,16 @@
     <string name="shell_settings_copied">Copied</string>
     <string name="shell_settings_test_connection">Test current connection</string>
     <string name="shell_settings_test_connection_hint">Check URL reachability and latency</string>
+    <string name="shell_pair_title">Pair with a code</string>
+    <string name="shell_pair_description">Enter the relay address shown on the computer and its 8-digit code. The address is the relay itself, not the DSH port.</string>
+    <string name="shell_pair_address_hint">https://192.168.2.13:3443</string>
+    <string name="shell_pair_code_hint">8-digit pairing code</string>
+    <string name="shell_pair_connect">Connect</string>
+    <string name="shell_pair_scan">Scan instead</string>
+    <string name="shell_pair_invalid">That address or code does not look right.</string>
+    <string name="shell_pair_row">Pair with a code</string>
+    <string name="shell_pair_row_hint">No camera? Type the relay address and the code</string>
+    <string name="shell_scan_all_added">Found %1$d device(s) — all already added</string>
     <string name="shell_doctor">Connection doctor</string>
     <string name="shell_doctor_hint">DNS, port, certificate, login and host plugin, one step at a time</string>
     <string name="shell_doctor_title">Connection doctor</string>

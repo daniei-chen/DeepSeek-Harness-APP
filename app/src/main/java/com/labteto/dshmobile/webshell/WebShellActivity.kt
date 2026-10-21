@@ -1240,6 +1240,7 @@ class WebShellActivity : AppCompatActivity() {
             dark = pageDark,
             onManageDevices = { showDeviceManager() },
             onScanQr = { openQrScanner() },
+            onPairCode = { showPairingCodeDialog() },
             onScanLan = { scanLan() },
             onNetworkInfo = { showNetworkInfoDialog() },
             onFleet = { showFleet() },
@@ -1636,6 +1637,17 @@ class WebShellActivity : AppCompatActivity() {
                 Toast.makeText(
                     this@WebShellActivity,
                     getString(R.string.shell_settings_scan_found_count, added),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                showDeviceManager()
+                return@launch
+            }
+            // A scan that found the devices already in the list is a success, not an empty scan.
+            val known = harnesses.count { it.trusted } + relays.size
+            if (known > 0) {
+                Toast.makeText(
+                    this@WebShellActivity,
+                    getString(R.string.shell_scan_all_added, known),
                     Toast.LENGTH_SHORT,
                 ).show()
                 showDeviceManager()
@@ -2408,6 +2420,41 @@ class WebShellActivity : AppCompatActivity() {
                 applyServerUrl(target.url)
                 true
             },
+        )
+    }
+
+    /**
+     * Pairing without a camera: relay origin + eight-digit code.
+     *
+     * The claim page accepts `?code=`, so this only has to build the same URL the QR would have
+     * carried and treat it as a device. The relay validates the code; a wrong one shows its own
+     * claim page rather than a silent failure.
+     */
+    private fun showPairingCodeDialog() {
+        val initial = runCatching {
+            val uri = java.net.URI(targetUrl)
+            val port = if (uri.port > 0) uri.port else if (uri.scheme == "https") 443 else 80
+            if (port == 3443 || targetUrl.contains("/relay")) "${uri.scheme}://${uri.host}:$port" else ""
+        }.getOrDefault("")
+        chrome.showPairingDialog(
+            dark = pageDark,
+            initialAddress = initial,
+            onSubmit = { address, code ->
+                val base = address.trim().trimEnd('/')
+                val uri = runCatching { java.net.URI(base) }.getOrNull()
+                val codeOk = code.trim().matches(Regex("^\\d{6,12}$"))
+                if (uri?.host == null || (uri.scheme != "http" && uri.scheme != "https") || !codeOk) {
+                    false
+                } else {
+                    val url = "$base/relay/pair?code=${code.trim()}"
+                    val device = shellDevices.add(url, name = getString(R.string.shell_scan_qr_device))
+                    shellDevices.setCurrent(device.id)
+                    Toast.makeText(this, R.string.shell_scan_qr_added, Toast.LENGTH_SHORT).show()
+                    applyServerUrl(url)
+                    true
+                }
+            },
+            onScan = { openQrScanner() },
         )
     }
 

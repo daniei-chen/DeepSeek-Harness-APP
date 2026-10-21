@@ -7,6 +7,7 @@ import https from "node:https";
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { collectPairing } from "../combined-plugin/lib/mobile-access.js";
 
 export const VERSION = "0.1.0";
 
@@ -35,12 +36,14 @@ Usage:
   node setup/dsh-mobile-setup.mjs install [options]
   node setup/dsh-mobile-setup.mjs status [options]
   node setup/dsh-mobile-setup.mjs doctor [options]
+  node setup/dsh-mobile-setup.mjs pair [options]
   node setup/dsh-mobile-setup.mjs uninstall [options]
 
 Commands:
   install    Install and enable the host packages, then write the managed patch.
   status     Show what is installed, enabled and listening.
   doctor     Check the profile, file roots and relay listener.
+  pair       Print the live relay address and pairing code (add --fresh for a new code).
   uninstall  Restore the profile files from the latest (or a chosen) backup.
 
 Options:
@@ -91,6 +94,7 @@ export function parseArgs(argv) {
     yes: false,
     json: false,
     backup: undefined,
+    fresh: false,
   };
 
   let i = 0;
@@ -161,6 +165,9 @@ export function parseArgs(argv) {
         break;
       case "--json":
         opts.json = true;
+        break;
+      case "--fresh":
+        opts.fresh = true;
         break;
       case "--backup":
         opts.backup = value();
@@ -762,6 +769,19 @@ async function checkRelayHealth(port) {
     req.on("error", (error) => resolve({ ok: false, error: error.message }));
     req.end();
   });
+}
+
+/**
+ * Read (or mint) the relay's live pairing invitation.
+ *
+ * The relay only issues codes to its own loopback listener, and this runs on that machine, so no
+ * password is involved. The same parser the phone's host plugin uses is reused here, which keeps
+ * the two halves of the product reading one page the same way.
+ */
+export async function readPairing(opts) {
+  const relayPort = Number(opts.relayPort) || DEFAULT_RELAY_PORT;
+  const result = await collectPairing(relayPort, { fresh: Boolean(opts.fresh) });
+  return { ...result, relayPort };
 }
 
 export async function doctor(ctx) {

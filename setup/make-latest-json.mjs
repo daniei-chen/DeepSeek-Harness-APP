@@ -21,16 +21,15 @@ const REPO = "daniei-chen/DeepSeek-Harness-APP";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export function versionCodeFor(version) {
-    const parts = String(version)
-        .trim()
-        .replace(/^v/, "")
+    const cleaned = String(version).trim().replace(/^v/, "");
+    const parts = cleaned
         .split("-")[0]
         .split(".")
         .map((part) => Number.parseInt(part, 10))
         .filter((part) => Number.isFinite(part));
     const [major = 0, minor = 0, patch = 0] = parts;
     const base = major * 10_000 + minor * 100 + patch;
-    return String(version).trim().startsWith("0.") ? base + 31_000 : base;
+    return cleaned.startsWith("0.") ? base + 31_000 : base;
 }
 
 function arg(name, fallback = undefined) {
