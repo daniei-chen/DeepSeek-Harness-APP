@@ -12,8 +12,9 @@ Android pieces a browser cannot provide.
 
 ## Latest
 
-- **APK 0.9.33** — QR scan, mDNS + subnet LAN discovery, relay pairing, device health, fleet
-  overview, cross-host inbox, session cockpit, actionable approval notifications.
+- **APK 0.9.34** — QR scan, mDNS + subnet LAN discovery, relay pairing, device health, fleet
+  overview, cross-host inbox, session cockpit, actionable approval notifications, native-styled
+  diagnostics and keyboard/layout fixes.
 - **Host plugin 0.1.7** — file upload / rename / new folder, file-operation audit log, relay
   extra proxy paths for `/dsh-file-ops` and `/dsh-mobile`.
 - **One-command host setup** — `dsh-relay` (TLS, QR/passcode pairing, device revoke), the combined
@@ -21,7 +22,7 @@ Android pieces a browser cannot provide.
 
 Downloads:
 
-- [APK v0.9.33](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.33)
+- [APK v0.9.34](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.9.34)
 - [Host plugin 0.1.7](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.7)
 
 ## What is inside

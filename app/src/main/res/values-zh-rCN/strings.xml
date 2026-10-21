@@ -857,11 +857,14 @@
     <string name="shell_scan_qr_too_new">二维码版本过新，请升级 App</string>
     <string name="shell_scan_qr_device">扫码设备</string>
     <string name="shell_scan_qr_added">已添加扫码设备</string>
+    <string name="shell_scan_qr_confirm_title">连接这个地址？</string>
+    <string name="shell_scan_qr_confirm">添加并连接</string>
     <string name="shell_settings_scan_lan">扫描局域网</string>
     <string name="shell_settings_scan_lan_hint">查找同一 Wi-Fi 下的 DSH 主机</string>
     <string name="shell_settings_scanning">正在扫描局域网…</string>
     <string name="shell_settings_scan_progress">扫描中… %1$d / %2$d</string>
     <string name="shell_settings_scan_empty">当前网络没有发现 DSH 主机</string>
+    <string name="shell_settings_scan_failed">扫描失败：%1$s</string>
     <string name="shell_settings_scan_found_count">已添加 %1$d 台设备</string>
     <string name="shell_settings_scan_empty_title">没有发现可连接的 DSH</string>
     <string name="shell_settings_scan_empty_detail">手机网段：%1$s\n已扫描端口：%2$s\n\n常见原因：DSH Desktop 只监听 127.0.0.1；电脑防火墙拦截了端口；访客 Wi-Fi 做了客户端隔离。</string>

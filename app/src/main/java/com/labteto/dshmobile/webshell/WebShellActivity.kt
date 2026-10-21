@@ -432,6 +432,9 @@ class WebShellActivity : AppCompatActivity() {
             val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             insets = InsetsDp(status / density, navigation / density, ime / density)
             applyInsetsToPage()
+            // adjustNothing keeps the window full-height; a stale WebView measure after the
+            // keyboard closes can still leave a blank strip below the page on some OEMs.
+            if (ime == 0) webView.post { webView.requestLayout() }
             windowInsets
         }
         ViewCompat.requestApplyInsets(root)
@@ -478,7 +481,9 @@ class WebShellActivity : AppCompatActivity() {
             ?: return null
         val host = runCatching { rememberHostForUrl(savedUrl) }.getOrNull() ?: return null
         val cookie = runCatching { harnessSessions.cookie(host.id) }.getOrNull()
-        return ResolvedTarget(host, host.baseUrl.trimEnd('/') + "/", cookie)
+        // A relay's /relay/pair route is exact; appending "/" turns it into a 404 page.
+        val rootSuffix = if (host.basePath.isBlank()) "/" else ""
+        return ResolvedTarget(host, host.baseUrl.trimEnd('/') + rootSuffix, cookie)
     }
 
     /**
@@ -1192,17 +1197,17 @@ class WebShellActivity : AppCompatActivity() {
             webViewVersion,
             "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
         )
-        AlertDialog.Builder(this)
-            .setTitle(R.string.shell_diagnostics_title)
-            .setMessage(message)
-            .setPositiveButton(R.string.shell_diagnostics_copy) { _, _ ->
+        chrome.showDiagnosticsPage(
+            dark = pageDark,
+            message = message,
+            onCopy = {
                 getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(ClipData.newPlainText("DSH diagnostics", message))
                 Toast.makeText(this, R.string.shell_diagnostics_copied, Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton(R.string.shell_diagnostics_clear_cache) { _, _ -> clearCacheAndReload() }
-            .setNegativeButton(R.string.common_close, null)
-            .show()
+            },
+            onClearCache = { clearCacheAndReload() },
+            onBack = { showSettings() },
+        )
     }
 
     private fun showNotificationsPage() {
@@ -1266,6 +1271,7 @@ class WebShellActivity : AppCompatActivity() {
         progress.show()
 
         lifecycleScope.launch {
+            try {
             val settings = runCatching { hostsStore.settings.first() }.getOrDefault(AppSettings())
             val ports = (settings.knownPorts + 3080).distinct().take(8)
             val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
@@ -1335,6 +1341,18 @@ class WebShellActivity : AppCompatActivity() {
                 return@launch
             }
             showScanEmptyDialog(subnet, ports, harnesses.count { !it.trusted }, relays.size)
+            } catch (error: Throwable) {
+                if (!isFinishing && !isDestroyed) {
+                    Toast.makeText(
+                        this@WebShellActivity,
+                        getString(R.string.shell_settings_scan_failed, error.message ?: error.javaClass.simpleName),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            } finally {
+                if (progress.isShowing) progress.dismiss()
+                lanScanning = false
+            }
         }
     }
 
@@ -1845,14 +1863,18 @@ class WebShellActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(10), dp(22), dp(4))
         }
+        val accent = Color.parseColor("#3964FE")
         val progressLabel = TextView(this).apply {
             text = getString(R.string.shell_update_downloading)
             textSize = 13f
+            setTextColor(if (pageDark) Color.WHITE else Color.parseColor("#20242C"))
         }
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             progress = 0
             isIndeterminate = true
+            progressTintList = android.content.res.ColorStateList.valueOf(accent)
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(accent)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1866,6 +1888,10 @@ class WebShellActivity : AppCompatActivity() {
             .setCancelable(false)
             .create()
         dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.86f).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
         lifecycleScope.launch {
             val file = withContext(Dispatchers.IO) {
                 for (candidate in candidates) {
@@ -2120,10 +2146,20 @@ class WebShellActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.shell_scan_qr_invalid, Toast.LENGTH_SHORT).show()
             return
         }
-        val device = shellDevices.add(target.url, name = getString(R.string.shell_scan_qr_device))
-        shellDevices.setCurrent(device.id)
-        Toast.makeText(this, R.string.shell_scan_qr_added, Toast.LENGTH_SHORT).show()
-        applyServerUrl(target.url)
+        // Show the decoded address before it becomes a device. A scanned code is easy to trust,
+        // and a relay pair page is exactly the kind of address that should not be silently
+        // committed when the QR came from the wrong tab or the wrong host.
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_scan_qr_confirm_title)
+            .setMessage(target.url)
+            .setPositiveButton(R.string.shell_scan_qr_confirm) { _, _ ->
+                val device = shellDevices.add(target.url, name = getString(R.string.shell_scan_qr_device))
+                shellDevices.setCurrent(device.id)
+                Toast.makeText(this, R.string.shell_scan_qr_added, Toast.LENGTH_SHORT).show()
+                applyServerUrl(target.url)
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
     }
 
     private fun showRenameDeviceDialog(device: ShellDevice) {
@@ -2195,7 +2231,9 @@ class WebShellActivity : AppCompatActivity() {
             port = port,
             useTls = scheme == "https",
             basePath = basePath,
-            url = "$scheme://$authority$basePath".trimEnd('/') + "/",
+            // Preserve an exact non-root path (notably /relay/pair); only the origin gets a
+            // trailing slash so the page's own relative URLs keep resolving.
+            url = "$scheme://$authority$basePath" + if (basePath.isBlank()) "/" else "",
         )
     }
 
