@@ -1,4 +1,4 @@
-# Release 0.9.34
+# Release 0.9.35
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.34-personal.94.apk`
-- SHA-256: `E62C4E6D09AB4144CED0C70F66E713AD2B3619367E4B8BD60969BD3820021C0C`
+- APK: `dist/DeepSeek-Harness-0.9.35-personal.95.apk`
+- SHA-256: `E2ACA1B5098EF136D358025FBEEC2819075900D1A3218240303C7ECB3C09AAB3`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,7 +27,9 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
-- **IME/layout fix:** `adjustNothing` + full-height WebView, with a post-keyboard re-layout, so closing the keyboard no longer leaves a blank strip below the page.
+- **Layout recovery:** back to `adjustResize`, plus a real 1px view-resize nudge (the only thing that makes the renderer re-read the viewport), a `min-height` repair pass, and an automatic repair on resume, after the keyboard closes and after page load. `Settings → Diagnostics → Repair page layout` forces a full repaint.
+- **Settings → 远控 (Remote access):** the relay pairing QR is drawn inside the app from the live invitation, with the 8-digit code, remaining validity, copy pairing link/code, relay addresses and a shortcut to the paired-device page. Requires host plugin **0.1.8**; on an older host the page says which side to update.
+- Bloom theme note: `dsh-bloom-theme` can leave the WebView painting only part of the page. 0.9.35 repairs it automatically; if it recurs, either disable Bloom for the phone or tap `修复界面排版`.
 - Native diagnostics and update-progress dialogs now use the same card/typography language as the shell.
 - QR scan now asks for confirmation and shows the decoded URL before adding a device; non-root paths such as `/relay/pair` are kept exact (no trailing-slash 404).
 - Settings → Connection → **Scan QR code**: accepts a plain `http(s)` DSH URL or a `dsh-relay-pair` payload and opens the relay pairing page; adding a device immediately switches the WebView.
