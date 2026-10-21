@@ -34,6 +34,168 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     private val density = activity.resources.displayMetrics.density
     private fun dp(value: Int): Int = (value * density).roundToInt()
 
+    // ---- settings -----------------------------------------------------------
+
+    fun showSettings(
+        dark: Boolean,
+        currentDeviceName: String?,
+        versionName: String,
+        notificationsEnabled: Boolean,
+        onManageDevices: () -> Unit,
+        onNotificationSettings: () -> Unit,
+        onTestNotification: () -> Unit,
+        onBatterySettings: () -> Unit,
+        onAutostart: () -> Unit,
+        onSource: () -> Unit,
+        onRefresh: () -> Unit,
+        onExit: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(4), dp(8), dp(2))
+        }
+        val titleColumn = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        titleColumn.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_title)
+                textSize = 18f
+                setTextColor(colors.primary)
+            },
+        )
+        titleColumn.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_subtitle)
+                textSize = 12f
+                setPadding(0, dp(3), 0, 0)
+                setTextColor(colors.secondary)
+            },
+        )
+        header.addView(titleColumn)
+        header.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.device_close)
+                textSize = 13f
+                setTextColor(colors.secondary)
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                isClickable = true
+                setOnClickListener { dialog.dismiss() }
+            },
+        )
+        card.addView(header, matchWidth())
+
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_settings_section_connection)))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_device,
+                title = activity.getString(R.string.shell_settings_manage_devices),
+                subtitle = currentDeviceName?.let { activity.getString(R.string.shell_settings_current_device, it) }
+                    ?: activity.getString(R.string.shell_settings_manage_devices_hint),
+            ) {
+                dialog.dismiss()
+                onManageDevices()
+            },
+        )
+
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_settings_section_notifications)))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_settings_notification_settings),
+                subtitle = if (notificationsEnabled) {
+                    activity.getString(R.string.shell_settings_notification_enabled)
+                } else {
+                    activity.getString(R.string.shell_settings_notification_disabled)
+                },
+            ) {
+                dialog.dismiss()
+                onNotificationSettings()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_check,
+                title = activity.getString(R.string.shell_settings_test_notification),
+                subtitle = activity.getString(R.string.shell_settings_test_notification_hint),
+            ) {
+                dialog.dismiss()
+                onTestNotification()
+            },
+        )
+
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_settings_section_background)))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_battery,
+                title = activity.getString(R.string.shell_settings_battery),
+                subtitle = activity.getString(R.string.shell_settings_battery_hint),
+            ) {
+                dialog.dismiss()
+                onBatterySettings()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_settings,
+                title = activity.getString(R.string.shell_settings_autostart),
+                subtitle = activity.getString(R.string.shell_settings_autostart_hint),
+            ) {
+                dialog.dismiss()
+                onAutostart()
+            },
+        )
+
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_settings_section_about)))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_device,
+                title = activity.getString(R.string.shell_settings_version, versionName),
+                subtitle = activity.getString(R.string.shell_settings_source_hint),
+            ) {
+                dialog.dismiss()
+                onSource()
+            },
+        )
+
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
+                dialog.dismiss()
+                onRefresh()
+            },
+        )
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
+                dialog.dismiss()
+                onExit()
+            },
+        )
+
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
+        )
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
     // ---- device manager -----------------------------------------------------
 
     fun showDeviceManager(
@@ -426,6 +588,72 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             leftMargin = dp(14)
             rightMargin = dp(14)
         }
+    }
+
+    private fun settingsRow(
+        colors: Colors,
+        iconRes: Int,
+        title: String,
+        subtitle: String? = null,
+        action: () -> Unit,
+    ): View {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(58)
+            setPadding(dp(14), dp(7), dp(12), dp(7))
+            background = rowRipple(colors)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { action() }
+        }
+        row.addView(
+            ImageView(activity).apply {
+                setImageResource(iconRes)
+                setColorFilter(colors.secondary)
+                layoutParams = LinearLayout.LayoutParams(dp(21), dp(21))
+            },
+        )
+        val copy = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(13), 0, dp(8), 0)
+        }
+        copy.addView(
+            TextView(activity).apply {
+                text = title
+                textSize = 15f
+                setTextColor(colors.primary)
+                maxLines = 1
+            },
+        )
+        if (!subtitle.isNullOrBlank()) {
+            copy.addView(
+                TextView(activity).apply {
+                    text = subtitle
+                    textSize = 11.5f
+                    setTextColor(colors.secondary)
+                    maxLines = 1
+                    setPadding(0, dp(2), 0, 0)
+                },
+            )
+        }
+        row.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(
+            TextView(activity).apply {
+                text = "›"
+                textSize = 20f
+                setTextColor(colors.secondary)
+            },
+        )
+        return row
+    }
+
+    private fun sectionLabel(colors: Colors, label: String): TextView = TextView(activity).apply {
+        text = label
+        textSize = 11f
+        letterSpacing = 0.04f
+        setTextColor(colors.secondary)
+        setPadding(dp(16), dp(11), dp(16), dp(4))
     }
 
     private fun menuRow(

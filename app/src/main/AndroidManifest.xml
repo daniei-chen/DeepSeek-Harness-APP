@@ -11,6 +11,7 @@
         android:name="android.hardware.microphone"
         android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!--
         Only ever used to scan a relay's pairing QR, and requested at the moment Scan is tapped.
         Declared `required="false"` so a device without a camera can still install: typing the

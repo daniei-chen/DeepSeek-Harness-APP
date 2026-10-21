@@ -9,9 +9,11 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
 import android.net.http.SslError
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -38,6 +40,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -47,6 +50,8 @@ import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
+import com.labteto.dshmobile.connection.ConnectionManager
+import com.labteto.dshmobile.notify.DshNotifications
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -90,6 +95,8 @@ class WebShellActivity : AppCompatActivity() {
 
     @Inject lateinit var hostsStore: HostsStore
     @Inject lateinit var harnessSessions: HarnessSessionStore
+    @Inject lateinit var notifications: DshNotifications
+    @Inject lateinit var connectionManager: ConnectionManager
 
     private val cookieManager: CookieManager get() = CookieManager.getInstance()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -147,12 +154,26 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
+    private var pendingTestNotification = false
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted: Boolean ->
+        val test = pendingTestNotification
+        pendingTestNotification = false
+        if (granted) {
+            if (test) postTestNotificationInternal()
+        } else {
+            Toast.makeText(this@WebShellActivity, R.string.shell_settings_notification_disabled, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         splashScreen.setKeepOnScreenCondition { !pageReady.get() }
         enableEdgeToEdge()
 
+        notifications.ensureChannels()
         buildContentView()
         configureWebView()
         installJavascriptInterfaces()
@@ -204,7 +225,7 @@ class WebShellActivity : AppCompatActivity() {
         column.addView(errorMessage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(errorButton(R.string.webshell_reload) { reloadPage() })
         column.addView(errorButton(R.string.webshell_clear_cache) { clearCacheAndReload() })
-        column.addView(errorButton(R.string.device_manager_title) { showDeviceManager() })
+        column.addView(errorButton(R.string.shell_settings_title) { showSettings() })
         column.addView(errorButton(R.string.webshell_exit) { finishAffinity() })
         return ScrollView(this).apply {
             setBackgroundColor(Color.WHITE)
@@ -288,6 +309,11 @@ class WebShellActivity : AppCompatActivity() {
             val resolved = withContext(Dispatchers.IO) { resolveTarget() }
             targetHost = resolved.host
             targetUrl = resolved.url
+            // Keep the native event/notification pipeline connected alongside the WebView. The
+            // WebView owns the visible session; this connection is what lets NotificationObserver
+            // turn approval/question waterfalls into Android notifications while the page is open
+            // or in the background.
+            launch { withContext(Dispatchers.IO) { runCatching { connectionManager.connect(resolved.host) } } }
             seededCookie = resolved.cookie
             if (!resolved.cookie.isNullOrBlank()) {
                 cookieManager.setCookie(resolved.url, resolved.cookie)
@@ -686,7 +712,124 @@ class WebShellActivity : AppCompatActivity() {
         if (!clearHistoryAfterLoad && webView.canGoBack()) {
             webView.goBack()
         } else {
-            showDeviceManager()
+            showSettings()
+        }
+    }
+
+    /** The back-button surface: connection, notifications, background and about. */
+    private fun showSettings() {
+        val devices = shellDevices.ensure(targetUrl)
+        val currentName = devices.firstOrNull { it.id == shellDevices.currentId() }?.name
+        val versionName = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: "0.0.0"
+        chrome.showSettings(
+            dark = pageDark,
+            currentDeviceName = currentName,
+            versionName = versionName,
+            notificationsEnabled = notifications.canPost() &&
+                NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            onManageDevices = { showDeviceManager() },
+            onNotificationSettings = { openNotificationSettings() },
+            onTestNotification = { sendTestNotification() },
+            onBatterySettings = { openBatterySettings() },
+            onAutostart = { openAutostartSettings() },
+            onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
+            onRefresh = { reloadPage() },
+            onExit = { finishAffinity() },
+        )
+    }
+
+    private fun openNotificationSettings() {
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
+            )
+        }.onFailure { openAppDetailsSettings() }
+    }
+
+    private fun sendTestNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingTestNotification = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        postTestNotificationInternal()
+    }
+
+    private fun postTestNotificationInternal() {
+        notifications.ensureChannels()
+        notifications.postSession(
+            channel = DshNotifications.CHANNEL_ACTION,
+            id = 4242,
+            title = getString(R.string.shell_settings_test_notification),
+            text = getString(R.string.shell_settings_test_notification_text),
+            sessionId = null,
+            actionLabel = getString(R.string.notif_open),
+        )
+    }
+
+    private fun openBatterySettings() {
+        val power = getSystemService(android.os.PowerManager::class.java)
+        if (power != null && power.isIgnoringBatteryOptimizations(packageName)) {
+            runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                .onFailure { openAppDetailsSettings() }
+            return
+        }
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName"),
+                ),
+            )
+        }.onFailure {
+            runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+                .onFailure { openAppDetailsSettings() }
+        }
+    }
+
+    private fun openAutostartSettings() {
+        val candidates = listOf(
+            android.content.ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            ),
+            android.content.ComponentName(
+                "com.huawei.systemmanager",
+                "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+            ),
+            android.content.ComponentName(
+                "com.coloros.safecenter",
+                "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+            ),
+            android.content.ComponentName(
+                "com.vivo.permissionmanager",
+                "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+            ),
+        )
+        for (component in candidates) {
+            val intent = Intent().setComponent(component)
+            if (packageManager.resolveActivity(intent, 0) != null) {
+                runCatching { startActivity(intent) }.onFailure { openAppDetailsSettings() }
+                return
+            }
+        }
+        openAppDetailsSettings()
+    }
+
+    private fun openAppDetailsSettings() {
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:$packageName"),
+                ),
+            )
         }
     }
 
@@ -830,6 +973,9 @@ class WebShellActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return@launch
             targetHost = remembered
             targetUrl = target.url
+            if (remembered != null) {
+                launch { withContext(Dispatchers.IO) { runCatching { connectionManager.connect(remembered) } } }
+            }
             prefetchDeferred = null
             interceptPrefetch = false
             clearHistoryAfterLoad = true

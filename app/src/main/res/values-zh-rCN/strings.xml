@@ -751,6 +751,27 @@
     <string name="device_at_least_one">至少保留一个设备</string>
     <string name="device_save">保存</string>
     <string name="microphone_permission_denied">麦克风权限未开启，请在系统设置中允许后使用语音输入。</string>
+    <string name="shell_settings_title">设置</string>
+    <string name="shell_settings_subtitle">连接、通知与后台运行</string>
+    <string name="shell_settings_section_connection">连接</string>
+    <string name="shell_settings_section_notifications">通知</string>
+    <string name="shell_settings_section_background">后台运行</string>
+    <string name="shell_settings_section_about">关于</string>
+    <string name="shell_settings_manage_devices">设备管理</string>
+    <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
+    <string name="shell_settings_current_device">当前：%1$s</string>
+    <string name="shell_settings_notification_settings">通知设置</string>
+    <string name="shell_settings_notification_enabled">通知已开启</string>
+    <string name="shell_settings_notification_disabled">通知未开启，点击去允许</string>
+    <string name="shell_settings_test_notification">发送测试通知</string>
+    <string name="shell_settings_test_notification_hint">检查系统通知渠道和权限</string>
+    <string name="shell_settings_test_notification_text">通知渠道工作正常。</string>
+    <string name="shell_settings_battery">电池无限制</string>
+    <string name="shell_settings_battery_hint">避免系统在后台限制连接</string>
+    <string name="shell_settings_autostart">自启动设置</string>
+    <string name="shell_settings_autostart_hint">打开对应厂商的自启动管理页</string>
+    <string name="shell_settings_version">版本 %1$s</string>
+    <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
 </resources>
 
 

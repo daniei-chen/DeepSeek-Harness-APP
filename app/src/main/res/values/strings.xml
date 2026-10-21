@@ -753,6 +753,27 @@
     <string name="device_at_least_one">Keep at least one device</string>
     <string name="device_save">Save</string>
     <string name="microphone_permission_denied">Microphone permission is off. Allow it in system settings to use voice input.</string>
+    <string name="shell_settings_title">Settings</string>
+    <string name="shell_settings_subtitle">Connection, notifications and background behaviour</string>
+    <string name="shell_settings_section_connection">Connection</string>
+    <string name="shell_settings_section_notifications">Notifications</string>
+    <string name="shell_settings_section_background">Background</string>
+    <string name="shell_settings_section_about">About</string>
+    <string name="shell_settings_manage_devices">Devices</string>
+    <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
+    <string name="shell_settings_current_device">Current: %1$s</string>
+    <string name="shell_settings_notification_settings">Notification settings</string>
+    <string name="shell_settings_notification_enabled">Notifications are enabled</string>
+    <string name="shell_settings_notification_disabled">Notifications are off — tap to allow</string>
+    <string name="shell_settings_test_notification">Send test notification</string>
+    <string name="shell_settings_test_notification_hint">Check the Android channel and permission</string>
+    <string name="shell_settings_test_notification_text">The notification channel is working.</string>
+    <string name="shell_settings_battery">Battery unrestricted</string>
+    <string name="shell_settings_battery_hint">Keep the connection alive in the background</string>
+    <string name="shell_settings_autostart">Autostart settings</string>
+    <string name="shell_settings_autostart_hint">Open the vendor autostart page when available</string>
+    <string name="shell_settings_version">Version %1$s</string>
+    <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
 </resources>
 
 

@@ -27,17 +27,20 @@ pieces a browser cannot provide.
 ## Current
 
 - Self-hosted DSH connection profiles (add / rename / delete / switch devices).
+- Native settings surface reached from the back button: device manager, notification setup/test,
+  battery-unrestricted shortcut, vendor autostart shortcut, version/source.
 - WebView shell with drawer gestures, custom back navigation, in-app document preview.
 - Workspace file panel: preview HTML/PDF/Word/PPT, download files/folders, delete files/folders
   through the internal `host-plugin/`.
+- Android notification channels and test notification; native DSH event connection for
+  approval/question notifications while the app is alive.
 - Multiple connection routes: LAN, your own HTTPS address, or a tunnel you run yourself
   (Cloudflare Tunnel / frp / Tailscale). No official relay.
 - No account, no telemetry, no ads, no monetization.
 
 ## Roadmap
 
-- Native settings screen (connection, notifications, battery, storage, about).
-- Task completion / approval / question notifications while the app is alive or in the background.
+- Full task completion/pause notifications with deep links and per-session grouping.
 - **Self-hosted ntfy / UnifiedPush push** for notifications after the app is killed. This is a
   required, documented feature of the project; it is optional for each user to enable. There is
   **no official cloud push service**.
