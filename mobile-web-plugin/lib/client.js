@@ -470,7 +470,10 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
               body: JSON.stringify({ path: filePath }),
             });
             if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
-            window.setTimeout(refreshFiles, 350);
+            // Remove the row immediately; the background refresh reconciles the rest of the
+            // directory without making the user stare at a stale list.
+            row.remove();
+            window.setTimeout(refreshFiles, 50);
           } catch (error) {
             window.alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
           }
@@ -486,9 +489,28 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
         openMenu = menu;
       };
 
+      let panelNudged = false;
+      let panelSeenAt = 0;
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
-        if (rootPath() === "") return;
+        const root = rootPath();
+        if (root === "") {
+          panelNudged = false;
+          panelSeenAt = 0;
+          return;
+        }
+        const rows = document.querySelectorAll('[class*="Woyo-G_row"]').length;
+        if (rows > 0) {
+          panelNudged = true;
+        } else if (!panelNudged) {
+          if (panelSeenAt === 0) panelSeenAt = Date.now();
+          // The DSH file panel sometimes opens against a request that never paints. One
+          // programmatic refresh reproduces the tap that makes it appear, without a reload.
+          if (Date.now() - panelSeenAt > 1200) {
+            panelNudged = true;
+            refreshFiles();
+          }
+        }
         document.querySelectorAll('[class*="Woyo-G_row"]').forEach((row) => {
           if (row.dataset.dshFileActions === "1") return;
           row.dataset.dshFileActions = "1";
