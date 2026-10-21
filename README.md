@@ -29,8 +29,9 @@ pieces a browser cannot provide.
 ## Current
 
 - Self-hosted DSH connection profiles (add / rename / delete / switch devices).
-- Native settings surface reached from the back button: device manager, notification setup/test,
-  battery-unrestricted shortcut, vendor autostart shortcut, version/source.
+- Native settings surface reached from the back button: device manager, LAN scan, notification
+  setup/test, foreground-service toggle, battery-unrestricted shortcut, vendor autostart shortcut,
+  update check, version/source.
 - WebView shell with drawer gestures, custom back navigation, in-app document preview.
 - Workspace file panel: preview HTML/PDF/Word/PPT, download files/folders, delete files/folders
   through the internal `host-plugin/`.
