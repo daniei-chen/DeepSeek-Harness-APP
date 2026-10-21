@@ -251,10 +251,13 @@
     <string name="notif_goal_complete">任务已完成</string>
     <string name="notif_goal_blocked">任务需处理</string>
     <string name="notif_review_requested">任务需审批</string>
-    <string name="notif_question">任务需审批</string>
+    <string name="notif_question">需要回答</string>
     <string name="notif_session_idle">任务已完成</string>
     <string name="notif_session_fallback">当前会话</string>
     <string name="notif_open">打开</string>
+    <string name="notif_approve">批准</string>
+    <string name="notif_reject">拒绝</string>
+    <string name="notif_action_failed">操作失败，请打开 App 重试。</string>
     <string name="trajectory_title">轨迹</string>
     <string name="trajectory_empty">尚无已记录的请求</string>
     <string name="trajectory_tab_usage">用量</string>

@@ -14,8 +14,13 @@ Events:
 - background job completed/failed;
 - connection lost (optional).
 
-Notifications are deduplicated and grouped by session. Tapping a notification should deep-link to
-the corresponding session.
+Notifications are deduplicated and grouped by session. Tapping a notification deep-links to the
+corresponding session.
+
+Approval notifications carry two inline actions, **Approve** and **Reject**. They resolve the
+pending Remote Event waterfall directly, so the user does not have to open the app for the common
+case. The action works while the app process still owns the live connection; if Android killed the
+process, the tap opens the app instead of claiming a success it cannot prove.
 
 Android requires:
 

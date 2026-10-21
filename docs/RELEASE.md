@@ -1,4 +1,4 @@
-# Release 0.9.25
+# Release 0.9.26
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.25-personal.85.apk`
-- SHA-256: `962FFB2DB238F047C977322BDE90FACF826C70C600408AD9B57D4EBDDDD5A571`
+- APK: `dist/DeepSeek-Harness-0.9.26-personal.86.apk`
+- SHA-256: `12A196F317A2D0CAFBA37AD2B1015D0548416A6778212B526CE631AAE1CF373E`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -33,6 +33,9 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - WebView shell with drawer gestures, custom back handling, in-app document preview
 - workspace file panel: download files/folders, zip folders, recursive delete (`host-plugin/`)
 - Android notification channels and permission flow
+- approval notifications carry inline **Approve** / **Reject** actions; the answer resolves the pending Remote Event directly while the app process owns the live connection
+- approvals are keyed per request, so two waiting tool calls in one session cannot replace each other
+- approval notification body shows tool name, reason and session title; question notifications carry an **Open** action
 - notification toggles for task completion, approval/question and goal events
 - notification session deep links (`uiWorkspace.openSession`)
 - optional self-hosted ntfy subscriber (`Settings → Notifications`)
@@ -53,6 +56,8 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
   notifications after Android kills the app must run ntfy/UnifiedPush themselves.
 - A loopback gateway that would unify LAN/HTTPS/VPN transports is not part of this release;
   the app uses connection profiles, direct URLs and URL-level failover.
+- Inline notification actions require the app process to still hold the live connection. If
+  Android killed the process, the notification opens the app and the approval is answered there.
 - Real-device QA is required for notification delivery, OEM background policies, LAN discovery
   and the Android installer flow. The release has passed compile/lint/unit-test and public APK
   checks, not a physical-device lab run.

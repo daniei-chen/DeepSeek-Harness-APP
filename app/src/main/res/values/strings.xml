@@ -344,10 +344,13 @@
     <string name="notif_goal_complete">Task complete</string>
     <string name="notif_goal_blocked">Task needs attention</string>
     <string name="notif_review_requested">Approval needed</string>
-    <string name="notif_question">Approval needed</string>
+    <string name="notif_question">Question waiting</string>
     <string name="notif_session_idle">Task complete</string>
     <string name="notif_session_fallback">Session</string>
     <string name="notif_open">Open</string>
+    <string name="notif_approve">Approve</string>
+    <string name="notif_reject">Reject</string>
+    <string name="notif_action_failed">Action failed. Open the app to retry.</string>
     <string name="trajectory_title">Trajectory</string>
     <string name="trajectory_empty">No recorded requests yet</string>
     <string name="trajectory_tab_usage">Usage</string>

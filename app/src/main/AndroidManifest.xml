@@ -122,6 +122,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Approval notification buttons. The PendingIntent is explicit and immutable, so the
+             receiver never needs to be exported or matched by an intent filter. -->
+        <receiver
+            android:name=".notify.NotificationActionReceiver"
+            android:exported="false" />
+
         <!--
             Opts into AppCompat's own storage for the per-app language. Below API 33 the framework
             has no LocaleManager to remember the choice, and without this the library only holds it

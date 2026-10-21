@@ -62,6 +62,7 @@ class DshNotifications @Inject constructor(
         text: String,
         sessionId: String?,
         actionLabel: String? = null,
+        approvalId: String? = null,
     ) {
         if (!canPost()) return
         val open = Intent(context, WebShellActivity::class.java).apply {
@@ -84,10 +85,54 @@ class DshNotifications @Inject constructor(
             .setContentIntent(pending)
             .setAutoCancel(true)
             .setPriority(if (channel == CHANNEL_ACTION) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
-        if (actionLabel != null) {
+        if (approvalId != null && sessionId != null) {
+            builder.addAction(
+                0,
+                context.getString(R.string.notif_approve),
+                actionIntent(
+                    action = NotificationActionReceiver.ACTION_APPROVE,
+                    sessionId = sessionId,
+                    approvalId = approvalId,
+                    notificationId = id,
+                    requestCode = id * 10 + 1,
+                ),
+            )
+            builder.addAction(
+                0,
+                context.getString(R.string.notif_reject),
+                actionIntent(
+                    action = NotificationActionReceiver.ACTION_REJECT,
+                    sessionId = sessionId,
+                    approvalId = approvalId,
+                    notificationId = id,
+                    requestCode = id * 10 + 2,
+                ),
+            )
+        } else if (actionLabel != null) {
             builder.addAction(0, actionLabel, pending)
         }
         NotificationManagerCompat.from(context).notify(id, builder.build())
+    }
+
+    private fun actionIntent(
+        action: String,
+        sessionId: String,
+        approvalId: String,
+        notificationId: Int,
+        requestCode: Int,
+    ): PendingIntent {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            this.action = action
+            putExtra(DshNotifications.EXTRA_SESSION_ID, sessionId)
+            putExtra(NotificationActionReceiver.EXTRA_APPROVAL_ID, approvalId)
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     companion object {
