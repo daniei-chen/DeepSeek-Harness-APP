@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: "@dsh-android/dsh-client-ui-responsive-bundle",
+  id: "@dsh-android/deepseek-harness-app-plugin",
   factory: (require) => {
     var module = { exports: {} };
     var exports = module.exports;
