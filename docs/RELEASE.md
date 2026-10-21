@@ -1,14 +1,23 @@
-# Release 0.11.1
+# Release 1.0.0
 
 ## What this release is
 
 A self-hosted Android client for DeepSeek Harness. No project cloud, no account, no telemetry,
 no monetization.
 
+## 1.0 quality gates
+
+- **New user:** install -> first connection in under ten minutes, by QR or by the pairing-code path (设置 -> 连接 -> 配对码连接).
+- **Upgrade:** every release has a strictly higher versionCode (1.0.0 = 50000); settings and devices survive.
+- **Failure is explainable:** connection doctor, notification self-check and the offline session snapshot each name the cause and the next action.
+- **Updates:** read from the repository's latest.json first, so release ordering and GitHub rate limits cannot hide a version.
+- **Offline:** the last synced session list stays readable without a network.
+- **Zero cloud:** no project account, telemetry, relay or push service; relay/ntfy/UnifiedPush are the user's own.
+
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.11.1-personal.111.apk`
-- SHA-256: `9242212CF06DB99689F012A8706593C6241ECA9896F9318521172D38AC2F2244`
+- APK: `dist/DeepSeek-Harness-1.0.0-personal.1.apk`
+- SHA-256: `54C59A80E8A650D541B787E11AE1D2C204F9F38DE42AAB4CFBBAA07BDCEFA4F0`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
