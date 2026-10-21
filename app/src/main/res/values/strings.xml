@@ -310,6 +310,17 @@
     <string name="settings_connection_disconnect">Disconnect</string>
     <string name="settings_connection_disconnect_confirm">Disconnect from harness?</string>
     <string name="settings_connection_disconnect_message">You will return to the connection screen.</string>
+    <string name="settings_mobile_access">Phone access</string>
+    <string name="settings_mobile_access_hint">Install the host pieces, pair this phone and manage paired devices.</string>
+    <string name="settings_mobile_access_action">Set up phone access</string>
+    <string name="mobile_setup_title">Set up phone access</string>
+    <string name="mobile_setup_body">Run one of these on the computer that runs DSH. The installer adds the relay, the APP plugin and optional notifications, then prints a pairing QR.</string>
+    <string name="mobile_setup_command_label">Host setup command</string>
+    <string name="mobile_setup_copy">Copy command</string>
+    <string name="mobile_setup_copied">Command copied</string>
+    <string name="mobile_setup_scan">Scan pairing code</string>
+    <string name="mobile_setup_docs">Open setup guide</string>
+    <string name="mobile_setup_note">The relay listens on port 3443 with a self-signed certificate; the app pins it. Do not expose the port without a trusted certificate and a public hostname.</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_harness">Harness</string>
     <string name="settings_data">Data</string>

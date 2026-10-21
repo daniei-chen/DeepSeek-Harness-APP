@@ -343,6 +343,17 @@
     <string name="settings_connection_disconnect">断开连接</string>
     <string name="settings_connection_disconnect_confirm">要断开与 Harness 的连接吗？</string>
     <string name="settings_connection_disconnect_message">你将返回连接界面。</string>
+    <string name="settings_mobile_access">手机访问</string>
+    <string name="settings_mobile_access_hint">安装电脑端组件、配对手机，并管理已配对设备。</string>
+    <string name="settings_mobile_access_action">设置手机访问</string>
+    <string name="mobile_setup_title">设置手机访问</string>
+    <string name="mobile_setup_body">在运行 DSH 的电脑上执行以下任一命令。安装器会加入中继、APP 插件和可选通知，并打印配对二维码。</string>
+    <string name="mobile_setup_command_label">电脑端安装命令</string>
+    <string name="mobile_setup_copy">复制命令</string>
+    <string name="mobile_setup_copied">命令已复制</string>
+    <string name="mobile_setup_scan">扫描配对码</string>
+    <string name="mobile_setup_docs">打开安装说明</string>
+    <string name="mobile_setup_note">中继默认监听 3443，使用自签名证书并由 App 固定。没有可信证书和公开主机名时，不要直接把端口暴露到公网。</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_harness">Harness</string>
     <string name="settings_data">数据</string>
