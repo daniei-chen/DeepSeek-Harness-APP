@@ -38,6 +38,17 @@ internal data class ShellFleetHost(
     val runningCount: Int? = null,
 )
 
+/** One cross-host session that is running or has an active question/plan review. */
+internal data class ShellFleetSession(
+    val device: ShellDevice,
+    val sessionId: String,
+    val title: String,
+    val status: String,
+    val updatedAt: Long,
+    /** 0 = waiting question/plan review, 1 = running only. */
+    val priority: Int = 1,
+)
+
 /** One row in the native inbox. */
 internal data class ShellInboxRow(
     val sessionId: String,
@@ -475,6 +486,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onScanLan: () -> Unit,
         onNetworkInfo: () -> Unit,
         onFleet: () -> Unit,
+        onFleetInbox: () -> Unit,
         onDeviceHealth: () -> Unit,
         onTestConnection: () -> Unit,
         onBack: () -> Unit,
@@ -513,6 +525,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
         card.addView(
+            settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_fleet_inbox), activity.getString(R.string.shell_fleet_inbox_hint)) {
+                dialog.dismiss()
+                onFleetInbox()
+            },
+        )
+        card.addView(
             settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_device_health), activity.getString(R.string.shell_device_health_hint)) {
                 dialog.dismiss()
                 onDeviceHealth()
@@ -522,6 +540,57 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
                 dialog.dismiss()
                 onTestConnection()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showFleetInboxPage(
+        dark: Boolean,
+        rows: List<ShellFleetSession>,
+        onOpen: (ShellFleetSession) -> Unit,
+        onRefresh: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_fleet_inbox_title)) { dialog.dismiss(); onBack() })
+        if (rows.isEmpty()) {
+            card.addView(
+                TextView(activity).apply {
+                    text = activity.getString(R.string.shell_fleet_inbox_empty)
+                    textSize = 13f
+                    setTextColor(colors.secondary)
+                    setPadding(dp(14), dp(14), dp(14), dp(18))
+                },
+            )
+        } else {
+            rows.forEach { row ->
+                card.addView(
+                    settingsRow(
+                        colors = colors,
+                        iconRes = R.drawable.ic_shell_notifications,
+                        title = row.device.name + " · " + row.title,
+                        subtitle = row.status,
+                    ) {
+                        dialog.dismiss()
+                        onOpen(row)
+                    },
+                )
+            }
+        }
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_fleet_inbox_refresh)) {
+                dialog.dismiss()
+                onRefresh()
             },
         )
         root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))

@@ -69,8 +69,14 @@ import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.connection.HarnessClientFactory
 import com.labteto.dshmobile.connection.AppSettings
 import com.labteto.dshmobile.core.wire.RpcResult
+import com.labteto.dshmobile.core.wire.dto.SessionSummary
 import com.labteto.dshmobile.data.SessionRow
 import com.labteto.dshmobile.data.SessionStore
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.notify.NtfyConfig
 import com.labteto.dshmobile.notify.NtfySubscriberService
@@ -1133,6 +1139,7 @@ class WebShellActivity : AppCompatActivity() {
             onScanLan = { scanLan() },
             onNetworkInfo = { showNetworkInfoDialog() },
             onFleet = { showFleet() },
+            onFleetInbox = { showFleetInbox() },
             onDeviceHealth = { checkDeviceHealth() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
@@ -1495,6 +1502,92 @@ class WebShellActivity : AppCompatActivity() {
             }.getOrNull()
         }
         return result ?: ShellFleetHost(device, false, getString(R.string.shell_fleet_timeout))
+    }
+
+    /**
+     * Cross-host inbox: only sessions that are running or have an active user question/plan
+     * review. Idle history stays in each host's own inbox and is not pulled into this view.
+     */
+    private fun showFleetInbox() {
+        val devices = shellDevices.load()
+        if (devices.isEmpty()) {
+            Toast.makeText(this, R.string.shell_fleet_inbox_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val progress = AlertDialog.Builder(this)
+            .setMessage(R.string.shell_fleet_loading)
+            .setCancelable(false)
+            .create()
+        progress.show()
+        lifecycleScope.launch {
+            val rows = coroutineScope {
+                devices.map { device -> async(Dispatchers.IO) { queryFleetSessions(device) } }.awaitAll()
+            }.flatten()
+                .sortedWith(compareBy<ShellFleetSession> { it.priority }.thenByDescending { it.updatedAt })
+                .take(40)
+            progress.dismiss()
+            if (isFinishing || isDestroyed) return@launch
+            chrome.showFleetInboxPage(
+                dark = pageDark,
+                rows = rows,
+                onOpen = { row ->
+                    shellDevices.setCurrent(row.device.id)
+                    pendingSessionId = row.sessionId
+                    applyServerUrl(row.device.url)
+                },
+                onRefresh = { showFleetInbox() },
+                onBack = { showConnectionPage() },
+            )
+        }
+    }
+
+    private suspend fun queryFleetSessions(device: ShellDevice): List<ShellFleetSession> {
+        if (device.url.contains("/relay/")) return emptyList()
+        val hosts = runCatching { hostsStore.hosts.first() }.getOrDefault(emptyList())
+        val base = device.url.substringBefore("/relay/").trimEnd('/')
+        val host = hosts.firstOrNull {
+            it.baseUrl.trimEnd('/') == device.url.trimEnd('/') || it.baseUrl.trimEnd('/') == base
+        } ?: return emptyList()
+        if (host.isRelay) return emptyList()
+        val result = withTimeoutOrNull(6_000) {
+            runCatching { harnessClientFactory.clientFor(host).sessionList() }.getOrNull()
+        } ?: return emptyList()
+        val items = when (result) {
+            is RpcResult.Ok -> result.value.items
+            is RpcResult.Err -> return emptyList()
+        }
+        return items.mapNotNull { summary ->
+            val pending = pendingQuestionCount(summary)
+            if (!summary.running && pending == 0) return@mapNotNull null
+            val status = buildList {
+                if (pending > 0) add(getString(R.string.shell_fleet_pending, pending))
+                if (summary.running) add(getString(R.string.shell_fleet_running))
+            }.joinToString(" · ")
+            ShellFleetSession(
+                device = device,
+                sessionId = summary.sessionId,
+                title = sessionTitleOf(summary)
+                    ?: getString(R.string.shell_inbox_untitled, summary.sessionId.take(8)),
+                status = status,
+                updatedAt = summary.updatedAt,
+                priority = if (pending > 0) 0 else 1,
+            )
+        }
+    }
+
+    private fun pendingQuestionCount(summary: SessionSummary): Int {
+        val values = summary.projections?.values ?: return 0
+        val questions = values["userQuestions"] as? JsonObject ?: return 0
+        return (questions["active"] as? JsonArray)?.size ?: 0
+    }
+
+    private fun sessionTitleOf(summary: SessionSummary): String? {
+        val value = summary.projections?.values?.get("title") ?: return null
+        return when (value) {
+            is JsonPrimitive -> value.contentOrNull
+            is JsonObject -> value["title"]?.jsonPrimitive?.contentOrNull
+            else -> null
+        }
     }
 
     private fun checkDeviceHealth() {

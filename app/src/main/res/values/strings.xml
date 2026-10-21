@@ -875,6 +875,13 @@
     <string name="shell_fleet_timeout">Connection timed out</string>
     <string name="shell_fleet_relay">Relay · pairing required</string>
     <string name="shell_fleet_not_configured">No native connection profile</string>
+    <string name="shell_fleet_inbox">Cross-host inbox</string>
+    <string name="shell_fleet_inbox_hint">Running and waiting sessions across all hosts</string>
+    <string name="shell_fleet_inbox_title">Cross-host inbox</string>
+    <string name="shell_fleet_inbox_empty">Nothing needs attention across saved hosts</string>
+    <string name="shell_fleet_inbox_refresh">Refresh cross-host inbox</string>
+    <string name="shell_fleet_pending">%1$d questions waiting</string>
+    <string name="shell_fleet_running">Running</string>
     <string name="shell_device_health">Device health</string>
     <string name="shell_device_health_hint">Check every saved device</string>
     <string name="shell_device_health_title">Device health</string>

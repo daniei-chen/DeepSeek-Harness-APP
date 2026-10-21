@@ -873,6 +873,13 @@
     <string name="shell_fleet_timeout">连接超时</string>
     <string name="shell_fleet_relay">中继 · 需要配对</string>
     <string name="shell_fleet_not_configured">没有匹配的原生连接配置</string>
+    <string name="shell_fleet_inbox">跨主机收件箱</string>
+    <string name="shell_fleet_inbox_hint">所有主机上运行中/待回答的会话</string>
+    <string name="shell_fleet_inbox_title">跨主机收件箱</string>
+    <string name="shell_fleet_inbox_empty">所有主机当前没有需要处理的会话</string>
+    <string name="shell_fleet_inbox_refresh">刷新跨主机收件箱</string>
+    <string name="shell_fleet_pending">%1$d 个待回答</string>
+    <string name="shell_fleet_running">运行中</string>
     <string name="shell_device_health">设备健康</string>
     <string name="shell_device_health_hint">检查所有已保存设备</string>
     <string name="shell_device_health_title">设备健康</string>

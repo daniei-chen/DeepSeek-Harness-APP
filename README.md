@@ -41,6 +41,8 @@ pieces a browser cannot provide.
   actions on approval notifications.
 - Fleet overview: one parallel `sessionList` per saved host, showing session and running counts;
   a read-only multi-host view that switches hosts on tap.
+- Cross-host inbox: running or waiting sessions across all saved hosts, sorted with waiting work
+  first; tapping one switches host and opens that session.
 - Device health: probe every saved device in parallel and see HTTP status/latency, offline, or
   a certificate that still needs first-use trust.
 - Native inbox for the current host: waiting approvals/questions, running and recent sessions,
