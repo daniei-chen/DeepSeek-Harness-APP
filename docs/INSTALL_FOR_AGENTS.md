@@ -242,6 +242,8 @@ If it says "主机上的 APP 插件还是旧版", the host is still running an o
 | App opens Settings, cannot connect | DSH binds `127.0.0.1` (desktop default) | use the relay (3.2) or bind DSH to the LAN address |
 | `ERR_CONNECTION_REFUSED` on `https://127.0.0.1:3443/...` from the phone | `127.0.0.1` is the phone itself | use `https://<host-lan-ip>:3443/...` |
 | `DSH RELAY Not found` on `/relay/pair/` | trailing slash | use exactly `/relay/pair` (the app preserves it) |
+| Relay answers `403` / "Host refused" | its DNS-rebinding fence only trusts loopback, its own LAN addresses and `publicHostnames` | re-run `install` with `--public-hostname <name>`, or reach it by the LAN IP |
+| Relay asks for a password on first open | no password is set yet | open `https://127.0.0.1:3443/relay/password` on the host and set one |
 | `Failed to load plugins` / `dsh-relay: pending (waiting for service: settingsScope)` | relay's browser card is incompatible with DSH 0.2.1 | the setup installer disables it (`disableRelayClientCard`); re-run `install` once, then restart |
 | `远控` says the host plugin is old | DSH still runs the previous plugin | restart DSH; confirm `status --json` shows `app: true` |
 | Update check says "up to date" but a release exists | older client read GitHub's `/releases/latest` (ordered by creation time; plugin releases are now pre-releases) | update to **0.9.36+**, which reads the release list and keeps only app-version tags |
