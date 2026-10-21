@@ -431,6 +431,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
+        onNetworkInfo: () -> Unit,
         onTestConnection: () -> Unit,
         onBack: () -> Unit,
     ) {
@@ -453,6 +454,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_scan_lan), activity.getString(R.string.shell_settings_scan_lan_hint)) {
                 dialog.dismiss()
                 onScanLan()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_network_info), activity.getString(R.string.shell_settings_network_info_hint)) {
+                dialog.dismiss()
+                onNetworkInfo()
             },
         )
         card.addView(

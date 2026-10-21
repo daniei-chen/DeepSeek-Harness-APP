@@ -32,8 +32,12 @@ powershell -ExecutionPolicy Bypass -File setup/install.ps1 `
 ./setup/install.sh --profile desktop --file-root "$HOME/workspaces"
 ```
 
-The installer prints a backup path and the relay URLs. Restart DSH, then open the pair page **on
-the computer**:
+The installer prints a backup path and the relay URLs. Restart DSH, then open **Settings →
+手机访问** on the computer. It shows the real bind address (DSH Desktop is loopback-only by
+default), the LAN candidates, relay health and copyable pair/LAN URLs. This is also where you can
+confirm why the phone's LAN scan cannot see a Desktop host.
+
+Open the pair page **on the computer**:
 
 ```text
 https://127.0.0.1:3443/relay/pair

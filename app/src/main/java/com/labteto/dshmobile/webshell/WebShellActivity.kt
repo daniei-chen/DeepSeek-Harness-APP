@@ -130,6 +130,8 @@ class WebShellActivity : AppCompatActivity() {
     private var pageHadError = false
     private var pendingSessionId: String? = null
     private var pendingNativeSpeech = false
+    private var lanScanning = false
+    private var sslPromptShowing = false
     private var speechRecognizer: SpeechRecognizer? = null
     private lateinit var welcomeView: LinearLayout
     private lateinit var welcomeTitle: TextView
@@ -609,6 +611,15 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+            val authority = authorityOf(error.url)
+            if (authority != null && isKnownDeviceAuthority(authority)) {
+                if (shellDevices.isSelfSignedTrusted(authority)) {
+                    handler.proceed()
+                } else {
+                    showSslTrustDialog(handler, authority, error)
+                }
+                return
+            }
             handler.cancel()
             showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_ssl))
         }
@@ -939,6 +950,7 @@ class WebShellActivity : AppCompatActivity() {
             dark = pageDark,
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
+            onNetworkInfo = { showNetworkInfoDialog() },
             onTestConnection = { testConnection() },
             onBack = { showSettings() },
         )
@@ -1043,30 +1055,179 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun scanLan() {
-        Toast.makeText(this, R.string.shell_settings_scanning, Toast.LENGTH_SHORT).show()
+        if (lanScanning) return
+        lanScanning = true
+        val progress = AlertDialog.Builder(this)
+            .setTitle(R.string.shell_settings_scan_lan)
+            .setMessage(R.string.shell_settings_scanning)
+            .setCancelable(false)
+            .create()
+        progress.setOnDismissListener { lanScanning = false }
+        progress.show()
+
         lifecycleScope.launch {
-            val ports = runCatching { hostsStore.settings.first().knownPorts }.getOrDefault(listOf(3080))
-            val found = withContext(Dispatchers.IO) {
-                runCatching { discoveryEngine.scan(ports) }.getOrDefault(emptyList())
+            val settings = runCatching { hostsStore.settings.first() }.getOrDefault(AppSettings())
+            val ports = (settings.knownPorts + 3080).distinct().take(8)
+            val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
+            val harnesses = withContext(Dispatchers.IO) {
+                runCatching {
+                    discoveryEngine.scan(
+                        ports = ports,
+                        onProgress = { probed, total ->
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed && progress.isShowing) {
+                                    progress.setMessage(
+                                        getString(R.string.shell_settings_scan_progress, probed, total),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }.getOrDefault(emptyList())
+            }
+            // A relay is the only supported way to reach a Desktop host that binds loopback.
+            // Scan it only when no plain harness answered, so a normal LAN host stays fast.
+            val relays = if (harnesses.none { it.trusted }) {
+                withContext(Dispatchers.IO) {
+                    runCatching { discoveryEngine.scanForRelays() }.getOrDefault(emptyList())
+                }
+            } else {
+                emptyList()
             }
             if (isFinishing || isDestroyed) return@launch
-            if (found.isEmpty()) {
-                Toast.makeText(this@WebShellActivity, R.string.shell_settings_scan_empty, Toast.LENGTH_SHORT).show()
+            progress.dismiss()
+
+            val existing = shellDevices.load().map { it.url.trimEnd('/') }.toMutableSet()
+            var added = 0
+            harnesses.filter { it.trusted }.forEach { host ->
+                val url = host.baseUrl.trimEnd('/') + "/"
+                if (url.trimEnd('/') !in existing) {
+                    shellDevices.add(url = url, name = "局域网 ${host.host}")
+                    existing.add(url.trimEnd('/'))
+                    added++
+                }
+            }
+            relays.filter { it.host != "127.0.0.1" }.forEach { relay ->
+                // The relay's default listener is TLS. The WebView asks for explicit trust on the
+                // first visit; this address is remembered per host:port in ShellDevices.
+                val url = relay.baseUrl.trimEnd('/') + "/relay/pair"
+                if (url.trimEnd('/') !in existing) {
+                    shellDevices.add(url = url, name = "中继 ${relay.host}")
+                    existing.add(url.trimEnd('/'))
+                    added++
+                }
+            }
+            if (added > 0) {
+                Toast.makeText(
+                    this@WebShellActivity,
+                    getString(R.string.shell_settings_scan_found_count, added),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                showDeviceManager()
                 return@launch
             }
-            found.forEach { host ->
-                shellDevices.add(
-                    url = host.baseUrl.trimEnd('/') + "/",
-                    name = "局域网 ${host.host}",
-                )
-            }
-            Toast.makeText(
-                this@WebShellActivity,
-                getString(R.string.shell_settings_scan_found),
-                Toast.LENGTH_SHORT,
-            ).show()
-            showDeviceManager()
+            showScanEmptyDialog(subnet, ports, harnesses.count { !it.trusted }, relays.size)
         }
+    }
+
+    private fun showScanEmptyDialog(
+        subnet: String?,
+        ports: List<Int>,
+        harnessCount: Int,
+        relayCount: Int,
+    ) {
+        val extra = buildString {
+            if (harnessCount > 0) {
+                append("\n\n")
+                append(getString(R.string.shell_settings_scan_untrusted, harnessCount))
+            }
+            if (relayCount > 0) {
+                append("\n\n")
+                append(getString(R.string.shell_settings_scan_relay_unpaired, relayCount))
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.shell_settings_scan_empty_title)
+            .setMessage(
+                getString(
+                    R.string.shell_settings_scan_empty_detail,
+                    subnet ?: getString(R.string.shell_settings_scan_unknown_subnet),
+                    ports.joinToString(" / "),
+                ) + extra,
+            )
+            .setPositiveButton(R.string.shell_settings_scan_help) { _, _ -> showMobileSetupDialog() }
+            .setNeutralButton(R.string.device_add) { _, _ -> showAddDeviceDialog() }
+            .setNegativeButton(R.string.common_close, null)
+            .show()
+    }
+
+    private fun showNetworkInfoDialog() {
+        lifecycleScope.launch {
+            val addresses = withContext(Dispatchers.IO) { discoveryEngine.localIpv4s() }
+            val subnet = withContext(Dispatchers.IO) { discoveryEngine.localSubnetLabel() }
+            val ports = runCatching { hostsStore.settings.first().knownPorts + 3080 }
+                .getOrDefault(listOf(3080))
+                .distinct()
+            if (isFinishing || isDestroyed) return@launch
+            AlertDialog.Builder(this@WebShellActivity)
+                .setTitle(R.string.shell_settings_network_info_title)
+                .setMessage(
+                    getString(
+                        R.string.shell_settings_network_info_message,
+                        addresses.ifEmpty { listOf(getString(R.string.shell_settings_network_none)) }
+                            .joinToString("\n") { "• $it" },
+                        subnet ?: getString(R.string.shell_settings_scan_unknown_subnet),
+                        ports.joinToString(" / "),
+                    ),
+                )
+                .setPositiveButton(R.string.common_close, null)
+                .show()
+        }
+    }
+
+    /** host:port key used for the per-device self-signed trust decision. */
+    private fun authorityOf(url: String?): String? {
+        val uri = url?.let { Uri.parse(it) } ?: return null
+        val host = uri.host ?: return null
+        val port = when {
+            uri.port != -1 -> uri.port
+            uri.scheme.equals("https", ignoreCase = true) -> 443
+            else -> 80
+        }
+        return "$host:$port"
+    }
+
+    /** Only an address already in the device list may be offered the self-signed exception. */
+    private fun isKnownDeviceAuthority(authority: String): Boolean =
+        shellDevices.load().any { device ->
+            authorityOf(device.url)?.equals(authority, ignoreCase = true) == true
+        }
+
+    private fun showSslTrustDialog(handler: SslErrorHandler, authority: String, error: SslError) {
+        if (sslPromptShowing || isFinishing || isDestroyed) {
+            handler.cancel()
+            return
+        }
+        sslPromptShowing = true
+        val issuer = error.certificate?.issuedTo?.cName?.takeIf { it.isNotBlank() } ?: authority
+        AlertDialog.Builder(this)
+            .setTitle(R.string.webshell_ssl_trust_title)
+            .setMessage(getString(R.string.webshell_ssl_trust_message, authority, issuer))
+            .setPositiveButton(R.string.webshell_ssl_trust_continue) { _, _ ->
+                sslPromptShowing = false
+                shellDevices.trustSelfSigned(authority)
+                handler.proceed()
+            }
+            .setNegativeButton(R.string.webshell_ssl_trust_cancel) { _, _ ->
+                sslPromptShowing = false
+                handler.cancel()
+                showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_ssl))
+            }
+            .setOnCancelListener {
+                sslPromptShowing = false
+                handler.cancel()
+            }
+            .show()
     }
 
     private fun openNotificationSettings() {

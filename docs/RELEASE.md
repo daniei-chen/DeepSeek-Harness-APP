@@ -1,4 +1,4 @@
-# Release 0.9.21
+# Release 0.9.25
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: https://deepseek.kaogong.art/dsh-kaogong-a7f3c9.apk
-- SHA-256: `0C4CC0CFBDC6A00C2E1914377C410A5E0FBBAD25D164DD6A3C76920525997914`
+- APK: `dist/DeepSeek-Harness-0.9.25-personal.85.apk`
+- SHA-256: `962FFB2DB238F047C977322BDE90FACF826C70C600408AD9B57D4EBDDDD5A571`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -25,6 +25,11 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 ## Included
 
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
+- LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
+- Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
+- empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
+- Settings → 手机访问 (host plugin 0.1.4) shows the real bind address, LAN candidates and relay health
+- relay URLs can be added from the scan; the first self-signed certificate is trusted per host:port only after an explicit prompt
 - WebView shell with drawer gestures, custom back handling, in-app document preview
 - workspace file panel: download files/folders, zip folders, recursive delete (`host-plugin/`)
 - Android notification channels and permission flow
