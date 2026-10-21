@@ -772,6 +772,9 @@
     <string name="shell_settings_test_notification_hint">检查系统通知渠道和权限</string>
     <string name="shell_settings_test_notification_text">通知渠道工作正常。</string>
     <string name="shell_settings_battery">电池无限制</string>
+    <string name="shell_settings_keep_background">保持后台连接</string>
+    <string name="shell_settings_background_on">前台服务已开启</string>
+    <string name="shell_settings_background_off">前台服务未开启</string>
     <string name="shell_settings_battery_hint">避免系统在后台限制连接</string>
     <string name="shell_settings_autostart">自启动设置</string>
     <string name="shell_settings_autostart_hint">打开对应厂商的自启动管理页</string>

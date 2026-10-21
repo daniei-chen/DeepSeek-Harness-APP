@@ -41,10 +41,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         currentDeviceName: String?,
         versionName: String,
         notificationsEnabled: Boolean,
+        backgroundEnabled: Boolean,
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
+        onBackgroundToggle: () -> Unit,
         onBatterySettings: () -> Unit,
         onAutostart: () -> Unit,
         onCheckUpdate: () -> Unit,
@@ -152,6 +154,21 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         )
 
         card.addView(sectionLabel(colors, activity.getString(R.string.shell_settings_section_background)))
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_settings,
+                title = activity.getString(R.string.shell_settings_keep_background),
+                subtitle = if (backgroundEnabled) {
+                    activity.getString(R.string.shell_settings_background_on)
+                } else {
+                    activity.getString(R.string.shell_settings_background_off)
+                },
+            ) {
+                dialog.dismiss()
+                onBackgroundToggle()
+            },
+        )
         card.addView(
             settingsRow(
                 colors = colors,

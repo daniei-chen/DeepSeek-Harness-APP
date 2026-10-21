@@ -774,6 +774,9 @@
     <string name="shell_settings_test_notification_hint">Check the Android channel and permission</string>
     <string name="shell_settings_test_notification_text">The notification channel is working.</string>
     <string name="shell_settings_battery">Battery unrestricted</string>
+    <string name="shell_settings_keep_background">Keep connection in background</string>
+    <string name="shell_settings_background_on">Foreground service is on</string>
+    <string name="shell_settings_background_off">Foreground service is off</string>
     <string name="shell_settings_battery_hint">Keep the connection alive in the background</string>
     <string name="shell_settings_autostart">Autostart settings</string>
     <string name="shell_settings_autostart_hint">Open the vendor autostart page when available</string>

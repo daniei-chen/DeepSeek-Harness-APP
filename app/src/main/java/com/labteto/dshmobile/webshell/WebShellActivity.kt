@@ -52,6 +52,7 @@ import com.labteto.dshmobile.connection.HarnessSessionStore
 import com.labteto.dshmobile.connection.HostConfig
 import com.labteto.dshmobile.connection.HostsStore
 import com.labteto.dshmobile.connection.ConnectionManager
+import com.labteto.dshmobile.connection.ConnectionService
 import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.notify.DshNotifications
 import com.labteto.dshmobile.update.UpdateChecker
@@ -735,10 +736,14 @@ class WebShellActivity : AppCompatActivity() {
             versionName = versionName,
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            backgroundEnabled = runCatching {
+                runBlocking { hostsStore.settings.first().keepConnectedInBackground }
+            }.getOrDefault(false),
             onManageDevices = { showDeviceManager() },
             onScanLan = { scanLan() },
             onNotificationSettings = { openNotificationSettings() },
             onTestNotification = { sendTestNotification() },
+            onBackgroundToggle = { toggleBackground() },
             onBatterySettings = { openBatterySettings() },
             onAutostart = { openAutostartSettings() },
             onCheckUpdate = { checkForUpdate() },
@@ -782,6 +787,20 @@ class WebShellActivity : AppCompatActivity() {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, packageName),
             )
         }.onFailure { openAppDetailsSettings() }
+    }
+
+    private fun toggleBackground() {
+        lifecycleScope.launch {
+            val enabled = runCatching { hostsStore.settings.first().keepConnectedInBackground }.getOrDefault(false)
+            val next = !enabled
+            hostsStore.setSetting { it.copy(keepConnectedInBackground = next) }
+            if (next) {
+                ContextCompat.startForegroundService(this@WebShellActivity, Intent(this@WebShellActivity, ConnectionService::class.java))
+            } else {
+                stopService(Intent(this@WebShellActivity, ConnectionService::class.java))
+            }
+            showSettings()
+        }
     }
 
     private fun checkForUpdate() {
