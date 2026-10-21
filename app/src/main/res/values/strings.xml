@@ -852,6 +852,13 @@
     <string name="shell_cockpit_forked">Fork created</string>
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
+    <string name="shell_settings_scan_qr">Scan QR code</string>
+    <string name="shell_settings_scan_qr_hint">Scan the pairing code on your computer</string>
+    <string name="shell_scan_qr_prompt">Point at the QR code on your computer</string>
+    <string name="shell_scan_qr_invalid">Not a DSH address or pairing code</string>
+    <string name="shell_scan_qr_too_new">This QR code is too new; update the app</string>
+    <string name="shell_scan_qr_device">Scanned device</string>
+    <string name="shell_scan_qr_added">Scanned device added</string>
     <string name="shell_settings_scan_lan">Scan local network</string>
     <string name="shell_settings_scan_lan_hint">Find a DSH host on the same Wi-Fi</string>
     <string name="shell_settings_scanning">Scanning the local network…</string>

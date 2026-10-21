@@ -43,9 +43,11 @@ Downloads:
 ### Connection
 
 - Self-hosted DSH profiles: add, rename, delete and switch devices.
+- **Scan QR code** adds a plain `http(s)` DSH URL or a relay pairing payload in one step.
 - LAN scan reports progress and combines `_dsh._tcp` mDNS with the subnet sweep; discovers
   `dsh-relay` on `3443/3444`.
 - Relay pairing with first-use certificate trust scoped to the exact `host:port`.
+- Relay status is in **Settings → 手机访问**; the relay floating bottom-right link is disabled.
 - Device health: HTTP status/latency, offline, or a certificate that still needs trust; tap to switch.
 - Fleet overview: one parallel `sessionList` per saved host, showing session and running counts.
 - Cross-host inbox: running sessions and active questions/plan reviews across saved hosts, waiting

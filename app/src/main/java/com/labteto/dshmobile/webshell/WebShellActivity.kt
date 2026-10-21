@@ -57,6 +57,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import com.labteto.dshmobile.BuildConfig
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.HarnessSessionStore
@@ -69,6 +71,8 @@ import com.labteto.dshmobile.connection.DiscoveryEngine
 import com.labteto.dshmobile.connection.HarnessClientFactory
 import com.labteto.dshmobile.connection.MdnsDiscovery
 import com.labteto.dshmobile.connection.AppSettings
+import com.labteto.dshmobile.core.wire.PairingPayloadResult
+import com.labteto.dshmobile.core.wire.RelayPairing
 import com.labteto.dshmobile.core.wire.RpcResult
 import com.labteto.dshmobile.core.wire.dto.SessionSummary
 import com.labteto.dshmobile.data.SessionRow
@@ -156,6 +160,9 @@ class WebShellActivity : AppCompatActivity() {
     private val prefetchClient by lazy { newPrefetchClient() }
     private val chrome by lazy { WebShellChrome(this) }
     private val shellDevices by lazy { ShellDevices(this) }
+    private val qrScanLauncher = registerForActivityResult(ScanContract()) { result ->
+        result.contents?.takeIf { it.isNotBlank() }?.let { handleScannedQr(it) }
+    }
 
     private lateinit var root: FrameLayout
     private lateinit var webView: WebView
@@ -1138,6 +1145,7 @@ class WebShellActivity : AppCompatActivity() {
         chrome.showConnectionPage(
             dark = pageDark,
             onManageDevices = { showDeviceManager() },
+            onScanQr = { openQrScanner() },
             onScanLan = { scanLan() },
             onNetworkInfo = { showNetworkInfoDialog() },
             onFleet = { showFleet() },
@@ -2074,6 +2082,48 @@ class WebShellActivity : AppCompatActivity() {
                 true
             },
         )
+    }
+
+    private fun openQrScanner() {
+        qrScanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt(getString(R.string.shell_scan_qr_prompt))
+                .setBeepEnabled(false)
+                .setOrientationLocked(false),
+        )
+    }
+
+    private fun handleScannedQr(raw: String) {
+        val url = when (val parsed = RelayPairing.parsePayload(raw)) {
+            is PairingPayloadResult.Valid -> {
+                val base = parsed.payload.url.trimEnd('/')
+                if (base.endsWith("/relay/pair")) base else "$base/relay/pair"
+            }
+            is PairingPayloadResult.TooNew -> {
+                Toast.makeText(this, R.string.shell_scan_qr_too_new, Toast.LENGTH_SHORT).show()
+                return
+            }
+            PairingPayloadResult.NotAPairingCode -> {
+                val text = raw.trim()
+                text.takeIf {
+                    it.startsWith("http://", ignoreCase = true) ||
+                        it.startsWith("https://", ignoreCase = true)
+                }
+            }
+        }
+        if (url == null) {
+            Toast.makeText(this, R.string.shell_scan_qr_invalid, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val target = parseServerUrl(url) ?: run {
+            Toast.makeText(this, R.string.shell_scan_qr_invalid, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val device = shellDevices.add(target.url, name = getString(R.string.shell_scan_qr_device))
+        shellDevices.setCurrent(device.id)
+        Toast.makeText(this, R.string.shell_scan_qr_added, Toast.LENGTH_SHORT).show()
+        applyServerUrl(target.url)
     }
 
     private fun showRenameDeviceDialog(device: ShellDevice) {

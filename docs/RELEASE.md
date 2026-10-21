@@ -1,4 +1,4 @@
-# Release 0.9.32
+# Release 0.9.33
 
 ## What this release is
 
@@ -7,8 +7,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-0.9.32-personal.92.apk`
-- SHA-256: `429DC6EE56DA2A1B9F62BE9AF37C06ABBDFFD776722CE2B157E42B058B2FDBF2`
+- APK: `dist/DeepSeek-Harness-0.9.33-personal.93.apk`
+- SHA-256: `BF07ADF2C40B9CAAABF0D7F61A5A35288B6A30336E28ECC74EA9406755A5CE66`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -27,6 +27,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- Settings → Connection → **Scan QR code**: accepts a plain `http(s)` DSH URL or a `dsh-relay-pair` payload and opens the relay pairing page; adding a device immediately switches the WebView.
 - Settings → Connection → This phone's network shows Wi-Fi IPv4 addresses, subnet and scan ports
 - empty scans explain the real cause (loopback-only DSH, firewall, guest Wi-Fi isolation) instead of a blank toast
 - **Fleet overview**: one parallel `sessionList` per saved host, showing session and running counts; read-only until a host is selected.
@@ -34,6 +35,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - **Device health**: probe every saved device in parallel; show HTTP status/latency, offline, or a certificate that still needs first-use trust; tap a row to switch.
 - Settings → 手机访问 (host plugin 0.1.5) shows the real bind address, LAN candidates and relay health
 - relay URLs can be added from the scan; the first self-signed certificate is trusted per host:port only after an explicit prompt
+- The relay floating bottom-right UI link is disabled (`uiLink: false`); relay status lives in Settings → 手机访问 instead.
 - WebView shell with drawer gestures, custom back handling, in-app document preview
 - workspace file panel: download files/folders, zip folders, recursive delete, upload, rename and new folder (`host plugin 0.1.5`)
 - Android notification channels and permission flow
