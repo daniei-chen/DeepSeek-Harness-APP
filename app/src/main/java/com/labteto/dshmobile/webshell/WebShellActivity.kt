@@ -182,6 +182,7 @@ class WebShellActivity : AppCompatActivity() {
     private var insets = InsetsDp(0f, 0f, 0f)
     private var imeVisible = false
     private var glassCompat = "auto"
+    private var inboxQuery = ""
     private var relayPairingResult: kotlinx.coroutines.CompletableDeferred<String>? = null
     private var pageDark = false
     private var clearHistoryAfterLoad = false
@@ -866,13 +867,19 @@ class WebShellActivity : AppCompatActivity() {
      * the view's layout, asks the page to re-read the viewport, and (when explicitly requested)
      * detaches the hardware layer so the next frame is painted from scratch.
      */
+    /**
+     * @param forceRepaint the manual "repair layout" path. Only that one resizes the view and
+     * detaches the hardware layer: both make the page re-render, and a silent pass must never do
+     * that — a resize is what makes the harness remount the composer and re-request its model
+     * list, which reads as "it refreshed by itself".
+     */
     private fun repairPageLayout(forceRepaint: Boolean = false, notify: Boolean = false) {
         if (!::webView.isInitialized) return
-        // A 1px resize is the only reliable way to make the renderer re-read the viewport:
-        // `requestLayout()` with unchanged bounds is a no-op for the compositor, and that is
-        // exactly how a WebView keeps painting a strip of page above an empty field.
-        nudgeWebViewSize()
         if (forceRepaint) {
+            // A 1px resize is the only reliable way to make the renderer re-read the viewport:
+            // `requestLayout()` with unchanged bounds is a no-op for the compositor, and that is
+            // exactly how a WebView keeps painting a strip of page above an empty field.
+            nudgeWebViewSize()
             val layer = webView.layerType
             webView.setLayerType(View.LAYER_TYPE_NONE, null)
             webView.post {
@@ -881,8 +888,6 @@ class WebShellActivity : AppCompatActivity() {
                 webView.requestLayout()
             }
         }
-        webView.requestLayout()
-        webView.invalidate()
         webView.evaluateJavascript(WebShellScripts.repairViewport(), null)
         if (notify) Toast.makeText(this, R.string.shell_diagnostics_repaired, Toast.LENGTH_SHORT).show()
     }
@@ -1108,7 +1113,8 @@ class WebShellActivity : AppCompatActivity() {
             }
     }
 
-    private fun showInbox() {
+    private fun showInbox(query: String = inboxQuery) {
+        inboxQuery = query
         val connection = connectionManager.state.value
         val phase = when (connection.phase) {
             ConnectionPhase.CONNECTED -> getString(R.string.shell_inbox_state_connected)
@@ -1119,10 +1125,36 @@ class WebShellActivity : AppCompatActivity() {
         val label = connection.host?.let { host ->
             getString(R.string.shell_inbox_connection, host.host, phase)
         } ?: getString(R.string.shell_inbox_disconnected)
+        val all = buildInboxRows()
+        val rows = if (query.isBlank()) {
+            all
+        } else {
+            all.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.subtitle.contains(query, ignoreCase = true)
+            }
+        }
         chrome.showInboxPage(
             dark = pageDark,
-            rows = buildInboxRows(),
+            rows = rows,
             connectionLabel = label,
+            query = query,
+            onSearch = {
+                chrome.showTextDialog(
+                    dark = pageDark,
+                    title = getString(R.string.shell_inbox_search),
+                    description = getString(R.string.shell_inbox_search_hint),
+                    initial = query,
+                    hint = getString(R.string.shell_inbox_search_hint),
+                    inputType = android.text.InputType.TYPE_CLASS_TEXT,
+                    errorText = "",
+                    onSubmit = { value ->
+                        showInbox(value.trim())
+                        true
+                    },
+                )
+            },
+            onClearSearch = { showInbox("") },
             onOpen = { row ->
                 pendingSessionId = row.sessionId
                 openPendingSession()

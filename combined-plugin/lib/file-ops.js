@@ -1,6 +1,6 @@
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, realpathSync } from "node:fs";
 import { execFile } from "node:child_process";
-import { appendFile, lstat, mkdir, mkdtemp, realpath, rename, rm, stat } from "node:fs/promises";
+import { appendFile, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -45,10 +45,51 @@ export function apply(ctx, config = {}) {
         appendFile(auditLog, JSON.stringify(entry) + "\n").catch((error) => ctx.logger?.warn?.(error));
     };
 
-    const insideRoots = (target) => {
-        const normalized = path.resolve(target);
-        return roots.some((root) => normalized === root || normalized.startsWith(root + path.sep));
+    /**
+     * Canonical form for a containment check.
+     *
+     * Windows hands out 8.3 short names (`C:\Users\ADMINI~1\...`) for temporary directories while
+     * `realpath` answers with the long name, so comparing the two spellings rejected every real
+     * path under such a root. Resolve the parent when the target itself does not exist yet (the
+     * `mkdir` case), and fall back to a plain resolve so a check can never throw.
+     */
+    const canonical = (target) => {
+        const resolved = path.resolve(target);
+        try {
+            return realpathSync.native(resolved);
+        } catch {
+            try {
+                return path.join(realpathSync.native(path.dirname(resolved)), path.basename(resolved));
+            } catch {
+                return resolved;
+            }
+        }
     };
+
+    const insideRoots = (target) => {
+        const normalized = canonical(target);
+        return roots.some((root) => {
+            const base = canonical(root);
+            return normalized === base || normalized.startsWith(base + path.sep);
+        });
+    };
+
+    /**
+     * Preview deliberately has a small ceiling: it exists to read a note or look at a screenshot
+     * on a phone, not to stream a video. Anything larger, or binary, gets `kind: "binary"` and the
+     * panel offers the normal download instead.
+     */
+    const IMAGE_MIME = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".bmp": "image/bmp",
+        ".svg": "image/svg+xml",
+    };
+    const PREVIEW_TEXT_LIMIT = 512 * 1024;
+    const PREVIEW_IMAGE_LIMIT = 6 * 1024 * 1024;
 
     const json = (res, status, value) => {
         const body = JSON.stringify(value);
@@ -177,6 +218,54 @@ export function apply(ctx, config = {}) {
                 await rm(resolved, { recursive: true, force: false });
                 audit(req, "delete", resolved, "ok");
                 json(res, 200, { ok: true, path: resolved });
+                return;
+            }
+            if (action === "preview") {
+                const entry = await lstat(resolved);
+                if (entry.isSymbolicLink() || !entry.isFile()) {
+                    json(res, 400, { error: "not a previewable file" });
+                    return;
+                }
+                const real = await realpath(resolved);
+                if (!insideRoots(real)) {
+                    json(res, 403, { error: "resolved path is outside the workspace roots" });
+                    return;
+                }
+                const info = await stat(real);
+                const name = path.basename(real);
+                const ext = path.extname(real).toLowerCase();
+                const mime = IMAGE_MIME[ext];
+                if (mime !== undefined && info.size <= PREVIEW_IMAGE_LIMIT) {
+                    const bytes = await readFile(real);
+                    json(res, 200, {
+                        ok: true,
+                        kind: "image",
+                        name,
+                        size: info.size,
+                        mime,
+                        data: `data:${mime};base64,${bytes.toString("base64")}`,
+                    });
+                    return;
+                }
+                if (info.size <= PREVIEW_TEXT_LIMIT) {
+                    const bytes = await readFile(real);
+                    const text = bytes.toString("utf8");
+                    // A NUL byte in the first block is the cheap, reliable signal that this is not
+                    // text; rendering a binary as UTF-8 would produce megabytes of replacement
+                    // characters on a phone.
+                    if (!text.includes("\u0000")) {
+                        json(res, 200, {
+                            ok: true,
+                            kind: "text",
+                            name,
+                            size: info.size,
+                            content: text.slice(0, 256 * 1024),
+                            truncated: text.length > 256 * 1024,
+                        });
+                        return;
+                    }
+                }
+                json(res, 200, { ok: true, kind: "binary", name, size: info.size });
                 return;
             }
             if (action !== "download") {

@@ -1069,6 +1069,9 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         rows: List<ShellInboxRow>,
         connectionLabel: String,
+        query: String,
+        onSearch: () -> Unit,
+        onClearSearch: () -> Unit,
         onOpen: (ShellInboxRow) -> Unit,
         onDetails: (ShellInboxRow) -> Unit,
         onRefresh: () -> Unit,
@@ -1092,10 +1095,38 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
 
+        if (query.isBlank()) {
+            card.addView(menuRow(colors, R.drawable.ic_shell_search, activity.getString(R.string.shell_inbox_search)) {
+                dialog.dismiss()
+                onSearch()
+            })
+        } else {
+            card.addView(
+                settingsRow(
+                    colors,
+                    R.drawable.ic_shell_search,
+                    activity.getString(R.string.shell_inbox_search_active, query),
+                    activity.getString(R.string.shell_inbox_search_hint),
+                ) {
+                    dialog.dismiss()
+                    onSearch()
+                },
+            )
+            card.addView(menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.shell_inbox_search_clear)) {
+                dialog.dismiss()
+                onClearSearch()
+            })
+        }
+        card.addView(divider(colors))
+
         if (rows.isEmpty()) {
             card.addView(
                 TextView(activity).apply {
-                    text = activity.getString(R.string.shell_inbox_empty)
+                    text = if (query.isBlank()) {
+                        activity.getString(R.string.shell_inbox_empty)
+                    } else {
+                        activity.getString(R.string.shell_inbox_no_match, query)
+                    }
                     textSize = 13f
                     setTextColor(colors.secondary)
                     setPadding(dp(14), dp(14), dp(14), dp(18))

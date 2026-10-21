@@ -209,7 +209,9 @@ html[data-dsh-glass="off"] body::after {
         // between the activity pill and an empty slot on every stream gap.
         const now = Date.now();
         if (speedMissingSince === 0) speedMissingSince = now;
-        if (now - speedMissingSince < 2500) return;
+        // Long enough to survive a tool call or a stream pause; shorter values made the speed
+        // pill blink between readings, which reads as the composer reloading.
+        if (now - speedMissingSince < 6000) return;
         if (root.style.display !== "none") root.style.display = "none";
         setVar("--dsh-mobile-speed", "");
       };
@@ -402,6 +404,33 @@ html[data-dsh-glass="off"] body::after {
           font: 11px/1.2 sans-serif; padding: 4px 6px; cursor: pointer;
         }
         .dsh-file-tool:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(127,127,127,.2)); }
+        .dsh-file-preview {
+          position: fixed; inset: 0; z-index: 2147483001; display: flex;
+          align-items: center; justify-content: center; padding: 16px;
+          background: rgba(0,0,0,.58);
+        }
+        .dsh-file-preview-panel {
+          width: 100%; max-width: 760px; max-height: 86vh; display: flex; flex-direction: column;
+          border-radius: 14px; overflow: hidden; color: var(--dsw-alias-label-primary, #eee);
+          background: var(--dsw-alias-bg-layer-2, #1c1c1e);
+          box-shadow: 0 18px 60px rgba(0,0,0,.45);
+        }
+        .dsh-file-preview-head {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          padding: 10px 12px; font: 13px/1.3 sans-serif;
+          border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(127,127,127,.25));
+        }
+        .dsh-file-preview-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dsh-file-preview-head button {
+          border: 0; background: transparent; color: inherit; font: 13px sans-serif;
+          padding: 6px 8px; cursor: pointer;
+        }
+        .dsh-file-preview-body { padding: 12px; overflow: auto; }
+        .dsh-file-preview-body pre {
+          margin: 0; white-space: pre-wrap; word-break: break-word;
+          font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .dsh-file-preview-body img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
       `;
       style.dataset.plugin = "@dsh-android/dsh-file-actions";
       document.head.appendChild(style);
@@ -526,10 +555,74 @@ html[data-dsh-glass="off"] body::after {
         header.appendChild(tools);
       };
 
+      const previewable = (name) =>
+        /\.(txt|md|markdown|json|jsonc|js|mjs|cjs|ts|tsx|jsx|css|scss|html|htm|xml|yml|yaml|log|csv|ini|toml|conf|py|java|kt|kts|sh|bash|ps1|bat|sql|go|rs|c|cc|cpp|h|hpp|gradle|properties)$/i
+          .test(name) ||
+        /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+
+      /** Text and images render in a phone-sized sheet; everything else keeps the download path. */
+      const showPreview = async (filePath, name) => {
+        try {
+          const response = await fetch(
+            "/dsh-file-ops?action=preview&path=" + encodeURIComponent(filePath),
+            { credentials: "include" },
+          );
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) throw new Error(data.error || "HTTP " + response.status);
+          const overlay = document.createElement("div");
+          overlay.className = "dsh-file-preview";
+          const panel = document.createElement("div");
+          panel.className = "dsh-file-preview-panel";
+          const head = document.createElement("div");
+          head.className = "dsh-file-preview-head";
+          const title = document.createElement("span");
+          title.textContent = name;
+          const close = document.createElement("button");
+          close.type = "button";
+          close.textContent = "关闭";
+          head.append(title, close);
+          const body = document.createElement("div");
+          body.className = "dsh-file-preview-body";
+          if (data.kind === "image") {
+            const img = document.createElement("img");
+            img.src = data.data;
+            img.alt = name;
+            body.appendChild(img);
+          } else if (data.kind === "text") {
+            const pre = document.createElement("pre");
+            pre.textContent = data.content + (data.truncated ? "\n\n…（已截断）" : "");
+            body.appendChild(pre);
+          } else {
+            body.textContent = "此类型暂不支持预览，请下载后查看。";
+          }
+          panel.append(head, body);
+          overlay.appendChild(panel);
+          document.body.appendChild(overlay);
+          const dismiss = () => overlay.remove();
+          close.addEventListener("click", dismiss);
+          overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) dismiss();
+          });
+        } catch (error) {
+          window.alert("预览失败：" + (error instanceof Error ? error.message : String(error)));
+        }
+      };
+
       const showMenu = (row, filePath) => {
         closeMenu();
         const menu = document.createElement("div");
         menu.className = "dsh-file-menu";
+        if (previewable(label(row))) {
+          const preview = document.createElement("button");
+          preview.textContent = "预览";
+          preview.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeMenu();
+            showPreview(filePath, label(row));
+          });
+          menu.appendChild(preview);
+        }
         const download = document.createElement("button");
         download.textContent = "下载";
         download.addEventListener("click", (event) => {

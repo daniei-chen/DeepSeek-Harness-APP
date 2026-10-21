@@ -845,6 +845,11 @@
     <string name="shell_inbox_count">%1$d 个待处理</string>
     <string name="shell_inbox_empty">当前还没有会话。</string>
     <string name="shell_inbox_refresh">刷新收件箱</string>
+    <string name="shell_inbox_search">搜索会话</string>
+    <string name="shell_inbox_search_hint">按标题或状态过滤</string>
+    <string name="shell_inbox_search_active">搜索：%1$s</string>
+    <string name="shell_inbox_search_clear">清除搜索</string>
+    <string name="shell_inbox_no_match">没有匹配「%1$s」的会话。</string>
     <string name="shell_inbox_status_approval">待审批</string>
     <string name="shell_inbox_status_question">待回答</string>
     <string name="shell_inbox_status_plan">待确认计划</string>

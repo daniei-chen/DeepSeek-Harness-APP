@@ -38,11 +38,11 @@ Then `设置 → 连接 → 添加设备` (or scan the relay QR at `https://<hos
 
 ## Latest
 
-- **APK 0.10.0** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
+- **APK 0.10.1** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
   expiry and paired-device entry; layout recovery for pages left at a stale height (auto on
   resume / keyboard close, plus 设置 → 诊断 → 修复界面排版); QR scan, mDNS + subnet LAN discovery,
   device health, fleet overview, cross-host inbox, session cockpit and actionable notifications.
-- **Host plugin 0.1.8** — `/dsh-mobile/relay/pair` serves the live pairing invitation so the phone
+- **Host plugin 0.1.9** — `/dsh-mobile/relay/pair` serves the live pairing invitation so the phone
   can draw the QR itself; file upload / rename / new folder, file-operation audit log, relay extra
   proxy paths for `/dsh-file-ops` and `/dsh-mobile`.
 - **One-command host setup** — `dsh-relay` (TLS, QR/passcode pairing, device revoke), the combined
@@ -54,14 +54,14 @@ Install facts (used by `docs/INSTALL_FOR_AGENTS.md`):
 
 | | |
 | --- | --- |
-| APK `versionCode` | **32000** (must be greater than the installed one) |
-| APK SHA-256 | `2BAD4E020E7B24BE74E25AAE4346AA73176DFDDC39085D8DA1618D3F71791A74` |
+| APK `versionCode` | **32001** (must be greater than the installed one) |
+| APK SHA-256 | `48D436151266BCBF6699BAFE05D3378DBABD6DC759686336F86FAE40E78D94AA` |
 | Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
 
 Downloads:
 
-- [APK v0.10.0](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.10.0)
-- [Host plugin 0.1.8](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.8)
+- [APK v0.10.1](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v0.10.1)
+- [Host plugin 0.1.9](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.9)
 
 ## What is inside
 
