@@ -48,6 +48,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         ntfyEnabled: Boolean,
         onManageDevices: () -> Unit,
         onScanLan: () -> Unit,
+        onTestConnection: () -> Unit,
         onNotificationSettings: () -> Unit,
         onTestNotification: () -> Unit,
         onToggleTurnNotifications: () -> Unit,
@@ -130,6 +131,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onScanLan()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_refresh,
+                title = activity.getString(R.string.shell_settings_test_connection),
+                subtitle = activity.getString(R.string.shell_settings_test_connection_hint),
+            ) {
+                dialog.dismiss()
+                onTestConnection()
             },
         )
 
@@ -291,6 +303,257 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER),
         )
         show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    // ---- settings home + second-level pages --------------------------------
+
+    fun showSettingsHome(
+        dark: Boolean,
+        currentDeviceName: String?,
+        versionName: String,
+        notificationsEnabled: Boolean,
+        backgroundEnabled: Boolean,
+        ntfyEnabled: Boolean,
+        onConnection: () -> Unit,
+        onNotifications: () -> Unit,
+        onBackground: () -> Unit,
+        onAbout: () -> Unit,
+        onRefresh: () -> Unit,
+        onExit: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_title)) { dialog.dismiss() })
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_device,
+                title = activity.getString(R.string.shell_settings_section_connection),
+                subtitle = currentDeviceName?.let { activity.getString(R.string.shell_settings_current_device, it) }
+                    ?: activity.getString(R.string.shell_settings_connection_hint),
+            ) {
+                dialog.dismiss()
+                onConnection()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_settings_section_notifications),
+                subtitle = if (notificationsEnabled) {
+                    activity.getString(R.string.shell_settings_notification_enabled)
+                } else {
+                    activity.getString(R.string.shell_settings_notification_disabled)
+                } + if (ntfyEnabled) " · ntfy" else "",
+            ) {
+                dialog.dismiss()
+                onNotifications()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_settings,
+                title = activity.getString(R.string.shell_settings_section_background),
+                subtitle = if (backgroundEnabled) {
+                    activity.getString(R.string.shell_settings_background_on)
+                } else {
+                    activity.getString(R.string.shell_settings_background_off)
+                },
+            ) {
+                dialog.dismiss()
+                onBackground()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_check,
+                title = activity.getString(R.string.shell_settings_section_about),
+                subtitle = activity.getString(R.string.shell_settings_version, versionName),
+            ) {
+                dialog.dismiss()
+                onAbout()
+            },
+        )
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
+                dialog.dismiss()
+                onRefresh()
+            },
+        )
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
+                dialog.dismiss()
+                onExit()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showConnectionPage(
+        dark: Boolean,
+        onManageDevices: () -> Unit,
+        onScanLan: () -> Unit,
+        onTestConnection: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_section_connection)) { dialog.dismiss(); onBack() })
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_manage_devices), activity.getString(R.string.shell_settings_manage_devices_hint)) {
+                dialog.dismiss()
+                onManageDevices()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_scan_lan), activity.getString(R.string.shell_settings_scan_lan_hint)) {
+                dialog.dismiss()
+                onScanLan()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_test_connection), activity.getString(R.string.shell_settings_test_connection_hint)) {
+                dialog.dismiss()
+                onTestConnection()
+            },
+        )
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showNotificationsPage(
+        dark: Boolean,
+        notificationsEnabled: Boolean,
+        turnNotifications: Boolean,
+        actionNotifications: Boolean,
+        goalNotifications: Boolean,
+        ntfyEnabled: Boolean,
+        onNotificationSettings: () -> Unit,
+        onTestNotification: () -> Unit,
+        onToggleTurn: () -> Unit,
+        onToggleAction: () -> Unit,
+        onToggleGoal: () -> Unit,
+        onConfigureNtfy: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_section_notifications)) { dialog.dismiss(); onBack() })
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_notification_settings), if (notificationsEnabled) activity.getString(R.string.shell_settings_notification_enabled) else activity.getString(R.string.shell_settings_notification_disabled)) {
+                dialog.dismiss()
+                onNotificationSettings()
+            },
+        )
+        card.addView(
+            settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_test_notification), activity.getString(R.string.shell_settings_test_notification_hint)) {
+                dialog.dismiss()
+                onTestNotification()
+            },
+        )
+        card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_notify_turn), enabledLabel(turnNotifications)) { dialog.dismiss(); onToggleTurn() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_notify_action), enabledLabel(actionNotifications)) { dialog.dismiss(); onToggleAction() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_notify_goal), enabledLabel(goalNotifications)) { dialog.dismiss(); onToggleGoal() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_settings_ntfy), if (ntfyEnabled) enabledLabel(true) else activity.getString(R.string.shell_settings_ntfy_hint)) { dialog.dismiss(); onConfigureNtfy() })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showBackgroundPage(
+        dark: Boolean,
+        backgroundEnabled: Boolean,
+        onToggleBackground: () -> Unit,
+        onBatterySettings: () -> Unit,
+        onAutostart: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_section_background)) { dialog.dismiss(); onBack() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_keep_background), if (backgroundEnabled) activity.getString(R.string.shell_settings_background_on) else activity.getString(R.string.shell_settings_background_off)) { dialog.dismiss(); onToggleBackground() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_battery, activity.getString(R.string.shell_settings_battery), activity.getString(R.string.shell_settings_battery_hint)) { dialog.dismiss(); onBatterySettings() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_autostart), activity.getString(R.string.shell_settings_autostart_hint)) { dialog.dismiss(); onAutostart() })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    fun showAboutPage(
+        dark: Boolean,
+        versionName: String,
+        onCheckUpdate: () -> Unit,
+        onSource: () -> Unit,
+        onBack: () -> Unit,
+    ) {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+        }
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_section_about)) { dialog.dismiss(); onBack() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.shell_settings_check_update), activity.getString(R.string.shell_settings_update_hint)) { dialog.dismiss(); onCheckUpdate() })
+        card.addView(settingsRow(colors, R.drawable.ic_shell_check, activity.getString(R.string.shell_settings_version, versionName), activity.getString(R.string.shell_settings_source_hint)) { dialog.dismiss(); onSource() })
+        root.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        show(dialog, root, gravity = Gravity.CENTER)
+    }
+
+    private fun pageHeader(colors: Colors, title: String, onClose: () -> Unit): LinearLayout {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(8), dp(8), dp(4))
+            minimumHeight = dp(48)
+        }
+        row.addView(
+            TextView(activity).apply {
+                text = title
+                textSize = 18f
+                setTextColor(colors.primary)
+            },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        row.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_settings_page_back)
+                textSize = 13f
+                setTextColor(colors.secondary)
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                isClickable = true
+                setOnClickListener { onClose() }
+            },
+        )
+        return row
     }
 
     // ---- update dialog ------------------------------------------------------

@@ -761,41 +761,78 @@ class WebShellActivity : AppCompatActivity() {
         val versionName = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull() ?: "0.0.0"
-        val appSettings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
-        chrome.showSettings(
+        chrome.showSettingsHome(
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
-            turnNotifications = appSettings.notifyTurnComplete,
-            actionNotifications = appSettings.notifyNeedsAction,
-            goalNotifications = appSettings.notifyGoal,
             backgroundEnabled = runCatching {
                 runBlocking { hostsStore.settings.first().keepConnectedInBackground }
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
-            onManageDevices = { showDeviceManager() },
-            onScanLan = { scanLan() },
-            onNotificationSettings = { openNotificationSettings() },
-            onTestNotification = { sendTestNotification() },
-            onToggleTurnNotifications = {
-                toggleNotificationSetting { it.copy(notifyTurnComplete = !it.notifyTurnComplete) }
-            },
-            onToggleActionNotifications = {
-                toggleNotificationSetting { it.copy(notifyNeedsAction = !it.notifyNeedsAction) }
-            },
-            onToggleGoalNotifications = {
-                toggleNotificationSetting { it.copy(notifyGoal = !it.notifyGoal) }
-            },
-            onConfigureNtfy = { configureNtfy() },
-            onBackgroundToggle = { toggleBackground() },
-            onBatterySettings = { openBatterySettings() },
-            onAutostart = { openAutostartSettings() },
-            onCheckUpdate = { checkForUpdate() },
-            onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
+            onConnection = { showConnectionPage() },
+            onNotifications = { showNotificationsPage() },
+            onBackground = { showBackgroundPage() },
+            onAbout = { showAboutPage() },
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
+        )
+    }
+
+    private fun showConnectionPage() {
+        chrome.showConnectionPage(
+            dark = pageDark,
+            onManageDevices = { showDeviceManager() },
+            onScanLan = { scanLan() },
+            onTestConnection = { testConnection() },
+            onBack = { showSettings() },
+        )
+    }
+
+    private fun showNotificationsPage() {
+        val settings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
+        chrome.showNotificationsPage(
+            dark = pageDark,
+            notificationsEnabled = notifications.canPost() &&
+                NotificationManagerCompat.from(this).areNotificationsEnabled(),
+            turnNotifications = settings.notifyTurnComplete,
+            actionNotifications = settings.notifyNeedsAction,
+            goalNotifications = settings.notifyGoal,
+            ntfyEnabled = NtfyConfig.load(this) != null,
+            onNotificationSettings = { openNotificationSettings() },
+            onTestNotification = { sendTestNotification() },
+            onToggleTurn = { toggleNotificationSetting { it.copy(notifyTurnComplete = !it.notifyTurnComplete) } },
+            onToggleAction = { toggleNotificationSetting { it.copy(notifyNeedsAction = !it.notifyNeedsAction) } },
+            onToggleGoal = { toggleNotificationSetting { it.copy(notifyGoal = !it.notifyGoal) } },
+            onConfigureNtfy = { configureNtfy() },
+            onBack = { showSettings() },
+        )
+    }
+
+    private fun showBackgroundPage() {
+        chrome.showBackgroundPage(
+            dark = pageDark,
+            backgroundEnabled = runCatching {
+                runBlocking { hostsStore.settings.first().keepConnectedInBackground }
+            }.getOrDefault(false),
+            onToggleBackground = { toggleBackground() },
+            onBatterySettings = { openBatterySettings() },
+            onAutostart = { openAutostartSettings() },
+            onBack = { showSettings() },
+        )
+    }
+
+    private fun showAboutPage() {
+        val versionName = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: "0.0.0"
+        chrome.showAboutPage(
+            dark = pageDark,
+            versionName = versionName,
+            onCheckUpdate = { checkForUpdate() },
+            onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
+            onBack = { showSettings() },
         )
     }
 
@@ -835,6 +872,38 @@ class WebShellActivity : AppCompatActivity() {
         }.onFailure { openAppDetailsSettings() }
     }
 
+    private fun testConnection() {
+        val url = targetUrl
+        if (url.isBlank()) {
+            Toast.makeText(this, R.string.shell_settings_no_device, Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val started = System.nanoTime()
+                    val request = okhttp3.Request.Builder().url(url).head().build()
+                    val client = okhttp3.OkHttpClient.Builder()
+                        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                        .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                        .build()
+                    client.newCall(request).execute().use { response ->
+                        response.code to ((System.nanoTime() - started) / 1_000_000).toInt()
+                    }
+                }.getOrNull()
+            }
+            if (result == null) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_settings_test_connection_failed, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(
+                    this@WebShellActivity,
+                    getString(R.string.shell_settings_test_connection_ok, result.first, result.second),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     private fun configureNtfy() {
         chrome.showTextDialog(
             dark = pageDark,
@@ -867,7 +936,7 @@ class WebShellActivity : AppCompatActivity() {
     private fun toggleNotificationSetting(transform: (AppSettings) -> AppSettings) {
         lifecycleScope.launch {
             hostsStore.setSetting(transform)
-            showSettings()
+            showNotificationsPage()
         }
     }
 
@@ -881,7 +950,7 @@ class WebShellActivity : AppCompatActivity() {
             } else {
                 stopService(Intent(this@WebShellActivity, ConnectionService::class.java))
             }
-            showSettings()
+            showBackgroundPage()
         }
     }
 
