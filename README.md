@@ -10,6 +10,32 @@ Android pieces a browser cannot provide.
 > endorsed by DeepSeek. “DeepSeek Harness” and the whale logo are trademarks of their respective
 > owners.
 
+> **For AI agents / 给 AI 安装：** follow **[docs/INSTALL_FOR_AGENTS.md](docs/INSTALL_FOR_AGENTS.md)**.
+> It has the exact versions, SHA-256 values, copy-paste commands, verification steps and a
+> troubleshooting table for **both** halves — the host plugin and the Android APK. `AGENTS.md`
+> holds the repository's hard rules (versionCode, restarts, bundle registration).
+
+## Quick install
+
+Host (the machine running DSH):
+
+```bash
+git clone https://github.com/daniei-chen/DeepSeek-Harness-APP.git
+cd DeepSeek-Harness-APP
+node setup/dsh-mobile-setup.mjs install --profile desktop \
+  --file-root "$HOME" --relay-port 3443 --yes
+# --app-plugin defaults to ./combined-plugin and is packed automatically
+# restart DSH afterwards — the plugin loads only at process start
+```
+
+Phone:
+
+```bash
+adb install -r DeepSeek-Harness-0.9.36-personal.96.apk
+```
+
+Then `设置 → 连接 → 添加设备` (or scan the relay QR at `https://<host>:3443/relay/pair`).
+
 ## Latest
 
 - **APK 0.9.36** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
@@ -21,6 +47,16 @@ Android pieces a browser cannot provide.
   proxy paths for `/dsh-file-ops` and `/dsh-mobile`.
 - **One-command host setup** — `dsh-relay` (TLS, QR/passcode pairing, device revoke), the combined
   APP plugin, optional ntfy publisher and the vendored responsive base.
+- **Update check 0.9.36** — reads the release list and accepts only app-version tags, so a host
+  plugin release can no longer become GitHub's "latest" and hide an app update.
+
+Install facts (used by `docs/INSTALL_FOR_AGENTS.md`):
+
+| | |
+| --- | --- |
+| APK `versionCode` | **31936** (must be greater than the installed one) |
+| APK SHA-256 | `E9A62462F7DF8912011937559F83E41E841AA1035FD418A35CF2CD48F71AF585` |
+| Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
 
 Downloads:
 
@@ -119,6 +155,8 @@ rollback.
 
 ## Documentation
 
+- [Install for AI agents](docs/INSTALL_FOR_AGENTS.md) — versions, hashes, commands, verification
+- [Agent rules](AGENTS.md) — hard constraints for anyone changing this repo
 - [One-command host setup](setup/README.md)
 - [Self-hosting](docs/SELF_HOSTING.md)
 - [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
