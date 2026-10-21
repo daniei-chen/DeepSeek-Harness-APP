@@ -18,7 +18,7 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 Current release (2026-10-22):
 
 - APK **1.0.0**, `versionCode` **50000**, `DeepSeek-Harness-1.0.0-personal.1.apk`
-- Host plugin **0.1.10**, `dsh-android-deepseek-harness-app-plugin-0.1.10.tgz`
+- Host plugin **0.1.11**, `dsh-android-deepseek-harness-app-plugin-0.1.11.tgz`
 - DSH tested against `0.2.1`
 
 ## Hard rules

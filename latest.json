@@ -4,7 +4,7 @@
   "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.0/DeepSeek-Harness-1.0.0-personal.1.apk",
   "sha256": "54C59A80E8A650D541B787E11AE1D2C204F9F38DE42AAB4CFBBAA07BDCEFA4F0",
   "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.0",
-  "minPluginVersion": "0.1.10",
+  "minPluginVersion": "0.1.11",
   "notes": "1.0: connection doctor, pairing, file tools, notifications, offline snapshot",
-  "generatedAt": "2026-10-21T18:59:35.565Z"
+  "generatedAt": "2026-10-21T23:19:20.475Z"
 }
