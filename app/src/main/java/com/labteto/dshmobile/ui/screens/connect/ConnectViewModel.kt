@@ -123,7 +123,7 @@ data class ConnectUiState(
     val signInError: SignInError? = null,
     // ---- Fork: self-hosted gateway ----------------------------------------
     /** The server address typed into the gateway form. */
-    val gatewayUrl: String = "https://harness.example.com",
+    val gatewayUrl: String = "https://",
     /** The access code typed into the gateway form. Never persisted. */
     val gatewayCode: String = "",
     /** A gateway sign-in is in flight. */
@@ -289,7 +289,7 @@ class ConnectViewModel @Inject constructor(
     }
 
     /**
-     * Connect through a self-hosted HTTPS gateway (`https://harness.example.com`).
+     * Connect through a self-hosted HTTPS gateway (`https://`).
      *
      * The gateway is a reverse proxy with its own access-code gate. This does what the browser
      * does once per device: `POST /dsh-login` with the code, keep the returned cookie for about a

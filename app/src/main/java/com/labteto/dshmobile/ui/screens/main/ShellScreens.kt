@@ -316,7 +316,7 @@ internal fun MeScreen(onOpenChat: () -> Unit) {
     var aboutOpen by remember { mutableStateOf(false) }
     val currentSession = sessions.firstOrNull { it.sessionId == store.currentSessionId.value }
     val connectionLabel = connection.host?.baseUrl ?: stringResource(R.string.common_offline)
-    val webUrl = connection.host?.baseUrl ?: "https://harness.example.com"
+    val webUrl = connection.host?.baseUrl ?: "https://"
 
     BackHandler(enabled = subPage != 0) { subPage = 0 }
 

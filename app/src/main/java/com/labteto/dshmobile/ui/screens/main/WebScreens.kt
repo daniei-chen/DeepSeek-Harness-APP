@@ -130,7 +130,7 @@ fun SettingsHomeScreen(
                         stats = stats,
                         usage = usage,
                         onOpenBrowser = {
-                            val url = connection.host?.baseUrl ?: "https://harness.example.com"
+                            val url = connection.host?.baseUrl ?: "https://"
                             runCatching {
                                 context.startActivity(
                                     android.content.Intent(

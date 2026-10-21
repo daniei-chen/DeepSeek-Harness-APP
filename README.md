@@ -28,6 +28,7 @@ pieces a browser cannot provide.
 
 ## Current
 
+- Fresh installs open **Settings** first; no personal DSH URL is baked into the app.
 - Self-hosted DSH connection profiles (add / rename / delete / switch devices).
 - Native settings surface reached from the back button: device manager, LAN scan, notification
   setup/test, foreground-service toggle, battery-unrestricted shortcut, vendor autostart shortcut,
@@ -77,6 +78,7 @@ for the client bundle.
 ## Documentation
 
 - [Self-hosting](docs/SELF_HOSTING.md)
+- [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
 - [Connections](docs/CONNECTIONS.md)
 - [Notifications and self-hosted push](docs/NOTIFICATIONS.md)
 - [File operations](docs/FILE_OPERATIONS.md)

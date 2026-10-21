@@ -122,7 +122,7 @@ class WebShellActivity : AppCompatActivity() {
     @Volatile private var prefetchDeferred: Deferred<PrefetchedDocument?>? = null
     @Volatile private var interceptPrefetch = true
     private var targetHost: HostConfig? = null
-    private var targetUrl: String = DEFAULT_URL
+    private var targetUrl: String = ""
     private var seededCookie: String? = null
     private var persistedCookie: String? = null
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
@@ -314,6 +314,13 @@ class WebShellActivity : AppCompatActivity() {
     private fun startLoading() {
         lifecycleScope.launch {
             val resolved = withContext(Dispatchers.IO) { resolveTarget() }
+            if (resolved == null) {
+                // First run: there is no device yet. Open Settings as the product's landing
+                // surface instead of loading a fabricated personal URL.
+                markPageReady()
+                showSettings()
+                return@launch
+            }
             targetHost = resolved.host
             targetUrl = resolved.url
             // Keep the native event/notification pipeline connected alongside the WebView. The
@@ -336,32 +343,10 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun resolveTarget(): ResolvedTarget {
+    private suspend fun resolveTarget(): ResolvedTarget? {
         val savedUrl = runCatching { hostsStore.shellUrl.first() }.getOrNull()?.takeIf { it.isNotBlank() }
-        val host = runCatching {
-            if (savedUrl != null) {
-                rememberHostForUrl(savedUrl)
-            } else {
-                val known = hostsStore.hosts.first()
-                    .filter { it.isGateway }
-                    .maxByOrNull { it.lastConnectedAt }
-                known ?: hostsStore.rememberHost(
-                    name = DEFAULT_HOST,
-                    host = DEFAULT_HOST,
-                    port = 443,
-                    isLoopback = false,
-                    useTls = true,
-                    isGateway = true,
-                )
-            }
-        }.getOrNull() ?: HostConfig(
-            id = "gateway-default",
-            name = DEFAULT_HOST,
-            host = DEFAULT_HOST,
-            port = 443,
-            useTls = true,
-            isGateway = true,
-        )
+            ?: return null
+        val host = runCatching { rememberHostForUrl(savedUrl) }.getOrNull() ?: return null
         val cookie = runCatching { harnessSessions.cookie(host.id) }.getOrNull()
         return ResolvedTarget(host, host.baseUrl.trimEnd('/') + "/", cookie)
     }
@@ -373,19 +358,19 @@ class WebShellActivity : AppCompatActivity() {
      * person switches between the deployment and a plain LAN harness. A matching remembered host
      * keeps its gateway cookie; a new one simply starts signed out.
      */
-    private suspend fun rememberHostForUrl(url: String, remembered: List<HostConfig>? = null): HostConfig {
+    private suspend fun rememberHostForUrl(url: String, remembered: List<HostConfig>? = null): HostConfig? {
         val normalized = url.trimEnd('/')
         val hosts = remembered ?: hostsStore.hosts.first()
         hosts.firstOrNull { it.baseUrl.trimEnd('/') == normalized }?.let { return it }
-        val uri = runCatching { java.net.URI(normalized) }.getOrNull()
-            ?: return hostsStore.rememberHost(name = DEFAULT_HOST, host = DEFAULT_HOST, port = 443, isLoopback = false, useTls = true, isGateway = true)
+        val uri = runCatching { java.net.URI(normalized) }.getOrNull() ?: return null
         val scheme = uri.scheme?.lowercase().orEmpty()
         val host = uri.host.orEmpty()
+        if (host.isBlank()) return null
         val port = if (uri.port > 0) uri.port else if (scheme == "https") 443 else 80
         val basePath = uri.path.orEmpty().trimEnd('/').takeIf { it.isNotEmpty() } ?: ""
         return hostsStore.rememberHost(
-            name = host.ifBlank { DEFAULT_HOST },
-            host = host.ifBlank { DEFAULT_HOST },
+            name = host,
+            host = host,
             port = port,
             isLoopback = host == "127.0.0.1" || host == "localhost" || host == "::1",
             useTls = scheme == "https",
@@ -725,7 +710,7 @@ class WebShellActivity : AppCompatActivity() {
 
     /** The back-button surface: connection, notifications, background and about. */
     private fun showSettings() {
-        val devices = shellDevices.ensure(targetUrl)
+        val devices = shellDevices.load()
         val currentName = devices.firstOrNull { it.id == shellDevices.currentId() }?.name
         val versionName = runCatching {
             packageManager.getPackageInfo(packageName, 0).versionName
@@ -957,7 +942,7 @@ class WebShellActivity : AppCompatActivity() {
 
     /** Back-button manager: switch, add, rename or delete the deployments this shell knows. */
     private fun showDeviceManager() {
-        val devices = shellDevices.ensure(targetUrl)
+        val devices = shellDevices.load()
         chrome.showDeviceManager(
             dark = pageDark,
             devices = devices,
@@ -1200,8 +1185,6 @@ class WebShellActivity : AppCompatActivity() {
     private data class InsetsDp(val top: Float, val bottom: Float, val ime: Float)
 
     private companion object {
-        const val DEFAULT_HOST = "harness.example.com"
-        const val DEFAULT_URL = "https://harness.example.com/"
         const val SPLASH_TIMEOUT_MS = 8_000L
 
         /**

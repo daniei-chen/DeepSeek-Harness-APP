@@ -244,7 +244,7 @@ private fun StartPanel(
     val context = LocalContext.current
     val connection by store.connectionState.collectAsState()
     val baseUrl = connection.host?.baseUrl
-    val browserUrl = baseUrl ?: "https://harness.example.com"
+    val browserUrl = baseUrl ?: "https://"
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = DsSpacing.medium),
         verticalArrangement = Arrangement.spacedBy(DsSpacing.small),

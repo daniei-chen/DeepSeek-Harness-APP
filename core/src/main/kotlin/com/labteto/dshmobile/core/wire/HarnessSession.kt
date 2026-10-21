@@ -89,7 +89,7 @@ object HarnessSession {
     /**
      * Fork: exchange a self-hosted gateway's access code for its session cookie.
      *
-     * The gateway in front of the harness (`https://harness.example.com`) exposes a small login
+     * The gateway in front of the harness (`https://`) exposes a small login
      * form: `POST /dsh-login` with the access code in the `p` field. A correct code answers 303
      * with `Set-Cookie: dsh_gate=…`, which every later request — including the `/api/remote.mux`
      * upgrade — must carry. The gateway then injects the harness's own browser session upstream,

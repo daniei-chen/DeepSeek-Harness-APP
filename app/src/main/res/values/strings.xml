@@ -628,15 +628,15 @@
     <string name="update_install_failed">Termux could not install the update (%1$s).</string>
     <!-- Fork: self-hosted HTTPS gateway (access-code reverse proxy). -->
     <string name="connect_mode_gateway">My server</string>
-    <string name="connect_mode_gateway_hint">Connect through your own HTTPS address (for example harness.example.com) with the access code. The gateway signs this device in once and remembers the session; the local-network scan does not look for it.</string>
+    <string name="connect_mode_gateway_hint">Connect through your own HTTPS address (your own HTTPS address) with the access code. The gateway signs this device in once and remembers the session; the local-network scan does not look for it.</string>
     <string name="connect_gateway_title">Your own HTTPS endpoint</string>
     <string name="connect_gateway_hint">Enter the HTTPS address and the DSH access code. The app signs in once and keeps the gateway session (about a year); cookies and requests stay on the address you configure.</string>
     <string name="connect_gateway_url_label">Server address</string>
-    <string name="connect_gateway_url_placeholder">https://harness.example.com</string>
+    <string name="connect_gateway_url_placeholder">https://</string>
     <string name="connect_gateway_code_label">Access code</string>
     <string name="connect_gateway_button">Connect</string>
     <string name="connect_gateway_other_modes">Other connection methods</string>
-    <string name="connect_gateway_err_url">Enter an https:// address, for example https://harness.example.com.</string>
+    <string name="connect_gateway_err_url">Enter an https:// address, for example https://.</string>
     <string name="connect_gateway_err_code_required">Enter the access code. It is only needed once per device.</string>
     <string name="connect_gateway_err_refused">The access code was refused. Check it on the computer and try again.</string>
     <string name="connect_gateway_err_unreachable">Could not reach the server. Check the address and your network.</string>
@@ -744,7 +744,7 @@
     <string name="device_current">Current device</string>
     <string name="device_add_title">Add device</string>
     <string name="device_add_description">Enter the address of your DeepSeek Harness deployment; it connects as soon as it is added.</string>
-    <string name="device_add_hint">https://harness.example.com</string>
+    <string name="device_add_hint">https://</string>
     <string name="device_url_invalid">Enter a valid address starting with http:// or https://</string>
     <string name="device_rename_title">Rename device</string>
     <string name="device_rename_description">Give this device a name you will recognize.</string>

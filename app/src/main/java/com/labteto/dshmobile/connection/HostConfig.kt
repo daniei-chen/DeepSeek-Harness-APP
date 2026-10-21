@@ -185,7 +185,7 @@ object ConnectMode {
     const val RELAY: String = "relay"
 
     /**
-     * Fork: through a self-hosted HTTPS gateway (for example `https://harness.example.com`).
+     * Fork: through a self-hosted HTTPS gateway (for example `https://`).
      *
      * The gateway terminates TLS, checks an access code once, and injects the harness session
      * upstream, so the phone only ever holds the gateway cookie. The transport is the ordinary

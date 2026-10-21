@@ -626,15 +626,15 @@
     <string name="update_install_failed">Termux 无法安装此更新（%1$s）。</string>
     <!-- Fork：自建 HTTPS 网关（访问口令 + 反向代理）。 -->
     <string name="connect_mode_gateway">自建入口</string>
-    <string name="connect_mode_gateway_hint">通过你自己的 HTTPS 地址（例如 harness.example.com）和访问口令连接。网关会为本设备登录一次并记住会话；局域网扫描不会寻找这个入口。</string>
+    <string name="connect_mode_gateway_hint">通过你自己的 HTTPS 地址和访问口令连接。网关会为本设备登录一次并记住会话；局域网扫描不会寻找这个入口。</string>
     <string name="connect_gateway_title">自建 HTTPS 入口</string>
     <string name="connect_gateway_hint">填写 HTTPS 地址和 DSH 访问口令。App 只登录一次并保存网关会话（约一年）；cookie 和请求都走你配置的地址。</string>
     <string name="connect_gateway_url_label">服务器地址</string>
-    <string name="connect_gateway_url_placeholder">https://harness.example.com</string>
+    <string name="connect_gateway_url_placeholder">https://</string>
     <string name="connect_gateway_code_label">访问口令</string>
     <string name="connect_gateway_button">连接</string>
     <string name="connect_gateway_other_modes">其他连接方式</string>
-    <string name="connect_gateway_err_url">请输入 https:// 开头的地址，例如 https://harness.example.com。</string>
+    <string name="connect_gateway_err_url">请输入 https:// 开头的地址，例如 https://。</string>
     <string name="connect_gateway_err_code_required">请输入访问口令。每台设备只需输入一次。</string>
     <string name="connect_gateway_err_refused">访问口令不正确，请到电脑上确认后重试。</string>
     <string name="connect_gateway_err_unreachable">无法连接服务器，请检查地址和网络。</string>
@@ -742,7 +742,7 @@
     <string name="device_current">当前设备</string>
     <string name="device_add_title">添加设备</string>
     <string name="device_add_description">输入 DeepSeek Harness 的网址，添加后立即连接。</string>
-    <string name="device_add_hint">https://harness.example.com</string>
+    <string name="device_add_hint">https://</string>
     <string name="device_url_invalid">请输入以 http:// 或 https:// 开头的有效地址</string>
     <string name="device_rename_title">设备改名</string>
     <string name="device_rename_description">给这台设备起一个容易识别的名字。</string>
