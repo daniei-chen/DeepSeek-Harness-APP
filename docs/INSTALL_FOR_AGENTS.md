@@ -49,7 +49,7 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 | APK SHA-256 | `328494D9D1BE793A3F2A2516B56F3AED1EC3E2BB35EC02A0C5864EC6539A4681` |
 | Host plugin | **0.1.14** |
 | Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.14.tgz` |
-| Plugin SHA-256 | `DFBDA1B2155E8D1B023436B4CC16C070F13FFC739C531CBA93397AD42DC72BC9` |
+| Plugin SHA-256 | `9FD6B24A883ECEE79CFE739520B619E7A52EC3DFA19187289300BEAFF3F51C57` |
 | Responsive base (vendor) | `vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` |
 | DSH tested against | `0.2.1` (desktop profile; `0.2.1-rc.2` also works) |
 | Android | 8.0+ (`minSdk 26`) |
@@ -66,7 +66,7 @@ Checksums:
 sha256sum DeepSeek-Harness-1.1.3-personal.10.apk
 # 328494D9D1BE793A3F2A2516B56F3AED1EC3E2BB35EC02A0C5864EC6539A4681
 sha256sum dsh-android-deepseek-harness-app-plugin-0.1.14.tgz
-# DFBDA1B2155E8D1B023436B4CC16C070F13FFC739C531CBA93397AD42DC72BC9
+# 9FD6B24A883ECEE79CFE739520B619E7A52EC3DFA19187289300BEAFF3F51C57
 ```
 
 **1.1.3 self-check.** The app and the plugin are updated separately, so the shell reads the plugin
