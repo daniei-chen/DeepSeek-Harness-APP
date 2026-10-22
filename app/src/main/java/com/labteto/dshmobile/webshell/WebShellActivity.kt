@@ -663,6 +663,7 @@ class WebShellActivity : AppCompatActivity() {
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
             recordPageEvent("page finished")
+            normalizeRelayDeviceUrl(url)
             val reloadLoop = recordPageLoad(url)
             if (!pageHadError) {
                 failoverTried.clear()
@@ -2656,9 +2657,11 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun handleScannedQr(raw: String) {
+        var relayOrigin: String? = null
         val url = when (val parsed = RelayPairing.parsePayload(raw)) {
             is PairingPayloadResult.Valid -> {
                 val base = parsed.payload.url.trimEnd('/')
+                relayOrigin = base
                 if (base.endsWith("/relay/pair")) base else "$base/relay/pair"
             }
             is PairingPayloadResult.TooNew -> {
@@ -2688,7 +2691,10 @@ class WebShellActivity : AppCompatActivity() {
             .setTitle(R.string.shell_scan_qr_confirm_title)
             .setMessage(target.url)
             .setPositiveButton(R.string.shell_scan_qr_confirm) { _, _ ->
-                val device = shellDevices.add(target.url, name = getString(R.string.shell_scan_qr_device))
+                // A relay invitation is a one-time page; the device is the relay origin. Storing
+                // the pair URL would reopen the claim form on every launch after pairing.
+                val stored = relayOrigin?.let { it.trimEnd('/') + "/" } ?: target.url
+                val device = shellDevices.add(stored, name = getString(R.string.shell_scan_qr_device))
                 shellDevices.setCurrent(device.id)
                 Toast.makeText(this, R.string.shell_scan_qr_added, Toast.LENGTH_SHORT).show()
                 applyServerUrl(target.url)
@@ -2784,6 +2790,27 @@ class WebShellActivity : AppCompatActivity() {
         if (uri.getQueryParameter("dsh_android") == "1") raw
         else uri.buildUpon().appendQueryParameter("dsh_android", "1").build().toString()
     }.getOrDefault(raw)
+
+    /**
+     * After a successful relay pairing the relay redirects to its origin. Point the saved device
+     * there, so the next launch opens the app instead of the one-time claim form.
+     */
+    private fun normalizeRelayDeviceUrl(loaded: String?) {
+        val host = targetHost ?: return
+        if (!host.basePath.startsWith("/relay/")) return
+        val uri = runCatching { java.net.URI(loaded ?: return) }.getOrNull() ?: return
+        val path = uri.path ?: return
+        if (path.startsWith("/relay/")) return
+        val authority = uri.authority ?: return
+        val origin = "${uri.scheme}://$authority/"
+        val current = shellDevices.load().firstOrNull { it.id == shellDevices.currentId() } ?: return
+        if (current.url.trimEnd('/') != origin.trimEnd('/')) {
+            shellDevices.updateUrl(current.id, origin)
+            recordPageEvent("relay device normalized")
+        }
+        targetHost = host.copy(basePath = "")
+        targetUrl = origin
+    }
 
     private fun applyServerUrl(raw: String): Boolean {
         val target = parseServerUrl(raw) ?: return false

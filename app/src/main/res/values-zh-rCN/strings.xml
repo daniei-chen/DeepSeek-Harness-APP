@@ -896,7 +896,7 @@
     <string name="shell_scan_qr_confirm_title">连接这个地址？</string>
     <string name="shell_scan_qr_confirm">添加并连接</string>
     <string name="shell_settings_scan_lan">扫描局域网</string>
-    <string name="shell_settings_scan_lan_hint">查找同一 Wi-Fi 下的 DSH 主机</string>
+    <string name="shell_settings_scan_lan_hint">只对绑定局域网地址的主机有效；Desktop 默认只监听 127.0.0.1</string>
     <string name="shell_settings_scanning">正在扫描局域网…</string>
     <string name="shell_settings_scan_progress">扫描中… %1$d / %2$d</string>
     <string name="shell_settings_scan_empty">当前网络没有发现 DSH 主机</string>

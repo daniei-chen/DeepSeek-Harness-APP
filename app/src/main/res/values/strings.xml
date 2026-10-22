@@ -898,7 +898,7 @@
     <string name="shell_scan_qr_confirm_title">Connect to this address?</string>
     <string name="shell_scan_qr_confirm">Add and connect</string>
     <string name="shell_settings_scan_lan">Scan local network</string>
-    <string name="shell_settings_scan_lan_hint">Find a DSH host on the same Wi-Fi</string>
+    <string name="shell_settings_scan_lan_hint">Only finds hosts bound to a LAN address — Desktop listens on 127.0.0.1 by default</string>
     <string name="shell_settings_scanning">Scanning the local network…</string>
     <string name="shell_settings_scan_progress">Scanning… %1$d / %2$d</string>
     <string name="shell_settings_scan_empty">No DSH host found on this network</string>
