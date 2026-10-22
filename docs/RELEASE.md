@@ -1,9 +1,41 @@
-# Release 1.1.0
+# Release 1.1.1
 
 ## What this release is
 
 A self-hosted Android client for DeepSeek Harness. No project cloud, no account, no telemetry,
 no monetization.
+
+## What changed in 1.1.1
+
+A stability release, and it starts with the real culprit: **the host plugin was pinned to 0.1.7**.
+
+- The desktop profile's `package.json` resolved `@dsh-android/deepseek-harness-app-plugin` from
+  `dist/…-0.1.7.tgz`, whose `client.js` still contained `window.setInterval(compactStats, 2000)` —
+  a two-second timer that rewrote the model and speed readings. Updating `node_modules` by hand did
+  nothing durable: the pin put the old build back. Fixed at the pin.
+- `mobile-web-plugin/` and `host-plugin/` are deleted. The former carried the same three timers
+  (3000 / 2000 / 1500 ms) and the documentation still told people to install it — a reliable way to
+  reproduce the bug that had just been removed. `combined-plugin/` is the only host package now.
+- `viewportSync()` no longer dispatches a synthetic `resize`. That event makes the harness remount
+  its composer and re-read its model list, so the "repair" was itself the thing being reported as
+  "it refreshed by itself". It now reads the layout viewport (`innerHeight`) rather than
+  `visualViewport.height` — the latter shrinks with the keyboard and made it write on every IME
+  animation frame — and writes only when the layout height actually changed.
+- `applyPageTheme()` returns early when nothing changed. The page republishes its theme attribute on
+  theme-related renders, and every bridge call repainted the whole WebView base layer, four child
+  views and both system bars: a white flash in the middle of a dark conversation.
+- The prefetch comparison stripped no query, so it compared `…?dsh_android=1` against a bare address
+  and never matched: every load fetched the document twice. Fixed, which removes one round trip from
+  cold start.
+- `openPendingSession()` is now guarded: `onPageCommitVisible` and `onPageFinished` both call it and
+  the workspace used to navigate twice.
+- Five `runBlocking { hostsStore.settings.first() }` calls on the UI thread (opening Settings, the
+  notifications page, the connection page) are replaced by the mirror the onCreate collector already
+  fills — no more DataStore read on the main thread while a dialog opens.
+- **Instrumentation, so this stops being a guessing game.** The diagnostics page now shows page
+  health (`sync`, `layoutWrite`, `composerRemount`, `api` counts over a two-minute window) and a
+  self-reload counter: any main-frame load the shell cannot explain is tagged `SELF` in the event
+  timeline and counted. Copy the block and the next report names its author.
 
 ## What changed in 1.1.0
 

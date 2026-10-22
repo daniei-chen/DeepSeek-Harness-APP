@@ -17,9 +17,15 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-22):
 
-- APK **1.1.0**, `versionCode` **50100**, `DeepSeek-Harness-1.1.0-personal.7.apk`
-- Host plugin **0.1.12**, `dsh-android-deepseek-harness-app-plugin-0.1.12.tgz`
+- APK **1.1.1**, `versionCode` **50101**, `DeepSeek-Harness-1.1.1-personal.8.apk`
+- Host plugin **0.1.13**, `dsh-android-deepseek-harness-app-plugin-0.1.13.tgz`
 - DSH tested against `0.2.1`
+
+1.1.1 is the stability pass: the host plugin had been pinned to 0.1.7 (whose client still ran a
+two-second stats poll), `mobile-web-plugin/` and `host-plugin/` are deleted, and the shell no longer
+dispatches a synthetic `resize` or repaints its theme without a diff. If "it refreshes by itself"
+is reported again, read the page-health block in Settings → Diagnostics first: it counts
+`composerRemount`, the shell's own layout writes, and self-reloads.
 
 ## What 1.1.0 changed
 
@@ -65,7 +71,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.0 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.1 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
