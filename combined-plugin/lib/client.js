@@ -176,7 +176,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.17";
+    const PLUGIN_VERSION = "0.1.18";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -419,12 +419,72 @@ html[data-dsh-glass="off"] body::after {
         window.setTimeout(observe, 600);
         compactStats();
       });
+      installResilientFetch();
       installFileActions();
       installImageUploadDefault();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
 
+    /**
+     * Retry the transient API failures that make the web client say "服务异常，请重试".
+     *
+     * The page's own error surface reports a failed call and then waits for a tap. Almost all of
+     * those are one of: the socket died under a request, the reverse proxy answered 502/503/504
+     * while a tunnel re-registered, or a limiter answered 429. None of them is a decision the user
+     * has to make — the same request a second later normally succeeds.
+     *
+     * Only same-origin /api GET and HEAD are retried. A POST is never retried: a prompt or an
+     * approval the host already accepted would be sent twice, and that is worse than a toast. The
+     * settled response is passed through untouched, so the page's own error handling still runs
+     * when every attempt fails.
+     */
+    const installResilientFetch = () => {
+      if (window.__dshResilientFetch) return;
+      window.__dshResilientFetch = true;
+      const original = window.fetch;
+      if (typeof original !== "function") return;
+      const RETRY_STATUS = { 429: 1, 502: 1, 503: 1, 504: 1 };
+      const DELAYS_MS = [400, 1200, 3000];
+      const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+      const stats = () => {
+        try {
+          return window.__dshShellStats || (window.__dshShellStats = {});
+        } catch (e) {
+          return {};
+        }
+      };
+      window.fetch = function (input, init) {
+        const args = arguments;
+        let url = "";
+        let method = "GET";
+        try {
+          url = typeof input === "string" ? input : (input && input.url) || "";
+          method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+        } catch (e) {}
+        let retryable = false;
+        if (method === "GET" || method === "HEAD") {
+          try {
+            const target = new URL(url, location.href);
+            retryable = target.origin === location.origin && target.pathname.indexOf("/api/") === 0;
+          } catch (e) {}
+        }
+        if (!retryable) return original.apply(window, args);
+        const attempt = (index) =>
+          original.apply(window, args).then((response) => {
+            if (!RETRY_STATUS[response.status] || index >= DELAYS_MS.length) return response;
+            const s = stats();
+            s.fetchRetries = (s.fetchRetries || 0) + 1;
+            return sleep(DELAYS_MS[index]).then(() => attempt(index + 1));
+          }).catch((error) => {
+            if (index >= DELAYS_MS.length) throw error;
+            const s = stats();
+            s.fetchRetries = (s.fetchRetries || 0) + 1;
+            return sleep(DELAYS_MS[index]).then(() => attempt(index + 1));
+          });
+        return attempt(0);
+      };
+    };
     /**
      * Use the Android speech recognizer for the composer microphone. The experimental DSH voice
      * plugin records PCM and sends it to a host transcription backend; on a phone that path can
