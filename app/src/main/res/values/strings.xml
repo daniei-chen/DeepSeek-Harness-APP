@@ -821,8 +821,9 @@
     <string name="shell_diagnostics_repair">Repair page layout</string>
     <string name="shell_diagnostics_repaired">Page layout reset</string>
     <string name="shell_remote">Remote access</string>
-    <string name="shell_remote_hint">Pairing QR, devices and relay addresses</string>
+    <string name="shell_remote_hint">Invite another device — this phone pairs with the code from the computer</string>
     <string name="shell_remote_title">Remote access</string>
+    <string name="shell_remote_scope_note">This QR is an invitation for another device. To pair this phone, use the QR or the 8-digit code shown on the computer.</string>
     <string name="shell_remote_qr_hint">Scan this on another device to pair it. The code works once.</string>
     <string name="shell_remote_code">Pairing code %1$s</string>
     <string name="shell_remote_expires">Valid for %1$s</string>
@@ -889,7 +890,7 @@
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
     <string name="shell_settings_scan_qr">Scan QR code</string>
-    <string name="shell_settings_scan_qr_hint">Scan the pairing code on your computer</string>
+    <string name="shell_settings_scan_qr_hint">Scan the QR on the computer at https://computer-ip:3443/relay/pair</string>
     <string name="shell_scan_qr_prompt">Point at the QR code on your computer</string>
     <string name="shell_scan_qr_invalid">Not a DSH address or pairing code</string>
     <string name="shell_scan_qr_too_new">This QR code is too new; update the app</string>
@@ -953,7 +954,7 @@
     <string name="shell_pair_scan">Scan instead</string>
     <string name="shell_pair_invalid">That address or code does not look right.</string>
     <string name="shell_pair_row">Pair with a code</string>
-    <string name="shell_pair_row_hint">No camera? Type the relay address and the code</string>
+    <string name="shell_pair_row_hint">Type the 8-digit code shown on the computer — not the phone\'s QR</string>
     <string name="shell_scan_all_added">Found %1$d device(s) — all already added</string>
     <string name="shell_notify_check">Notification check</string>
     <string name="shell_offline_title">Offline snapshot</string>

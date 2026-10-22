@@ -1,4 +1,4 @@
-# Release 1.0.2
+# Release 1.0.3
 
 ## What this release is
 
@@ -8,7 +8,7 @@ no monetization.
 ## 1.0 quality gates
 
 - **New user:** install -> first connection in under ten minutes, by QR or by the pairing-code path (设置 -> 连接 -> 配对码连接).
-- **Upgrade:** every release has a strictly higher versionCode (1.0.2 = 50002); settings and devices survive.
+- **Upgrade:** every release has a strictly higher versionCode (1.0.3 = 50003); settings and devices survive.
 - **Failure is explainable:** connection doctor, notification self-check and the offline session snapshot each name the cause and the next action.
 - **Updates:** read from the repository's latest.json first, so release ordering and GitHub rate limits cannot hide a version.
 - **Offline:** the last synced session list stays readable without a network.
@@ -16,8 +16,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-1.0.2-personal.3.apk`
-- SHA-256: `638DBF61EFEFFE671943AEFD48CD32F388C0762E74ABD6EA12CE1BAA41C150E2`
+- APK: `dist/DeepSeek-Harness-1.0.3-personal.4.apk`
+- SHA-256: `73CBF8732383632087A24AA00B5A38FD1ACEC641407E6A48828B41F04A5D92F6`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run
@@ -36,6 +36,7 @@ See `docs/SETUP_HTTP.md` for Caddy/nginx/Cloudflare Tunnel/frp/Tailscale setups.
 - self-hosted connection profiles, rename/delete/switch, LAN scan, failover
 - LAN scan now reports progress, scans configured ports plus `3080`, and discovers `dsh-relay` on `3443/3444`
 - LAN scan also browses `_dsh._tcp` mDNS in parallel; multicast-filtered networks still fall back to the subnet sweep.
+- **Pairing direction is now spelled out:** the 8-digit code is generated on the computer (relay pair page or `setup pair`); the phone's 远控 QR is an invitation **for another device**. The connection page and the 远控 page both say this in place.
 - **Relay pairing now sticks:** a scanned relay invitation is stored as the relay origin, not `/relay/pair`; an existing device still pointing at the claim page rewrites itself as soon as the relay redirects to the app. No more reopening the pairing form on every launch.
 - **Honest LAN hint:** the scan row now says it only finds hosts bound to a LAN address, because DSH Desktop listens on 127.0.0.1 by default.
 - **Page event timeline:** diagnostics now lists the last 24 page events — started, finished, main-frame error, renderer crash, webview recreated, device switch, resume, requested reload — so "it refreshed by itself" names its author instead of being a guess.
