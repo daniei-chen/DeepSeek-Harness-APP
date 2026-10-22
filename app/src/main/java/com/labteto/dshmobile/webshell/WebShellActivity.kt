@@ -224,6 +224,49 @@ class WebShellActivity : AppCompatActivity() {
 
     /** The host-plugin version the page reported (`window.__dshMobilePlugin.version`), if any. */
     private var pluginVersion: String? = null
+
+    /**
+     * When the shell itself last asked for a main-frame load, on the elapsed-realtime clock.
+     *
+     * Every main-frame load the shell initiates goes through [loadShellUrl], which stamps this. A
+     * document that starts without a fresh stamp is a navigation nobody asked for — the page
+     * redirecting, a router reload, or its own retry logic — and is counted separately instead of
+     * being lumped in with "the shell reloaded".
+     */
+    private var nativeNavigationAt = 0L
+
+    /** Main-frame loads with no shell action behind them. */
+    private var unattributedReloads = 0
+
+    /** The newest page-health sample and when it was taken, for the diagnostics page. */
+    private var healthText: String? = null
+    private var healthAt = 0L
+
+    /**
+     * Mirror of `hostsStore.settings`, filled by the collector in [onCreate].
+     *
+     * Building a dialog must never block the UI thread on a DataStore read. Five call sites used to
+     * read the settings with `runBlocking` while opening Settings and the notifications page, which
+     * is a stall the user feels as the app hanging for a moment. Defaults match `AppSettings()`, and
+     * the collector has emitted long before any of those dialogs can be opened.
+     */
+    @Volatile private var cachedSettings: AppSettings? = null
+
+    /** Whether [applyPageTheme] has painted once, so identical calls can be dropped. */
+    private var themeApplied = false
+
+    /** A pending deep-link session open is in flight; a second pass would navigate twice. */
+    private var pendingSessionInFlight = false
+
+    /**
+     * Bumped for every main document.
+     *
+     * Deferred work scheduled by `onPageFinished` (insets, the plugin-version read, the share
+     * hand-off, the health sample) used to fire unconditionally. After a reload those callbacks land
+     * in a document that never asked for them and do the work twice. Every delayed action now carries
+     * the epoch it was scheduled under and is dropped if the document has moved on.
+     */
+    private var documentEpoch = 0
     /**
      * Human-readable page lifecycle events, newest last.
      *
@@ -330,6 +373,7 @@ class WebShellActivity : AppCompatActivity() {
         // Keep the glass-compat mode live: changing it in Settings re-marks the page immediately.
         lifecycleScope.launch {
             hostsStore.settings.collect { settings ->
+                cachedSettings = settings
                 val mode = settings.glassCompat
                 if (mode != glassCompat) {
                     glassCompat = mode
@@ -597,7 +641,7 @@ class WebShellActivity : AppCompatActivity() {
             prefetchDeferred = lifecycleScope.async(Dispatchers.IO) {
                 prefetchDocument(prefetchClient, resolved.url, seededForPrefetch)
             }
-            webView.loadUrl(markAndroidUrl(resolved.url))
+            loadShellUrl(markAndroidUrl(resolved.url))
         }
     }
 
@@ -678,7 +722,12 @@ class WebShellActivity : AppCompatActivity() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             if (!request.isForMainFrame || !interceptPrefetch) return null
             val requested = request.url.toString()
-            if (requested.trimEnd('/') != targetUrl.trimEnd('/')) return null
+            // Compare without the query: the shell loads `…?dsh_android=1` while `targetUrl` is the
+            // bare address, so the old equality test could never match and every load fetched the
+            // document twice — once by the preload, once by the WebView.
+            if (requested.substringBefore('?').trimEnd('/') != targetUrl.substringBefore('?').trimEnd('/')) {
+                return null
+            }
             val deferred = prefetchDeferred ?: return null
             // shouldInterceptRequest runs on a WebView worker thread, so waiting here costs the page
             // nothing and saves the whole document round trip when the preload wins the race.
@@ -688,7 +737,7 @@ class WebShellActivity : AppCompatActivity() {
             if (document.statusCode !in 200..299) return null
             // Only replay a document fetched for exactly this URL: a followed redirect would make
             // the page resolve its relative asset URLs against the wrong base.
-            if (document.url.trimEnd('/') != requested.trimEnd('/')) return null
+            if (document.url.substringBefore('?').trimEnd('/') != requested.substringBefore('?').trimEnd('/')) return null
             document.setCookies.forEach { cookie -> cookieManager.setCookie(document.url, cookie) }
             interceptPrefetch = false
             return WebResourceResponse(
@@ -703,8 +752,17 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            recordPageEvent("page started " + (url?.substringAfter("://")?.take(80) ?: ""))
-            injectPageScripts()
+            // Nothing is injected here on purpose: at this point the outgoing document is still the
+            // one a script would run in, and the result is thrown away with it. Injection happens on
+            // commit and on finish, where it lands in the document that survives.
+            documentEpoch += 1
+            val sinceNative = SystemClock.elapsedRealtime() - nativeNavigationAt
+            val attributed = sinceNative in 0..2_500
+            if (!attributed) unattributedReloads += 1
+            recordPageEvent(
+                "page started " + (if (attributed) "" else "SELF ") +
+                    (url?.substringAfter("://")?.take(80) ?: ""),
+            )
         }
 
         override fun onPageCommitVisible(view: WebView, url: String?) {
@@ -713,7 +771,6 @@ class WebShellActivity : AppCompatActivity() {
             hideError()
             injectPageScripts()
             openPendingSession()
-            applyInsetsToPage()
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
@@ -734,20 +791,22 @@ class WebShellActivity : AppCompatActivity() {
             applyInsetsToPage()
             persistGatewayCookie()
             // The plugin's own hooks appear with its client bundle, a moment after the document.
-            mainHandler.postDelayed({ readPluginVersion() }, 600)
-            mainHandler.postDelayed({ deliverPendingShare() }, 400)
+            val epoch = documentEpoch
+            afterDocument(epoch, 600) { readPluginVersion() }
+            afterDocument(epoch, 400) { deliverPendingShare() }
             maybeStartPendingVoice()
             if (clearHistoryAfterLoad) {
                 view.clearHistory()
                 clearHistoryAfterLoad = false
             }
             ensureMicrophonePermission()
-            // The client mounts its frame asynchronously; re-apply the insets once the frame exists.
-            mainHandler.postDelayed({ applyInsetsToPage() }, 350)
-            mainHandler.postDelayed({ applyInsetsToPage() }, 1200)
-            // ...and once more after the shell has settled, so a root measured during the splash
-            // cannot keep a short height.
-            mainHandler.postDelayed({ repairPageLayout() }, 1600)
+            // The client mounts its frame asynchronously, so one retry is worth it. There used to be
+            // two more passes here — insets again at 1200 ms and a layout repair at 1600 ms — and
+            // each one wrote into a document that was already correct; the repair could dispatch a
+            // synthetic resize, which is what makes the harness remount the composer and re-read its
+            // model list. One retry, and the script itself skips identical values, is enough.
+            afterDocument(epoch, 350) { applyInsetsToPage() }
+            afterDocument(epoch, 900) { readPageHealth() }
         }
 
         override fun onReceivedError(
@@ -951,9 +1010,29 @@ class WebShellActivity : AppCompatActivity() {
 
     // ---- page helpers -------------------------------------------------------
 
+    /** Settings as last seen, without touching DataStore. */
+    private fun settingsNow(): AppSettings = cachedSettings ?: AppSettings()
+
+    /** Run `block` later, but only if the document that scheduled it is still the current one. */
+    private fun afterDocument(epoch: Int, delayMs: Long, block: () -> Unit) {
+        mainHandler.postDelayed(
+            {
+                if (epoch == documentEpoch && !isFinishing && !isDestroyed) block()
+            },
+            delayMs,
+        )
+    }
+
+    /** Every main-frame load the shell decides on goes through here, so it can be attributed. */
+    private fun loadShellUrl(url: String) {
+        nativeNavigationAt = SystemClock.elapsedRealtime()
+        webView.loadUrl(url)
+    }
+
     private fun injectPageScripts() {
         if (!::webView.isInitialized) return
         webView.evaluateJavascript(WebShellScripts.SHIMS, null)
+        webView.evaluateJavascript(WebShellScripts.health(), null)
         applyInsetsToPage()
         applyGlassCompat()
     }
@@ -1000,7 +1079,7 @@ class WebShellActivity : AppCompatActivity() {
                 webView.requestLayout()
             }
         }
-        webView.evaluateJavascript(WebShellScripts.repairViewport(), null)
+        webView.evaluateJavascript(WebShellScripts.viewportSync(), null)
         if (notify) Toast.makeText(this, R.string.shell_diagnostics_repaired, Toast.LENGTH_SHORT).show()
     }
 
@@ -1021,7 +1100,42 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyPageTheme(dark: Boolean) {
+    /**
+     * Sample what the page thinks has been happening to it.
+     *
+     * `health()` counts the resizes the shell dispatched, the composer remounts the harness did and
+     * the API calls made in the last two minutes. That turns "it refreshed itself" from a report into
+     * a measurement: if `composerRemount` climbs while `resize` stays flat, the harness is rebuilding
+     * its own composer and no shell-side change will fix it.
+     */
+    private fun readPageHealth() {
+        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+        webView.evaluateJavascript(
+            "String((function(){try{" +
+                "var a=(window.__dshShellReport&&window.__dshShellReport())||'';" +
+                "var b=(window.__dshShellNetwork&&window.__dshShellNetwork(120))||'';" +
+                "return a+(b?' /// '+b:'');" +
+                "}catch(e){return '';}})())",
+        ) { raw ->
+            val sample = raw?.trim()?.trim('"')?.takeIf { it.isNotBlank() && it != "null" }
+            if (sample != null) {
+                healthText = sample
+                healthAt = SystemClock.elapsedRealtime()
+            }
+        }
+    }
+
+    /**
+     * Paint the shell surfaces to match the page's theme.
+     *
+     * @param force re-apply even when nothing changed. Only the paths that rebuild the WebView need
+     * it. Everything else returns early: the page republishes its theme attribute on every
+     * theme-related render, and each bridge call used to repaint the whole WebView base layer, four
+     * child views and both system bars — a full white flash in the middle of a dark conversation.
+     */
+    private fun applyPageTheme(dark: Boolean, force: Boolean = false) {
+        if (themeApplied && !force && dark == pageDark) return
+        themeApplied = true
         pageDark = dark
         if (::root.isInitialized) root.setBackgroundColor(if (dark) DARK_BACKGROUND else Color.WHITE)
         if (::welcomeView.isInitialized) {
@@ -1097,7 +1211,7 @@ class WebShellActivity : AppCompatActivity() {
         synchronized(pageLoadTimes) { pageLoadTimes.clear() }
         hideError()
         interceptPrefetch = false
-        webView.loadUrl(markAndroidUrl(targetUrl))
+        loadShellUrl(markAndroidUrl(targetUrl))
     }
 
     private fun clearCacheAndReload() {
@@ -1120,10 +1234,10 @@ class WebShellActivity : AppCompatActivity() {
         )
         configureWebView()
         installJavascriptInterfaces()
-        applyPageTheme(pageDark)
+        applyPageTheme(pageDark, force = true)
         hideError()
         interceptPrefetch = false
-        webView.loadUrl(markAndroidUrl(targetUrl))
+        loadShellUrl(markAndroidUrl(targetUrl))
     }
 
     private fun handleBack() {
@@ -1204,15 +1318,11 @@ class WebShellActivity : AppCompatActivity() {
             currentDeviceName = currentName,
             versionName = versionName,
             pluginVersion = pluginVersion,
-            simpleMode = runCatching {
-                runBlocking { hostsStore.settings.first().simpleMode }
-            }.getOrDefault(true),
+            simpleMode = settingsNow().simpleMode,
             inboxCount = inboxRows.count { it.action },
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
-            backgroundEnabled = runCatching {
-                runBlocking { hostsStore.settings.first().keepConnectedInBackground }
-            }.getOrDefault(false),
+            backgroundEnabled = settingsNow().keepConnectedInBackground,
             ntfyEnabled = NtfyConfig.load(this) != null,
             linkHandlerEnabled = isLinkHandlerEnabled(),
             onConnection = { showConnectionPage() },
@@ -1432,9 +1542,7 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun showConnectionPage() {
-        val simple = runCatching {
-            runBlocking { hostsStore.settings.first().simpleMode }
-        }.getOrDefault(true)
+        val simple = settingsNow().simpleMode
         chrome.showConnectionPage(
             dark = pageDark,
             simpleMode = simple,
@@ -1555,6 +1663,11 @@ class WebShellActivity : AppCompatActivity() {
             webViewVersion,
             "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
         ) + "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary()) +
+            "\n" + getString(R.string.shell_diagnostics_self_reloads, unattributedReloads) +
+            (healthText?.let { sample ->
+                val age = ((SystemClock.elapsedRealtime() - healthAt) / 1000).coerceAtLeast(0)
+                "\n" + getString(R.string.shell_diagnostics_health, age) + "\n" + sample
+            } ?: "") +
             "\n\n" + getString(R.string.shell_diagnostics_events) + "\n" + pageEventSummary()
         chrome.showDiagnosticsPage(
             dark = pageDark,
@@ -1702,7 +1815,7 @@ class WebShellActivity : AppCompatActivity() {
                 if (target.isNullOrBlank()) {
                     Toast.makeText(this, R.string.shell_remote_offline, Toast.LENGTH_SHORT).show()
                 } else {
-                    webView.loadUrl(target)
+                    loadShellUrl(target)
                 }
             },
             onBack = { showSettings() },
@@ -1804,7 +1917,7 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun showNotificationsPage() {
-        val settings = runCatching { runBlocking { hostsStore.settings.first() } }.getOrDefault(AppSettings())
+        val settings = settingsNow()
         chrome.showNotificationsPage(
             dark = pageDark,
             notificationsEnabled = notifications.canPost() &&
@@ -1830,9 +1943,7 @@ class WebShellActivity : AppCompatActivity() {
     private fun showBackgroundPage() {
         chrome.showBackgroundPage(
             dark = pageDark,
-            backgroundEnabled = runCatching {
-                runBlocking { hostsStore.settings.first().keepConnectedInBackground }
-            }.getOrDefault(false),
+            backgroundEnabled = settingsNow().keepConnectedInBackground,
             onToggleBackground = { toggleBackground() },
             onBatterySettings = { openBatterySettings() },
             onAutostart = { openAutostartSettings() },
@@ -2916,7 +3027,7 @@ class WebShellActivity : AppCompatActivity() {
             interceptPrefetch = false
             clearHistoryAfterLoad = true
             hideError()
-            webView.loadUrl(markAndroidUrl(target.url))
+            loadShellUrl(markAndroidUrl(target.url))
         }
         return true
     }
@@ -3325,7 +3436,7 @@ class WebShellActivity : AppCompatActivity() {
             .onFailure { failure ->
                 val fallback = if (scheme == "intent") intent.getStringExtra("browser_fallback_url") else null
                 if (!fallback.isNullOrBlank() && (fallback.startsWith("http://") || fallback.startsWith("https://"))) {
-                    if (::webView.isInitialized && !isFinishing && !isDestroyed) webView.loadUrl(fallback)
+                    if (::webView.isInitialized && !isFinishing && !isDestroyed) loadShellUrl(fallback)
                 } else if (failure is ActivityNotFoundException) {
                     Toast.makeText(this, R.string.webshell_open_failed, Toast.LENGTH_SHORT).show()
                 }
@@ -3392,10 +3503,16 @@ class WebShellActivity : AppCompatActivity() {
     private fun openPendingSession() {
         val id = pendingSessionId ?: return
         if (!::webView.isInitialized || !pageReady.get()) return
+        // `onPageCommitVisible` and `onPageFinished` both call this for the same document, and the
+        // first call's answer arrives after the second one starts: without this the workspace
+        // navigates twice and the conversation visibly re-renders.
+        if (pendingSessionInFlight) return
+        pendingSessionInFlight = true
         val quoted = org.json.JSONObject.quote(id)
         webView.evaluateJavascript(
             "(function(){try{if(window.__dshOpenSession){window.__dshOpenSession($quoted);return '1';}}catch(e){}return '0';})()",
         ) { result ->
+            pendingSessionInFlight = false
             if (result?.contains("1") == true) pendingSessionId = null
         }
     }

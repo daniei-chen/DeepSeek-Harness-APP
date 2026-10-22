@@ -1067,6 +1067,9 @@
     <string name="shell_network_restored">Network is back — reconnecting</string>
     <string name="shell_network_lost">Network lost</string>
     <string name="shell_link_open_failed">Nothing on this phone can open that link</string>
+
+    <string name="shell_diagnostics_health">Page health (sampled %1$d s ago)</string>
+    <string name="shell_diagnostics_self_reloads">Self-reloads (no shell action behind them): %1$d</string>
 </resources>
 
 
