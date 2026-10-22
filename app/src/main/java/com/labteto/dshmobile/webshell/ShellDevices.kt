@@ -93,6 +93,20 @@ internal class ShellDevices(context: Context) {
         return renamed.firstOrNull { it.id == id }
     }
 
+    /**
+     * Replace a device's address in place.
+     *
+     * Used after the relay's pairing page has done its job: the device should point at the relay
+     * origin from then on, not at `/relay/pair`, or every later launch would reopen the claim
+     * form instead of the app.
+     */
+    fun updateUrl(id: String, url: String): ShellDevice? {
+        val existing = load()
+        val updated = existing.map { if (it.id == id) it.copy(url = url) else it }
+        save(updated)
+        return updated.firstOrNull { it.id == id }
+    }
+
     fun remove(id: String): List<ShellDevice> {
         val remaining = load().filterNot { it.id == id }
         save(remaining)
