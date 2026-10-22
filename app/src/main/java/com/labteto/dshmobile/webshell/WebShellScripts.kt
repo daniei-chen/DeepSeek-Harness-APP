@@ -192,50 +192,135 @@ internal object WebShellScripts {
     """.trimIndent()
 
     /**
-     * Re-assert the viewport against the real WebView size.
+     * Re-assert the viewport against the real layout height — and that is all it does.
      *
-     * The harness client is a full-height flex app: its root is sized from the viewport, and that
-     * viewport only changes when the WebView is resized. After a keyboard or a surface detach the
-     * root can be left at a stale, shorter height — the page then paints in a band at the top and
-     * the shell's background shows underneath. `min-height` never fights a page that is already
-     * full height; the explicit root height is the last resort for one that cached a pixel size.
+     * This function used to dispatch a synthetic `resize` (on the window and on `visualViewport`)
+     * whenever anything changed. That event is what makes the harness remount its composer and
+     * re-request its model list, i.e. it *was* the "it refreshed itself" report. Nothing here
+     * touches it any more: when the WebView is really resized the platform already delivers a real
+     * resize, and when it is not resized there is nothing to announce.
+     *
+     * What is left is one value check: the layout height. It is written only when it differs from
+     * the height this document was last told about, and the short-root fallback needs the shortfall
+     * to be observed twice, so a page still painting its first frame is left alone.
      */
-    fun repairViewport(): String = """
+    fun viewportSync(): String = """
         (function () {
           try {
-            var viewport = Math.round(window.visualViewport ? window.visualViewport.height : window.innerHeight);
             var root = document.documentElement;
             var body = document.body;
-            if (!root || !body || !viewport) { return; }
-            // Everything below is conditional on a real difference. Dispatching `resize` when
-            // nothing changed makes the harness remount the composer and re-read the model list,
-            // which is what "it refreshes by itself" looks like from the outside.
-            var changed = false;
-            var desired = viewport + 'px';
-            if (root.style.minHeight !== desired) { root.style.minHeight = desired; changed = true; }
-            if (body.style.minHeight !== desired) { body.style.minHeight = desired; changed = true; }
-            if (root.style.getPropertyValue('--dsh-android-viewport-height') !== desired) {
-              root.style.setProperty('--dsh-android-viewport-height', desired);
-            }
-            var app = document.getElementById('root');
-            if (app) {
-              var height = app.getBoundingClientRect().height;
-              if (height > 0 && height < viewport * 0.6) {
-                app.style.height = desired;
-                changed = true;
+            if (!root || !body) { return; }
+            // Layout viewport, not visualViewport: the latter shrinks with the keyboard and is what
+            // made this write land on every IME animation frame.
+            var height = Math.round(window.innerHeight || 0);
+            if (!height) { return; }
+            var stats = window.__dshShellStats ||
+              (window.__dshShellStats = { syncs: 0, layoutWrites: 0, rootFixes: 0, shortRoot: 0 });
+            stats.syncs++;
+            var desired = height + 'px';
+            if (window.__dshShellLayout !== desired) {
+              window.__dshShellLayout = desired;
+              if (root.style.minHeight !== desired) { root.style.minHeight = desired; stats.layoutWrites++; }
+              if (body.style.minHeight !== desired) { body.style.minHeight = desired; stats.layoutWrites++; }
+              if (root.style.getPropertyValue('--dsh-android-viewport-height') !== desired) {
+                root.style.setProperty('--dsh-android-viewport-height', desired);
               }
             }
-            if (!changed) { return; }
-            void body.offsetHeight;
-            window.dispatchEvent(new Event('resize'));
-            if (window.visualViewport) {
-              try { window.visualViewport.dispatchEvent(new Event('resize')); } catch (e) {}
+            if (window.__dshShellRootFixed !== true) {
+              var app = document.getElementById('root');
+              if (app) {
+                var boxHeight = app.getBoundingClientRect().height;
+                if (boxHeight > 0 && boxHeight < height * 0.6) {
+                  stats.shortRoot++;
+                  if (stats.shortRoot >= 2) {
+                    app.style.height = desired;
+                    window.__dshShellRootFixed = true;
+                    stats.rootFixes++;
+                  }
+                } else {
+                  stats.shortRoot = 0;
+                }
+              }
             }
           } catch (e) {}
         })();
     """.trimIndent()
 
     /**
+     * What the page thinks has been happening to it.
+     *
+     * Installed once per document. Two facts are counted that the native side cannot see:
+     * the composer being remounted (a React identity change, i.e. the harness rebuilt it) and the
+     * API calls the page made. Together with the shell's own resize counter they answer "who
+     * refreshed this" with numbers instead of a guess.
+     *
+     * Strings only, no JSON: the value comes back through `evaluateJavascript`, and a plain string
+     * needs no unescaping on either side.
+     */
+    fun health(): String = """
+        (function () {
+          if (window.__dshShellHealth === true) { return; }
+          window.__dshShellHealth = true;
+          var startedAt = Date.now();
+          var calls = [];
+          var stats = window.__dshShellStats ||
+            (window.__dshShellStats = { syncs: 0, resizes: 0, rootFixes: 0, shortRoot: 0 });
+          stats.remounts = 0;
+          try {
+            var originalFetch = window.fetch;
+            if (typeof originalFetch === 'function') {
+              window.fetch = function (input) {
+                try {
+                  var url = typeof input === 'string' ? input : (input && input.url) || '';
+                  var path = String(url).split('?')[0].slice(-72);
+                  calls.push({ at: Date.now(), path: path });
+                  while (calls.length > 80) { calls.shift(); }
+                } catch (e) {}
+                return originalFetch.apply(window, arguments);
+              };
+            }
+          } catch (e) {}
+          try {
+            new MutationObserver(function (records) {
+              for (var i = 0; i < records.length; i++) {
+                var added = records[i].addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                  var node = added[j];
+                  if (node && node.nodeType === 1 && node.matches && node.matches('[data-composer-card]')) {
+                    window.__dshShellStats.remounts++;
+                  }
+                }
+              }
+            }).observe(document.body, { childList: true, subtree: true });
+          } catch (e) {}
+          window.__dshShellReport = function () {
+            var s = window.__dshShellStats;
+            return 'up=' + Math.round((Date.now() - startedAt) / 1000) + 's' +
+              ' sync=' + s.syncs + ' layoutWrite=' + (s.layoutWrites || 0) +
+              ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts;
+          };
+          window.__dshShellNetwork = function (seconds) {
+            var since = Date.now() - (seconds || 120) * 1000;
+            var counts = {};
+            var order = [];
+            var total = 0;
+            for (var i = 0; i < calls.length; i++) {
+              if (calls[i].at < since) { continue; }
+              total++;
+              var key = calls[i].path;
+              if (counts[key] === undefined) { counts[key] = 0; order.push(key); }
+              counts[key]++;
+            }
+            var parts = [];
+            for (var k = 0; k < order.length && k < 5; k++) {
+              parts.push(order[k] + ' x' + counts[order[k]]);
+            }
+            return 'api=' + total + (parts.length ? ' ' + parts.join(' , ') : '');
+          };
+        })();
+    """.trimIndent()
+
+/**
      * Mark the page when a third-party glass theme makes `position: fixed` overlays local.
      *
      * `backdrop-filter`, `filter`, `contain`, `perspective` and `will-change: transform` each turn
