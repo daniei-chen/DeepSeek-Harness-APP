@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="380" viewBox="0 0 920 380" role="img" aria-label="Pairing flow">
+  <defs>
+    <marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3964fe"/>
+    </marker>
+  </defs>
+  <rect width="920" height="380" rx="16" fill="#f6f8fa"/>
+
+  <!-- lifelines -->
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif">
+    <rect x="40" y="40" width="180" height="46" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="64" y="69" font-size="14" font-weight="700" fill="#0b1f2a">电脑（你的机器）</text>
+    <line x1="130" y1="86" x2="130" y2="330" stroke="#d0d7de" stroke-dasharray="5 5"/>
+
+    <rect x="370" y="40" width="180" height="46" rx="12" fill="#eaf5ef" stroke="#a7d3bd"/>
+    <text x="412" y="69" font-size="14" font-weight="700" fill="#0b1f2a">中继 :3443</text>
+    <line x1="460" y1="86" x2="460" y2="330" stroke="#d0d7de" stroke-dasharray="5 5"/>
+
+    <rect x="700" y="40" width="180" height="46" rx="12" fill="#e8efff" stroke="#b6c8ff"/>
+    <text x="756" y="69" font-size="14" font-weight="700" fill="#0b1f2a">手机 App</text>
+    <line x1="790" y1="86" x2="790" y2="330" stroke="#d0d7de" stroke-dasharray="5 5"/>
+
+    <!-- step 1 -->
+    <text x="140" y="118" font-size="12" fill="#57606a">1. 打开 https://电脑IP:3443/relay/pair</text>
+    <line x1="132" y1="128" x2="452" y2="128" stroke="#3964fe" stroke-width="2" marker-end="url(#p)"/>
+
+    <!-- step 2 -->
+    <text x="300" y="152" font-size="12" fill="#57606a">2. 回环请求 = 操作员</text>
+    <line x1="452" y1="162" x2="140" y2="162" stroke="#3964fe" stroke-width="2" marker-end="url(#p)"/>
+    <text x="140" y="186" font-size="12" fill="#57606a">3. 页面显示二维码 + 8 位码（5 分钟、一次性）</text>
+
+    <!-- step 4 -->
+    <text x="590" y="214" font-size="12" fill="#57606a">4. 扫码或输入 8 位码</text>
+    <line x1="132" y1="224" x2="782" y2="224" stroke="#3964fe" stroke-width="2" marker-end="url(#p)"/>
+
+    <!-- step 5 -->
+    <text x="590" y="250" font-size="12" fill="#57606a">5. POST /relay/pair</text>
+    <line x1="782" y1="260" x2="468" y2="260" stroke="#3964fe" stroke-width="2" marker-end="url(#p)"/>
+
+    <!-- step 6 -->
+    <text x="480" y="286" font-size="12" fill="#57606a">6. 设备令牌 + 证书指纹</text>
+    <line x1="452" y1="296" x2="782" y2="296" stroke="#3964fe" stroke-width="2" marker-end="url(#p)"/>
+
+    <text x="40" y="356" font-size="12" fill="#57606a">之后手机保存中继根地址；「设置 → 远控」里的二维码是给第二台设备的新邀请，不是本机配对用的。</text>
+  </g>
+</svg>

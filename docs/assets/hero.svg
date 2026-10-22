@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" role="img" aria-label="DeepSeek Harness APP">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1f2a"/>
+      <stop offset="0.55" stop-color="#123444"/>
+      <stop offset="1" stop-color="#1b4b5a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3dd68c"/>
+      <stop offset="1" stop-color="#3964fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="220" rx="18" fill="url(#bg)"/>
+  <circle cx="760" cy="40" r="150" fill="#3dd68c" opacity="0.08"/>
+  <circle cx="820" cy="190" r="110" fill="#3964fe" opacity="0.12"/>
+  <text x="48" y="86" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="38" font-weight="700" fill="#ffffff">DeepSeek Harness APP</text>
+  <text x="48" y="124" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="16" fill="#b9d4dd">自托管 Android 客户端 · 无云 · 无账号 · 无遥测 · 无内购</text>
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="13" font-weight="600">
+    <rect x="48" y="150" width="92" height="30" rx="15" fill="#ffffff" opacity="0.12"/>
+    <text x="66" y="170" fill="#e8f6f0">v1.0.4</text>
+    <rect x="150" y="150" width="112" height="30" rx="15" fill="#ffffff" opacity="0.12"/>
+    <text x="168" y="170" fill="#e8f6f0">Android 8+</text>
+    <rect x="272" y="150" width="150" height="30" rx="15" fill="#ffffff" opacity="0.12"/>
+    <text x="290" y="170" fill="#e8f6f0">DSH 0.2.1</text>
+    <rect x="432" y="150" width="86" height="30" rx="15" fill="#ffffff" opacity="0.12"/>
+    <text x="450" y="170" fill="#e8f6f0">MIT</text>
+  </g>
+  <rect x="48" y="196" width="180" height="4" rx="2" fill="url(#accent)"/>
+</svg>
