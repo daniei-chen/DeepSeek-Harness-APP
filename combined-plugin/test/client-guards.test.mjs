@@ -184,11 +184,14 @@ test("CSS pins the reading slots so streaming digits cannot reflow the dock", ()
     const usage = sliceBetween('[data-composer-stat="usage"] button::after', '[data-composer-stat] svg');
     assert.match(usage, /min-width: \d+ch;/);
     assert.match(usage, /text-align: right;/);
-    // The model name is variable length, so it ellipsizes instead of widening its trigger.
+    // The model name is variable length and must never be cut: it renders in full, and the group
+    // around it wraps so a long name gets its own line instead of an ellipsis.
     const model = sliceBetween('button[aria-label*="选择模型"]::after', 'button[aria-label*="选择模型"] span');
-    assert.match(model, /max-width: 100%;/);
-    assert.match(model, /overflow: hidden;/);
-    assert.match(model, /text-overflow: ellipsis;/);
+    assert.match(model, /max-width: none;/);
+    assert.match(model, /overflow: visible;/);
+    assert.match(model, /text-overflow: clip;/);
+    assert.doesNotMatch(model, /text-overflow: ellipsis;/);
+    assert.match(css, /flex-wrap: wrap !important;/);
 });
 
 test("the plugin writes no inline style to a React-owned node", () => {

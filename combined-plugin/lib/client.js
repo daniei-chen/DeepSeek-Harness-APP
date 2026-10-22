@@ -6,18 +6,23 @@ window.__ModuleLoader__.load({
     Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 
     const CSS = `
-/* Model trigger: give it the free width next to the upload control, but keep a real minimum so a
-   narrow flex row can never collapse the label to an icon-sized zero. */
+/* Model trigger: give it the free width next to the upload control, and let the group wrap.
+   The label is the only place the phone says which model a message will run on, so it is never
+   truncated: if the full name does not fit beside the other controls, the group puts it on its own
+   line instead of showing "DeepSeek-V4.1-F…". */
 html[data-dsh-mobile-form] [data-composer-card] [class*="_root"]:has(> button[aria-label*="选择模型"]),
 html[data-dsh-mobile-form] [data-composer-card] [class*="_root"]:has(> button[aria-label*="Select model"]) {
   flex: 1 1 auto !important;
   min-width: 120px !important;
   max-width: none !important;
+  flex-wrap: wrap !important;
 }
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"],
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"] {
   width: auto !important;
-  max-width: 132px !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
   margin-left: -8px !important;
   font-size: 12px !important;
   justify-content: flex-start !important;
@@ -36,9 +41,9 @@ html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"]::after {
   content: var(--dsh-mobile-model, "");
   display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
   vertical-align: bottom;
   white-space: nowrap;
   font: inherit;
@@ -161,7 +166,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.13";
+    const PLUGIN_VERSION = "0.1.14";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;

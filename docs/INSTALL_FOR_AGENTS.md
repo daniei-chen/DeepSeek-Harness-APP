@@ -47,9 +47,9 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 | APK file | `DeepSeek-Harness-1.1.2-personal.9.apk` |
 | APK `versionCode` | **50102** — must be **greater** than the installed one |
 | APK SHA-256 | `0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030` |
-| Host plugin | **0.1.13** |
-| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.13.tgz` |
-| Plugin SHA-256 | `F394225A0FC8E63A41752653F1EDB9DB46E7D26AD3C58ED0BA95A7A670BE153B` |
+| Host plugin | **0.1.14** |
+| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.14.tgz` |
+| Plugin SHA-256 | `BDC189FF9D56A570C39115637DDDA84547AA2ACA48FDF56BEB45229381073EB2` |
 | Responsive base (vendor) | `vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` |
 | DSH tested against | `0.2.1` (desktop profile; `0.2.1-rc.2` also works) |
 | Android | 8.0+ (`minSdk 26`) |
@@ -58,22 +58,22 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 Direct downloads:
 
 - APK: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.2/DeepSeek-Harness-1.1.2-personal.9.apk>
-- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.13/dsh-android-deepseek-harness-app-plugin-0.1.13.tgz>
+- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.14/dsh-android-deepseek-harness-app-plugin-0.1.14.tgz>
 
 Checksums:
 
 ```bash
 sha256sum DeepSeek-Harness-1.1.2-personal.9.apk
 # 0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030
-sha256sum dsh-android-deepseek-harness-app-plugin-0.1.13.tgz
-# F394225A0FC8E63A41752653F1EDB9DB46E7D26AD3C58ED0BA95A7A670BE153B
+sha256sum dsh-android-deepseek-harness-app-plugin-0.1.14.tgz
+# BDC189FF9D56A570C39115637DDDA84547AA2ACA48FDF56BEB45229381073EB2
 ```
 
 **1.1.2 self-check.** The app and the plugin are updated separately, so the shell reads the plugin
 version out of the page (`window.__dshMobilePlugin.version`) and compares it with the build it shipped
-against. After installing, the top of 设置 should read `主机插件 0.1.13 · 与本应用同步`. If it says
+against. After installing, the top of 设置 should read `主机插件 0.1.14 · 与本应用同步`. If it says
 `低于 …` or `主机没有在提供手机插件`, the host half is not active: re-run step 2 and **restart DSH**.
-Two features need plugin 0.1.13 or newer — sharing text into the composer, and the notification reply
+Two features need plugin 0.1.14 or newer — sharing text into the composer, and the notification reply
 field. With an older plugin the share falls back to the clipboard and the reply field is absent.
 
 ---
@@ -104,7 +104,7 @@ node setup/dsh-mobile-setup.mjs install \
 
 ```bash
 curl -L -o /tmp/dsh-app-plugin.tgz \
-  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.13/dsh-android-deepseek-harness-app-plugin-0.1.13.tgz
+  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.14/dsh-android-deepseek-harness-app-plugin-0.1.14.tgz
 node setup/dsh-mobile-setup.mjs install --profile desktop \
   --app-plugin /tmp/dsh-app-plugin.tgz --file-root "$HOME" --relay-port 3443 --yes
 ```
@@ -243,7 +243,7 @@ The app has **no built-in URL** — this is deliberate.
 
 ### 3.3 The in-app pairing QR (`设置 → 远控`)
 
-Available **after** the phone is connected once, and only with host plugin **0.1.13+**. It shows a
+Available **after** the phone is connected once, and only with host plugin **0.1.14+**. It shows a
 fresh relay invitation drawn on the phone (code, expiry, copy link/code, paired devices) so a
 second device can be paired without opening the desktop page.
 
