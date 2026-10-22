@@ -18,7 +18,7 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 Current release (2026-10-22):
 
 - APK **1.1.3**, `versionCode` **50103**, `DeepSeek-Harness-1.1.3-personal.10.apk`
-- Host plugin **0.1.17**, `dsh-android-deepseek-harness-app-plugin-0.1.14.tgz`
+- Host plugin **0.1.17**, `dsh-android-deepseek-harness-app-plugin-0.1.17.tgz`
 - DSH tested against `0.2.1`
 
 1.1.3 is about the connection and the composer's last two readings: a failed generation is no longer reported until it has lasted, a run of failures stops retrying instead of looping forever, HTTP 429 pauses reconnecting for a minute instead of hammering the limiter, the model trigger shows the full name plus its reasoning effort, and the model label is one line with ellipsis only as a fallback. 1.1.2 fixed the settings sheet; 1.1.1 was the stability pass: the host plugin had been pinned to 0.1.7 (whose client still ran a
