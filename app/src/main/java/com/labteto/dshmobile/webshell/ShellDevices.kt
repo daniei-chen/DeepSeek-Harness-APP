@@ -12,6 +12,14 @@ internal data class ShellDevice(
     val id: String,
     val name: String,
     val url: String,
+    /**
+     * The other scheme to try once, when [url] was entered without one.
+     *
+     * A bare `dsh.example.com` is https in practice; a bare `192.168.1.5:3080` is http in
+     * practice. Instead of forcing the user to know which, the shell tries the preferred scheme
+     * and falls back to this on a main-frame failure.
+     */
+    val alternateUrl: String? = null,
 )
 
 /**
@@ -72,14 +80,13 @@ internal class ShellDevices(context: Context) {
         return listOf(device)
     }
 
-    fun add(url: String): ShellDevice = add(url, null)
-
-    fun add(url: String, name: String?): ShellDevice {
+    fun add(url: String, name: String? = null, alternateUrl: String? = null): ShellDevice {
         val existing = load()
         val device = ShellDevice(
             UUID.randomUUID().toString(),
             name?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(existing.size),
             url,
+            alternateUrl,
         )
         save(existing + device)
         setCurrent(device.id)
@@ -100,9 +107,11 @@ internal class ShellDevices(context: Context) {
      * origin from then on, not at `/relay/pair`, or every later launch would reopen the claim
      * form instead of the app.
      */
-    fun updateUrl(id: String, url: String): ShellDevice? {
+    fun updateUrl(id: String, url: String, alternateUrl: String? = null): ShellDevice? {
         val existing = load()
-        val updated = existing.map { if (it.id == id) it.copy(url = url) else it }
+        val updated = existing.map {
+            if (it.id == id) it.copy(url = url, alternateUrl = alternateUrl) else it
+        }
         save(updated)
         return updated.firstOrNull { it.id == id }
     }

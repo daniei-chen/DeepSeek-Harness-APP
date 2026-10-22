@@ -189,6 +189,8 @@ class WebShellActivity : AppCompatActivity() {
     private var imeVisible = false
     private var glassCompat = "auto"
     private var inboxQuery = ""
+    /** One http/https retry per device load, for addresses typed without a scheme. */
+    private var schemeFallbackTried = false
     /**
      * Human-readable page lifecycle events, newest last.
      *
@@ -668,6 +670,7 @@ class WebShellActivity : AppCompatActivity() {
             if (!pageHadError) {
                 failoverTried.clear()
                 failoverInProgress = false
+                schemeFallbackTried = false
             }
             pageHadError = false
             markPageReady()
@@ -697,6 +700,8 @@ class WebShellActivity : AppCompatActivity() {
             if (request.isForMainFrame) {
                 recordPageEvent("main-frame error ${error.errorCode} ${error.description}")
                 pageHadError = true
+                // A bare address was loaded as https first; a LAN deployment lives on http.
+                if (tryAlternateScheme()) return
                 if (tryFailover()) return
                 showError(getString(R.string.webshell_error_title), getString(R.string.webshell_error_network))
             }
@@ -1026,6 +1031,7 @@ class WebShellActivity : AppCompatActivity() {
 
     private fun reloadPage() {
         recordPageEvent("reload (requested)")
+        schemeFallbackTried = false
         failoverTried.clear()
         failoverInProgress = false
         pageHadError = false
@@ -1082,6 +1088,24 @@ class WebShellActivity : AppCompatActivity() {
         } else {
             showSettings()
         }
+    }
+
+    /**
+     * Retry the other scheme once, for a device whose address was typed without one.
+     *
+     * `dsh.example.com` is loaded as https; if that fails the http variant is tried before the
+     * error screen, which is what makes a bare LAN IP:port work without the user knowing the
+     * scheme. The alternate is consumed by this switch, so it cannot ping-pong.
+     */
+    private fun tryAlternateScheme(): Boolean {
+        if (schemeFallbackTried) return false
+        val device = shellDevices.load().firstOrNull { it.id == shellDevices.currentId() } ?: return false
+        val alternate = device.alternateUrl ?: return false
+        schemeFallbackTried = true
+        shellDevices.updateUrl(device.id, alternate, null)
+        recordPageEvent("scheme fallback $alternate")
+        applyServerUrl(alternate)
+        return true
     }
 
     /**
@@ -2617,7 +2641,7 @@ class WebShellActivity : AppCompatActivity() {
             errorText = getString(R.string.device_url_invalid),
             onSubmit = { raw ->
                 val target = parseServerUrl(raw) ?: return@showTextDialog false
-                val device = shellDevices.add(target.url)
+                val device = shellDevices.add(target.url, alternateUrl = target.alternateUrl)
                 shellDevices.setCurrent(device.id)
                 applyServerUrl(target.url)
                 true
@@ -2759,38 +2783,8 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
-    private data class ServerTarget(
-        val host: String,
-        val port: Int,
-        val useTls: Boolean,
-        val basePath: String,
-        val url: String,
-    )
-
-    private fun parseServerUrl(raw: String): ServerTarget? {
-        val trimmed = raw.trim()
-        val uri = runCatching { java.net.URI(trimmed) }.getOrNull() ?: return null
-        val scheme = uri.scheme?.lowercase() ?: return null
-        if (scheme != "http" && scheme != "https") return null
-        val host = uri.host?.takeIf { it.isNotBlank() } ?: return null
-        val port = if (uri.port > 0) uri.port else if (scheme == "https") 443 else 80
-        if (port !in 1..65535) return null
-        val basePath = uri.path.orEmpty().trimEnd('/').takeIf { it.isNotEmpty() } ?: ""
-        val authority = when {
-            scheme == "https" && port == 443 -> host
-            scheme == "http" && port == 80 -> host
-            else -> "$host:$port"
-        }
-        return ServerTarget(
-            host = host,
-            port = port,
-            useTls = scheme == "https",
-            basePath = basePath,
-            // Preserve an exact non-root path (notably /relay/pair); only the origin gets a
-            // trailing slash so the page's own relative URLs keep resolving.
-            url = "$scheme://$authority$basePath" + if (basePath.isBlank()) "/" else "",
-        )
-    }
+    /** Address parsing lives in [parseServerAddress] so it can be unit-tested. */
+    private fun parseServerUrl(raw: String): ServerAddress? = parseServerAddress(raw)
 
     /**
      * Switch the shell's address and reload at it.
