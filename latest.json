@@ -1,10 +1,10 @@
 {
-  "version": "1.1.2",
-  "versionCode": 50102,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.2/DeepSeek-Harness-1.1.2-personal.9.apk",
-  "sha256": "0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.2",
-  "minPluginVersion": "0.1.13",
-  "notes": "Settings sheet is grouped and scrollable; refresh and check-update are prominent actions",
-  "generatedAt": "2026-10-22T13:16:00.327Z"
+  "version": "1.1.3",
+  "versionCode": 50103,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.3/DeepSeek-Harness-1.1.3-personal.10.apk",
+  "sha256": "328494D9D1BE793A3F2A2516B56F3AED1EC3E2BB35EC02A0C5864EC6539A4681",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.3",
+  "minPluginVersion": "0.1.17",
+  "notes": "Reconnect: no false alarms, no endless loop, 429-aware; model name fully shown with reasoning effort; less streaming-time work",
+  "generatedAt": "2026-10-22T14:40:43.444Z"
 }

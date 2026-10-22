@@ -1,9 +1,36 @@
-# Release 1.1.2
+# Release 1.1.3
 
 ## What this release is
 
 A self-hosted Android client for DeepSeek Harness. No project cloud, no account, no telemetry,
 no monetization.
+
+## What changed in 1.1.3
+
+Connection policy, and the composer's last two readings.
+
+- **A failed generation is not a failed connection.** The manager used to publish a failure on every
+  retry, so a Wi-Fi blip put "connection failed" on screen while the next attempt was already
+  succeeding. A failure is reported only after three consecutive attempts **and** eight seconds of
+  failing; a completed handshake clears it immediately.
+- **A run of failures stops.** The loop retries forever by design, so the brake lives in the manager:
+  twenty consecutive failures or three minutes of failing stops automatic reconnecting and says that
+  reconnecting is now manual. Manual connect and network recovery start a fresh count.
+- **One rebuild at a time.** The network callback, the keep-alive worker and the connect screen all
+  called `reconnectIfNeeded`, and each one stopped the loop the previous caller had just started —
+  on a slow network that is a socket rebuilt over and over with the screen stuck on "reconnecting".
+  Callers now merge into one cycle, and a callback from a replaced loop is ignored by token.
+- **HTTP 429 pauses instead of hammering.** A limiter (nginx `limit_req` in front of the harness) is
+  the one failure where retrying at 500 ms makes things worse: each attempt refreshes the bucket. The
+  app now stops, says the server is rate limiting this phone, and tries once more after a minute.
+- **The model trigger shows the whole name and its reasoning effort.** The 132 px cap and the hidden
+  `_triggerEffort` span were why the phone could not say which model — or which effort — a message
+  would run on. The label now reads `DeepSeek-V4.1-Flash · 高`, starts 10 px further left, and
+  ellipsises only when the row genuinely cannot fit it.
+- **Less work while a reply streams.** Control projection frames go through the same 50 ms rebuild
+  tick as everything else instead of folding the transcript synchronously per frame; the dead
+  `hostEvents` flow no longer allocates a Pair per event; per-frame logcat lines are rate-limited;
+  identical insets are no longer shipped to the renderer on every IME animation frame.
 
 ## What changed in 1.1.2
 

@@ -20,8 +20,25 @@ internal data class ServerAddress(
  * HTTP. The shell switches over automatically if the first attempt fails, so the user never has
  * to know which one their deployment uses.
  */
-internal fun parseServerAddress(raw: String): ServerAddress? {
+/**
+ * Collapse a scheme pasted into a field that already had one.
+ *
+ * The device manager pre-fills 'https://', so pasting 'http://dsh.example.com' used to produce
+ * 'https://http://dsh.example.com', which parses as host 'http' with '//dsh.example.com' as the
+ * path — a device that can never connect and that then looks like a server problem. The inner
+ * scheme is the one the user meant.
+ */
+internal fun normaliseNestedScheme(raw: String): String {
     val trimmed = raw.trim()
+    val nested = Regex("^(https?)://(https?):?/*(.*)$", RegexOption.IGNORE_CASE).find(trimmed)
+        ?: return trimmed
+    val innerScheme = nested.groupValues[2].lowercase()
+    val rest = nested.groupValues[3].trimStart('/')
+    return if (rest.isBlank()) trimmed else innerScheme + "://" + rest
+}
+
+internal fun parseServerAddress(raw: String): ServerAddress? {
+    val trimmed = normaliseNestedScheme(raw)
     if (trimmed.isEmpty()) return null
     val explicitScheme = trimmed.contains("://")
     val candidate = if (explicitScheme) trimmed else "https://$trimmed"

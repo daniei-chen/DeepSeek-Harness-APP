@@ -196,6 +196,9 @@ class WebShellActivity : AppCompatActivity() {
     private var insets = InsetsDp(0f, 0f, 0f)
     private var imeVisible = false
     private var glassCompat = "auto"
+
+    /** The insets last pushed into this document, so identical values are not re-sent. */
+    private var sentInsets: Triple<Float, Float, Float>? = null
     private var inboxQuery = ""
     /** One http/https retry per device load, for addresses typed without a scheme. */
     private var schemeFallbackTried = false
@@ -383,8 +386,11 @@ class WebShellActivity : AppCompatActivity() {
         }
         // Keep a read-only snapshot of the session list, so a phone that wakes up without a
         // network can still show what was running instead of an empty error page.
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.Default) {
             var lastSignature = ""
+            // Sorting thirty rows and building a signature is small but it ran on the main thread for
+            // every session-list emission — i.e. on the thread that is also painting the reply. The
+            // only thing that must stay ordered is the DataStore write, which is a suspend call.
             sessionStore.sessions.collect { rows ->
                 val hostId = targetHost?.id ?: return@collect
                 val snapshot = rows.asSequence()
@@ -1033,7 +1039,9 @@ class WebShellActivity : AppCompatActivity() {
         if (!::webView.isInitialized) return
         webView.evaluateJavascript(WebShellScripts.SHIMS, null)
         webView.evaluateJavascript(WebShellScripts.health(), null)
-        applyInsetsToPage()
+        // A new document has no CSS variables yet, so the cache from the previous one is meaningless.
+        sentInsets = null
+        applyInsetsToPage(force = true)
         applyGlassCompat()
     }
 
@@ -1043,8 +1051,20 @@ class WebShellActivity : AppCompatActivity() {
         webView.evaluateJavascript(WebShellScripts.glassCompat(glassCompat), null)
     }
 
-    private fun applyInsetsToPage() {
+    private fun applyInsetsToPage(force: Boolean = false) {
         if (!::webView.isInitialized) return
+        // The insets listener fires on every frame of an IME animation, and each call costs a
+        // ~700-character script plus a renderer IPC — charged to the same JS thread that is painting
+        // a streaming reply. The page already ignores identical values; this stops building and
+        // shipping them in the first place. [force] is for a fresh document, where the CSS variables
+        // are gone even though the numbers did not move.
+        val sent = sentInsets
+        if (!force && sent != null &&
+            sent.first == insets.top && sent.second == insets.bottom && sent.third == insets.ime
+        ) {
+            return
+        }
+        sentInsets = Triple(insets.top, insets.bottom, insets.ime)
         webView.evaluateJavascript(WebShellScripts.insets(insets.top, insets.bottom, insets.ime), null)
     }
 
