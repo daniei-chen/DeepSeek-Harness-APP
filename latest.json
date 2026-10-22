@@ -1,10 +1,10 @@
 {
-  "version": "1.0.5",
-  "versionCode": 50005,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.5/DeepSeek-Harness-1.0.5-personal.6.apk",
-  "sha256": "A55B626A9EC540B54D53671D4D00E060B6D681190FB8E49C7E46BF407988B968",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.5",
-  "minPluginVersion": "0.1.11",
-  "notes": "Scheme-optional address field with http fallback",
-  "generatedAt": "2026-10-22T09:46:18.181Z"
+  "version": "1.1.0",
+  "versionCode": 50100,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.0/DeepSeek-Harness-1.1.0-personal.7.apk",
+  "sha256": "A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.0",
+  "minPluginVersion": "0.1.12",
+  "notes": "APK 12.3 to 2.5 MB, no background timers, network-aware reconnect, share target, opt-in link handler, settings export, notification reply",
+  "generatedAt": "2026-10-22T11:33:54.149Z"
 }

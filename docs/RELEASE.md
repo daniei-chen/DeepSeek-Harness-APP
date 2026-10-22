@@ -1,14 +1,52 @@
-# Release 1.0.5
+# Release 1.1.0
 
 ## What this release is
 
 A self-hosted Android client for DeepSeek Harness. No project cloud, no account, no telemetry,
 no monetization.
 
-## 1.0 quality gates
+## What changed in 1.1.0
+
+**The APK went from 12.34 MB to 2.47 MB.** The `ui/` package (25 k lines of Compose) was unreachable —
+the manifest declares one activity, `WebShellActivity`, an `AppCompatActivity` around a WebView — and
+R8 had already stripped it from the dex. What R8 could not strip was the ML Kit Chinese OCR it alone
+pulled in: 9.39 MB of native library and models, 76 % of the download, for a code path no user could
+reach. The tree is gone, and so are ML Kit, the Compose compiler, the Compose BOM, navigation-compose
+and hilt-navigation-compose. The old UI is in git history at tag `v1.0.5`.
+
+**Every periodic timer in the injected client is gone.** Two `setInterval` calls (a 3 s structure
+probe and a 1.5 s file-row decoration pass) now ride MutationObservers instead. That removes the last
+thing in the plugin that could repaint the composer row on its own.
+
+**Reconnect is network-aware.** A `ConnectivityManager.NetworkCallback` notices a Wi-Fi/cellular
+handover: the native event connection is re-established immediately and the page receives an
+`online` event instead of waiting out its own 30-second backoff. Each transition is written to the
+diagnostics timeline, which is what turns "it refreshed itself" into a named author.
+
+**New entry points.** Text or a link can be shared into the app from any other app (`ACTION_SEND`);
+it is inserted into the composer, and lands on the clipboard if the composer never appears.
+`dshmobile://host/current/session/<id>` links are answerable from outside. A plain web link opens
+here only when the user turns on the opt-in handler in Settings — the alias ships disabled, because
+otherwise the app appears in Android's chooser for every link on the phone; anything that is not a
+saved harness is bounced to the real browser.
+
+**Settings travel.** 设置 → 导出设置 writes devices, harnesses and switches as one readable JSON file;
+导入设置 validates every entry and reports what it skipped. Credentials are never in the file — the
+relay token and the sign-in cookie live in their own stores — and `allowBackup` is now `false`, so
+nothing about a deployment reaches a cloud backup either.
+
+**Notifications can be answered.** Completion, goal and question notifications carry a reply field
+that queues the text straight to the session. Approvals still get approve/reject only: they are
+waiting on a decision, not on prose.
+
+**The two halves check each other.** The shell reads the host plugin's version from the page and
+compares it with the build it shipped against, so Settings and the connection doctor name the side
+that is behind instead of letting a half-updated install look like a bug.
+
+## 1.x quality gates
 
 - **New user:** install -> first connection in under ten minutes, by QR or by the pairing-code path (设置 -> 连接 -> 配对码连接).
-- **Upgrade:** every release has a strictly higher versionCode (1.0.5 = 50005); settings and devices survive.
+- **Upgrade:** every release has a strictly higher versionCode (1.1.0 = 50100, and every later 1.x release lands above it); settings and devices survive.
 - **Failure is explainable:** connection doctor, notification self-check and the offline session snapshot each name the cause and the next action.
 - **Updates:** read from the repository's latest.json first, so release ordering and GitHub rate limits cannot hide a version.
 - **Offline:** the last synced session list stays readable without a network.
@@ -16,8 +54,8 @@ no monetization.
 
 ## Install
 
-- APK: `dist/DeepSeek-Harness-1.0.5-personal.6.apk`
-- SHA-256: `A55B626A9EC540B54D53671D4D00E060B6D681190FB8E49C7E46BF407988B968`
+- APK: `dist/DeepSeek-Harness-1.1.0-personal.7.apk`
+- SHA-256: `A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84`
 - Source: https://github.com/daniei-chen/DeepSeek-Harness-APP
 
 ## First run

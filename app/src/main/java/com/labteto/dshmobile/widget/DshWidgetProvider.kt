@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import com.labteto.dshmobile.webshell.WebShellActivity
 import com.labteto.dshmobile.R
-import com.labteto.dshmobile.ui.AppLaunchAction
+import com.labteto.dshmobile.webshell.AppLaunchAction
 
 /**
  * Fork: a small home-screen widget that opens the app or starts a voice prompt.

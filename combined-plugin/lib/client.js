@@ -136,8 +136,20 @@ html[data-dsh-glass="off"] body::after {
 }
 `;
 
+    /**
+     * Bundle identity reported to the Android shell so it can refuse a plugin that predates a
+     * feature it needs. Keep this identical to package.json "version"; the guard test in
+     * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
+     */
+    const PLUGIN_VERSION = "0.1.12";
+
     function apply(ctx) {
       if (typeof document === "undefined") return;
+      // Metadata, not a phone tweak: published on the desktop shell too, so the shell can always
+      // read which bundle build it is talking to (`window.__dshMobilePlugin.version` and the html
+      // attribute both carry it). The Android side compares it against its own minimum.
+      window.__dshMobilePlugin = { version: PLUGIN_VERSION };
+      document.documentElement.setAttribute("data-dsh-plugin-version", PLUGIN_VERSION);
       // This bundle is shared by the desktop Harness app and the Android WebView. The phone
       // tweaks (compact stats, model label, file actions) must never run in the desktop window,
       // where they would hide the native speed/identity indicators. Require an Android-only
@@ -298,16 +310,36 @@ html[data-dsh-glass="off"] body::after {
       };
 
       observe();
-      // Only a structural check every three seconds; the readings themselves are event-driven.
-      // The old two-second `compactStats` poll re-applied the model/speed values on a timer and
-      // was the source of the periodic "refresh" at the bottom of the composer.
-      window.setInterval(observe, 3000);
+      // Structural re-checks are event-driven now. A session switch mounts a different dock/card,
+      // so the tree changing under the composer is what says "re-attach the two observers"; the
+      // old `setInterval(observe, 3000)` probed the same nodes forever and was one of the periodic
+      // "the page refreshes by itself" sources. The readings themselves stay event-driven too.
+      let structuralTimer = 0;
+      const scheduleStructural = () => {
+        if (structuralTimer !== 0) return;
+        structuralTimer = window.setTimeout(() => {
+          structuralTimer = 0;
+          observe();
+        }, 250);
+      };
+      try {
+        // <html> rather than <body>: the root element always exists by the time a client bundle
+        // runs, and its subtree covers the body anyway. Attribute changes are not observed, so the
+        // plugin's own style writes cannot feed this observer.
+        new MutationObserver(scheduleStructural).observe(document.documentElement, { subtree: true, childList: true });
+      } catch (e) {}
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState !== "hidden") compactStats();
+        if (document.visibilityState === "hidden") return;
+        // Back from background: one immediate pass plus a single delayed retry, which is enough
+        // for the restored session to paint. No repeating timer.
+        observe();
+        window.setTimeout(observe, 600);
+        compactStats();
       });
       installFileActions();
       installImageUploadDefault();
       installNativeVoiceBridge();
+      installComposerTextBridge();
     }
 
     /**
@@ -355,6 +387,93 @@ html[data-dsh-glass="off"] body::after {
           window.DshShellBridge.startSpeechInput();
         } catch (e) {}
       }, true);
+    }
+
+    /**
+     * Insert text from an Android `ACTION_SEND` intent into the composer.
+     *
+     * The composer is React-owned, so assigning `value` on the node itself is swallowed by the
+     * framework's tracked state: set it through the prototype setter and then dispatch the
+     * bubbling `input` event React listens to. Newer DSH builds render a contenteditable Lexical
+     * editor instead of a textarea, so that path is the fallback. Shared text is appended rather
+     * than substituted, so a draft the user already typed survives; the caret always ends up after
+     * the inserted text.
+     *
+     * Returns false when there is no composer on screen, and never throws — the Android side shows
+     * its own "could not insert" message.
+     */
+    function installComposerTextBridge() {
+      if (window.__dshComposerTextBridge) return;
+      window.__dshComposerTextBridge = true;
+
+      const composerNodes = () => {
+        const found = [];
+        const candidates = document.querySelectorAll(
+          '[data-composer-input="true"], [data-composer-card] textarea, [data-composer-seat] textarea',
+        );
+        for (const node of candidates) {
+          if (node instanceof HTMLTextAreaElement || node.isContentEditable) found.push(node);
+        }
+        return found;
+      };
+
+      const insertIntoTextarea = (element, value) => {
+        element.focus();
+        const current = element.value || "";
+        const separator = current === "" || /\s$/.test(current) ? "" : " ";
+        const next = current + separator + value;
+        // React caches the last value it rendered in a tracker on the instance; writing through
+        // the prototype setter is what makes the following `input` event look like real typing.
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+        if (typeof setter === "function") setter.call(element, next);
+        else element.value = next;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        try {
+          element.setSelectionRange(next.length, next.length);
+        } catch (e) {}
+        return element.value === next;
+      };
+
+      const insertIntoEditor = (element, value) => {
+        element.focus();
+        try {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          // Lexical listens on the editing host and reconciles its own model; execCommand is the
+          // insertion that updates that model the same way typing does.
+          const inserted = document.execCommand("insertText", false, value);
+          element.dispatchEvent(new InputEvent("input", {
+            bubbles: true,
+            inputType: "insertText",
+            data: value,
+          }));
+          range.selectNodeContents(element);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          return inserted !== false || (element.textContent || "").includes(value);
+        } catch (e) {
+          return false;
+        }
+      };
+
+      window.__dshInsertComposerText = (text) => {
+        if (text === undefined || text === null) return false;
+        const value = String(text);
+        if (value === "") return false;
+        try {
+          const nodes = composerNodes();
+          const textarea = nodes.find((node) => node instanceof HTMLTextAreaElement);
+          if (textarea !== undefined) return insertIntoTextarea(textarea, value);
+          const editor = nodes.find((node) => node.isContentEditable);
+          if (editor !== undefined) return insertIntoEditor(editor, value);
+        } catch (e) {}
+        return false;
+      };
     }
 
     /**
@@ -733,11 +852,16 @@ html[data-dsh-glass="off"] body::after {
           panelSeenAt = 0;
           return;
         }
-        const rows = document.querySelectorAll('[class*="Woyo-G_row"]').length;
-        if (rows > 0) {
+        const rows = document.querySelectorAll('[class*="Woyo-G_row"]');
+        if (rows.length > 0) {
           panelNudged = true;
         } else if (!panelNudged) {
-          if (panelSeenAt === 0) panelSeenAt = Date.now();
+          if (panelSeenAt === 0) {
+            panelSeenAt = Date.now();
+            // One deferred look only: a panel that opened against a request which never paints will
+            // not mutate again, so the probe below needs a single scheduled re-entry. Not a poll.
+            window.setTimeout(decorate, 1400);
+          }
           // The DSH file panel sometimes opens against a request that never paints. One
           // programmatic refresh reproduces the tap that makes it appear, without a reload.
           if (Date.now() - panelSeenAt > 1200) {
@@ -746,7 +870,7 @@ html[data-dsh-glass="off"] body::after {
           }
         }
         installHeaderTools();
-        document.querySelectorAll('[class*="Woyo-G_row"]').forEach((row) => {
+        rows.forEach((row) => {
           if (row.dataset.dshFileActions === "1") return;
           row.dataset.dshFileActions = "1";
           const more = document.createElement("span");
@@ -783,10 +907,29 @@ html[data-dsh-glass="off"] body::after {
       };
 
       decorate();
+      // Rows, the panel header and folder expansions all arrive as DOM mutations, so the tree
+      // mutating is the only trigger this needs: a debounced body-level observer replaces the old
+      // `setInterval(decorate, 1500)`, which re-ran the whole probe forever and is what the "file
+      // panel refreshes itself" reports came from. The per-row `dshFileActions` marker keeps the
+      // plugin's own appends from producing a second decorating round.
+      let decorTimer = 0;
+      const scheduleDecorate = () => {
+        if (decorTimer !== 0) return;
+        decorTimer = window.setTimeout(() => {
+          decorTimer = 0;
+          decorate();
+        }, 250);
+      };
+      try {
+        // Same reason as the composer observer: <html> is always there when a client bundle runs.
+        // childList-only, so appending the decoration itself only re-runs one guarded pass.
+        new MutationObserver(scheduleDecorate).observe(document.documentElement, { subtree: true, childList: true });
+      } catch (e) {}
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState !== "hidden") decorate();
+        if (document.visibilityState === "hidden") return;
+        decorate();
+        window.setTimeout(decorate, 300);
       });
-      window.setInterval(decorate, 1500);
     }
 
     const inject = [];

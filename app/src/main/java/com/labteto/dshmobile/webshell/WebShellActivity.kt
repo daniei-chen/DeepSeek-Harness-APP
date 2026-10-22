@@ -6,10 +6,15 @@ import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Build
@@ -82,8 +87,11 @@ import com.labteto.dshmobile.core.wire.PairingPayloadResult
 import com.labteto.dshmobile.core.wire.RelayPairing
 import com.labteto.dshmobile.core.wire.RpcResult
 import com.labteto.dshmobile.core.wire.dto.SessionSummary
+import com.labteto.dshmobile.data.BundleResult
 import com.labteto.dshmobile.data.SessionRow
 import com.labteto.dshmobile.data.SessionStore
+import com.labteto.dshmobile.data.SettingsBundle
+import com.labteto.dshmobile.data.settingsBundleNow
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -191,6 +199,31 @@ class WebShellActivity : AppCompatActivity() {
     private var inboxQuery = ""
     /** One http/https retry per device load, for addresses typed without a scheme. */
     private var schemeFallbackTried = false
+
+    /**
+     * Text another app shared into this one (`ACTION_SEND`), waiting for a composer to exist.
+     *
+     * The composer belongs to the page, so the text cannot be delivered until the document has
+     * loaded and the plugin's insertion hook is installed. [deliverPendingShare] retries a few
+     * times and then falls back to the clipboard rather than dropping what the user shared.
+     */
+    private var pendingSharedText: String? = null
+    private var shareAttempts = 0
+
+    /**
+     * The phone lost its network since the last callback.
+     *
+     * Only a real drop arms recovery: `onAvailable` also fires once at registration, and reloading
+     * on that would be a gratuitous reload every cold start.
+     */
+    private var networkWasLost = false
+    private var connectivityCallback: ConnectivityManager.NetworkCallback? = null
+
+    /** A voice prompt asked for by the widget or the Quick Settings tile, before the page was ready. */
+    private var pendingVoiceLaunch = false
+
+    /** The host-plugin version the page reported (`window.__dshMobilePlugin.version`), if any. */
+    private var pluginVersion: String? = null
     /**
      * Human-readable page lifecycle events, newest last.
      *
@@ -246,7 +279,20 @@ class WebShellActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Settings transfer. The file is JSON the user can read, keep and hand-edit; the import path
+     * validates every entry and reports what it had to skip rather than half-applying a file.
+     */
+    private val exportSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri: Uri? -> if (uri != null) writeSettingsBundle(uri) }
+
+    private val importSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? -> if (uri != null) readSettingsBundle(uri) }
+
     private var pendingTestNotification = false
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
@@ -265,6 +311,13 @@ class WebShellActivity : AppCompatActivity() {
         splashScreen.setKeepOnScreenCondition { !pageReady.get() }
         enableEdgeToEdge()
         pendingSessionId = sessionIdFromIntent(intent)
+        pendingSharedText = sharedTextFromIntent(intent)
+        pendingVoiceLaunch = intent?.action == AppLaunchAction.ACTION_VOICE
+        if (!routeViewIntent(intent)) {
+            // A web link that does not point at a saved harness: the browser owns it.
+            finish()
+            return
+        }
 
         notifications.ensureChannels()
         if (NtfyConfig.load(this) != null) startNtfyService()
@@ -273,6 +326,7 @@ class WebShellActivity : AppCompatActivity() {
         installJavascriptInterfaces()
         installBackHandling()
         installInsetHandling()
+        installConnectivityWatching()
         // Keep the glass-compat mode live: changing it in Settings re-marks the page immediately.
         lifecycleScope.launch {
             hostsStore.settings.collect { settings ->
@@ -679,6 +733,10 @@ class WebShellActivity : AppCompatActivity() {
             openPendingSession()
             applyInsetsToPage()
             persistGatewayCookie()
+            // The plugin's own hooks appear with its client bundle, a moment after the document.
+            mainHandler.postDelayed({ readPluginVersion() }, 600)
+            mainHandler.postDelayed({ deliverPendingShare() }, 400)
+            maybeStartPendingVoice()
             if (clearHistoryAfterLoad) {
                 view.clearHistory()
                 clearHistoryAfterLoad = false
@@ -1145,6 +1203,7 @@ class WebShellActivity : AppCompatActivity() {
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
+            pluginVersion = pluginVersion,
             simpleMode = runCatching {
                 runBlocking { hostsStore.settings.first().simpleMode }
             }.getOrDefault(true),
@@ -1155,6 +1214,7 @@ class WebShellActivity : AppCompatActivity() {
                 runBlocking { hostsStore.settings.first().keepConnectedInBackground }
             }.getOrDefault(false),
             ntfyEnabled = NtfyConfig.load(this) != null,
+            linkHandlerEnabled = isLinkHandlerEnabled(),
             onConnection = { showConnectionPage() },
             onRemote = { showRemoteAccess() },
             onInbox = { showInbox() },
@@ -1162,6 +1222,12 @@ class WebShellActivity : AppCompatActivity() {
             onDiagnostics = { showDiagnosticsDialog() },
             onNotifications = { showNotificationsPage() },
             onBackground = { showBackgroundPage() },
+            onToggleLinkHandler = {
+                setLinkHandlerEnabled(!isLinkHandlerEnabled())
+                showSettings()
+            },
+            onExport = { exportSettings() },
+            onImport = { importSettings() },
             onCheckUpdate = { checkForUpdate() },
             onSource = { openExternalUri(Uri.parse("https://github.com/daniei-chen/DeepSeek-Harness-APP")) },
             onRefresh = { reloadPage() },
@@ -2947,6 +3013,305 @@ class WebShellActivity : AppCompatActivity() {
         recognizer.startListening(intent)
     }
 
+    // ---- entry points besides the launcher ----------------------------------
+
+    /** The text another app shared into this one, if any. */
+    private fun sharedTextFromIntent(intent: Intent?): String? {
+        if (intent == null || intent.action != Intent.ACTION_SEND) return null
+        if (intent.type?.startsWith("text/") != true) return null
+        return intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Decide who owns a `VIEW` intent and, when it is ours, get there.
+     *
+     * Returns false when the link was handed to another app, so the caller can stop instead of
+     * painting a shell it is about to close. `dshmobile://` links are always ours — their session id
+     * is picked up by [sessionIdFromIntent] — while an `http(s)` link only belongs here when it
+     * points at an address this phone already saved. The filter that delivers such links at all is a
+     * *disabled* activity-alias, so this path only ever runs for someone who turned it on.
+     */
+    private fun routeViewIntent(intent: Intent?): Boolean {
+        if (intent?.action != Intent.ACTION_VIEW) return true
+        val uri = intent.data ?: return true
+        return when (uri.scheme?.lowercase()) {
+            "dshmobile" -> true
+            "http", "https" -> {
+                if (isKnownHarnessUrl(uri)) {
+                    // Already running at the same deployment: make sure it is showing, not stale.
+                    if (::webView.isInitialized && pageReady.get()) reloadPage()
+                    true
+                } else {
+                    openExternalUri(uri)
+                    false
+                }
+            }
+            else -> false
+        }
+    }
+
+    /** Whether [uri] names the origin of one of the saved devices. */
+    private fun isKnownHarnessUrl(uri: Uri): Boolean {
+        val scheme = uri.scheme?.lowercase() ?: return false
+        val host = uri.host?.lowercase() ?: return false
+        val port = if (uri.port > 0) uri.port else if (scheme == "https") 443 else 80
+        return shellDevices.load().any { device ->
+            val saved = runCatching { java.net.URI(device.url.trimEnd('/')) }.getOrNull() ?: return@any false
+            val savedScheme = saved.scheme?.lowercase().orEmpty()
+            val savedHost = saved.host?.lowercase().orEmpty()
+            val savedPort = if (saved.port > 0) saved.port else if (savedScheme == "https") 443 else 80
+            savedHost.isNotEmpty() && savedScheme == scheme && savedHost == host && savedPort == port
+        }
+    }
+
+    private fun linkOpenAlias(): ComponentName =
+        ComponentName(this, "com.labteto.dshmobile.webshell.LinkOpenAlias")
+
+    /** Whether the user has opted into being offered for plain web links. */
+    private fun isLinkHandlerEnabled(): Boolean = runCatching {
+        packageManager.getComponentEnabledSetting(linkOpenAlias()) ==
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    }.getOrDefault(false)
+
+    /**
+     * Turn the opt-in web-link handler on or off.
+     *
+     * The alias ships disabled; enabling it is what puts this app in Android's "open with" list for
+     * http(s) links. `DONT_KILL_APP` keeps the current page — and its socket — alive across the
+     * change, which is the whole point of doing it from Settings rather than at install time.
+     */
+    private fun setLinkHandlerEnabled(enabled: Boolean) {
+        runCatching {
+            packageManager.setComponentEnabledSetting(
+                linkOpenAlias(),
+                if (enabled) {
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                } else {
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                },
+                PackageManager.DONT_KILL_APP,
+            )
+        }.onFailure { recordPageEvent("link handler toggle failed") }
+    }
+
+    // ---- network -------------------------------------------------------------
+
+    /**
+     * Watch the phone's own connectivity instead of waiting for the page to notice.
+     *
+     * Without this, a Wi-Fi/cellular handover kills the WebSocket silently: the page's event stream
+     * backs off to 30-second retries and the native connection manager has nothing scheduled until
+     * its next keep-alive tick. That silent window is what looks like "it was connected and then it
+     * refreshed itself".
+     */
+    private fun installConnectivityWatching() {
+        if (connectivityCallback != null) return
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                mainHandler.post { onNetworkAvailable() }
+            }
+
+            override fun onLost(network: Network) {
+                mainHandler.post {
+                    networkWasLost = true
+                    recordPageEvent("network lost")
+                }
+            }
+        }
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        runCatching { manager.registerNetworkCallback(request, callback) }
+            .onSuccess { connectivityCallback = callback }
+            .onFailure { recordPageEvent("network watcher unavailable") }
+    }
+
+    /**
+     * The phone is back online.
+     *
+     * Two things go stale at once: the native event connection behind the notification observer,
+     * and the page's own streams. The native side is reconnected outright; the page gets an
+     * `online` event, which is the one signal its client already reacts to without reloading.
+     */
+    private fun onNetworkAvailable() {
+        if (!networkWasLost) return
+        networkWasLost = false
+        recordPageEvent("network available")
+        val state = runCatching { connectionManager.state.value }.getOrNull()
+        if (state?.host != null && state.phase != ConnectionPhase.CONNECTED) {
+            runCatching { connectionManager.reconnectIfNeeded() }
+        }
+        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+        if (pageHadError) {
+            recordPageEvent("network recovery reload")
+            Toast.makeText(this, R.string.shell_network_restored, Toast.LENGTH_SHORT).show()
+            reloadPage()
+        } else {
+            webView.evaluateJavascript("window.dispatchEvent(new Event('online'))", null)
+        }
+    }
+
+    // ---- share target --------------------------------------------------------
+
+    /**
+     * Put a shared text into the page's composer.
+     *
+     * The insertion hook belongs to the host plugin and the composer renders a moment after the
+     * document commits, so a miss on the first attempts is expected. After [SHARE_ATTEMPTS] the text
+     * goes to the clipboard rather than disappearing — the user shared it, so it must land somewhere
+     * they can reach.
+     */
+    private fun deliverPendingShare() {
+        val text = pendingSharedText ?: return
+        if (!::webView.isInitialized || isFinishing || isDestroyed || !pageReady.get()) return
+        shareAttempts += 1
+        val quoted = org.json.JSONObject.quote(text)
+        val script = "(function(){try{return !!(window.__dshInsertComposerText && " +
+            "window.__dshInsertComposerText($quoted));}catch(e){return false;}})()"
+        webView.evaluateJavascript(script) { result ->
+            if (isFinishing || isDestroyed) return@evaluateJavascript
+            if (result == "true") {
+                pendingSharedText = null
+                shareAttempts = 0
+                Toast.makeText(this, R.string.shell_share_inserted, Toast.LENGTH_SHORT).show()
+            } else if (shareAttempts >= SHARE_ATTEMPTS) {
+                pendingSharedText = null
+                shareAttempts = 0
+                runCatching {
+                    getSystemService(ClipboardManager::class.java)
+                        ?.setPrimaryClip(ClipData.newPlainText(getString(R.string.app_name), text))
+                }
+                Toast.makeText(this, R.string.shell_share_waiting, Toast.LENGTH_LONG).show()
+            } else {
+                mainHandler.postDelayed({ deliverPendingShare() }, SHARE_RETRY_MS)
+            }
+        }
+    }
+
+    /** The widget/tile asked for a voice prompt before the page finished loading. */
+    private fun maybeStartPendingVoice() {
+        if (!pendingVoiceLaunch || !pageReady.get()) return
+        pendingVoiceLaunch = false
+        mainHandler.postDelayed({ if (!isFinishing && !isDestroyed) startNativeSpeech() }, 250)
+    }
+
+    // ---- settings transfer ---------------------------------------------------
+
+    private fun exportSettings() {
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US)
+            .format(java.util.Date())
+        runCatching { exportSettingsLauncher.launch("dsh-settings-$stamp.json") }
+            .onFailure {
+                Toast.makeText(this, R.string.shell_settings_export_failed, Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun importSettings() {
+        runCatching { importSettingsLauncher.launch(arrayOf("application/json", "text/plain")) }
+            .onFailure {
+                Toast.makeText(this, R.string.shell_settings_import_empty, Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun writeSettingsBundle(uri: Uri) {
+        lifecycleScope.launch {
+            val written = withContext(Dispatchers.IO) {
+                runCatching {
+                    val bundle = settingsBundleNow(
+                        appVersion = BuildConfig.VERSION_NAME,
+                        devices = shellDevices.load(),
+                        hosts = hostsStore.hosts.first(),
+                        settings = hostsStore.settingsOnce(),
+                        ntfy = NtfyConfig.raw(this@WebShellActivity),
+                        unifiedPush = UnifiedPushConfig.load(this@WebShellActivity),
+                    )
+                    val bytes = SettingsBundle.encode(bundle).toByteArray()
+                    contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                }.getOrNull() != null
+            }
+            if (isFinishing || isDestroyed) return@launch
+            Toast.makeText(
+                this@WebShellActivity,
+                if (written) R.string.shell_settings_export_done else R.string.shell_settings_export_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    private fun readSettingsBundle(uri: Uri) {
+        lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
+                }.getOrNull()
+            }
+            if (isFinishing || isDestroyed) return@launch
+            if (text.isNullOrBlank()) {
+                Toast.makeText(this@WebShellActivity, R.string.shell_settings_import_empty, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            when (val result = SettingsBundle.decode(text)) {
+                is BundleResult.Invalid -> Toast.makeText(
+                    this@WebShellActivity,
+                    getString(R.string.shell_settings_import_failed, result.reason.name),
+                    Toast.LENGTH_LONG,
+                ).show()
+                is BundleResult.Ok -> applySettingsBundle(result)
+            }
+        }
+    }
+
+    /**
+     * Write an imported snapshot over what this phone remembers.
+     *
+     * Devices and switches are replaced; harnesses are merged by id, because the host list is also
+     * what the native connection manager and the remembered-session map are keyed on. Nothing here
+     * touches credentials: the export cannot carry them and the import never invents them.
+     */
+    private fun applySettingsBundle(result: BundleResult.Ok) {
+        val bundle = result.bundle
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    if (bundle.devices.isNotEmpty()) shellDevices.replaceAll(bundle.devices)
+                    bundle.hosts.forEach { host -> runCatching { hostsStore.upsertHost(host) } }
+                    hostsStore.setSetting { bundle.settings }
+                    bundle.ntfy?.let { value -> runCatching { NtfyConfig.save(this@WebShellActivity, value) } }
+                }
+            }
+            if (isFinishing || isDestroyed) return@launch
+            val message = getString(
+                R.string.shell_settings_import_done,
+                bundle.devices.size,
+                bundle.hosts.size,
+            ) + if (result.dropped > 0) " · -${result.dropped}" else ""
+            Toast.makeText(this@WebShellActivity, message, Toast.LENGTH_LONG).show()
+            // The page was loaded from the address list this import just rewrote.
+            if (bundle.devices.isNotEmpty()) reloadPage()
+        }
+    }
+
+    // ---- host-plugin version -------------------------------------------------
+
+    /**
+     * Ask the page which host-plugin build it is running.
+     *
+     * The app and the plugin are two halves installed separately, and half an update is the single
+     * most common way this product misbehaves. Reading the version the page advertises lets Settings
+     * and the doctor say "the host is older than this app" instead of leaving the user to guess.
+     */
+    private fun readPluginVersion() {
+        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+        webView.evaluateJavascript(
+            "String((window.__dshMobilePlugin&&window.__dshMobilePlugin.version)||'')",
+        ) { raw ->
+            val value = raw?.trim()?.trim('"')
+            pluginVersion = value?.takeIf { it.isNotBlank() && it != "null" }
+            recordPageEvent("plugin " + (pluginVersion ?: "missing"))
+        }
+    }
+
     private fun openExternalUri(uri: Uri) {
         val scheme = uri.scheme?.lowercase()
         if (scheme.isNullOrBlank() || scheme == "javascript" || scheme == "data" || scheme == "file") return
@@ -2998,6 +3363,19 @@ class WebShellActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // A share that arrives while the app is already open still has to reach the composer, and a
+        // widget/tile voice tap has to start the recognizer even when the page was never reloaded.
+        sharedTextFromIntent(intent)?.let { text ->
+            pendingSharedText = text
+            shareAttempts = 0
+            deliverPendingShare()
+        }
+        if (intent.action == AppLaunchAction.ACTION_VOICE) {
+            pendingVoiceLaunch = true
+            maybeStartPendingVoice()
+        }
+        // A link that belongs to another app has already been dispatched; stay where we are.
+        if (!routeViewIntent(intent)) return
         sessionIdFromIntent(intent)?.let {
             pendingSessionId = it
             openPendingSession()
@@ -3033,6 +3411,12 @@ class WebShellActivity : AppCompatActivity() {
     override fun onDestroy() {
         speechRecognizer?.destroy()
         speechRecognizer = null
+        connectivityCallback?.let { callback ->
+            runCatching {
+                getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(callback)
+            }
+        }
+        connectivityCallback = null
         mainHandler.removeCallbacksAndMessages(null)
         if (isFinishing && ::webView.isInitialized) {
             root.removeView(webView)
@@ -3085,6 +3469,14 @@ class WebShellActivity : AppCompatActivity() {
     private companion object {
         const val TAG = "DshWebShell"
         const val SPLASH_TIMEOUT_MS = 8_000L
+
+        /**
+         * How many times a shared text is offered to the page's composer before it goes to the
+         * clipboard instead. The plugin's hook appears a moment after the document commits, so the
+         * first attempt usually misses.
+         */
+        const val SHARE_ATTEMPTS = 5
+        const val SHARE_RETRY_MS = 600L
 
         /**
          * How long the intercepted document request may wait for the parallel preload.

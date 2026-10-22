@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.0.5-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.0-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -31,8 +31,24 @@
 | **文件能管** | 上传、重命名、新建、下载、打包、递归删除、文本/图片预览 |
 | **出问题能说清** | 连接体检、通知自检、离线快照、页面事件时间线 |
 | **升级不靠人记** | 自托管 `latest.json`，版本号严格递增，覆盖安装即可 |
+| **2.5 MB 的安装包** | 1.1.0 删掉了 9.4 MB 用不到的原生 OCR，下载和升级都快了 5 倍 |
+| **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.0 更新了什么
+
+| 变化 | 说明 |
+| --- | --- |
+| **安装包 12.34 MB → 2.47 MB** | `ui/` 里 25 k 行 Compose 没有任何入口能到达，R8 早就把它从 dex 里删了；但只有它在用的 ML Kit 中文 OCR 删不掉，9.39 MB 原生库占了下载量的 76%。整个目录已删除，Compose 与 ML Kit 依赖一并移除。旧界面留在 git 历史 `v1.0.5`。 |
+| **注入脚本里再没有周期性定时器** | 两个 `setInterval`（3 秒结构探测、1.5 秒文件行装饰）改成 MutationObserver。这是「底部模型和速度自己刷新」最后一个可能的来源。 |
+| **重连看得懂网络** | 新增 `NetworkCallback`：Wi-Fi/移动网络切换时立刻重连，并给页面发一次 `online` 事件，不再干等 30 秒退避。每次变化都写进诊断时间线，下次再「自己刷新」能说出是谁干的。 |
+| **新入口** | 任意 app 分享文字/链接进来（插进输入框，失败落到剪贴板）；`dshmobile://` 链接可从外部打开；网页链接处理是**默认关闭**的开关，开了才会出现在系统「打开方式」里，且只接管你已保存的地址，其余交给浏览器。 |
+| **设置能带走** | 导出设置写成一个可读 JSON（设备、主机、开关），导入会逐条校验并告诉你丢了什么。**永远不含凭据**；`allowBackup` 也已关闭。 |
+| **通知能直接回复** | 完成/提问通知带回复框，文字按 queue 模式发到该会话。审批通知仍然只有同意/拒绝。 |
+| **两半会互相校对** | shell 读主机插件版本并与 app 内期望值比较，设置页和连接体检直接指出是哪一半旧了。 |
 
 ---
 
@@ -154,7 +170,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.0.5-personal.6.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.0-personal.7.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -181,8 +197,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.0.5**（`versionCode 50005`） | `DeepSeek-Harness-1.0.5-personal.6.apk` | `A55B626A9EC540B54D53671D4D00E060B6D681190FB8E49C7E46BF407988B968` |
-| 主机插件 | **0.1.11** | `dsh-android-deepseek-harness-app-plugin-0.1.11.tgz` | 见 Release 页面 |
+| App | **1.1.0**（`versionCode 50100`） | `DeepSeek-Harness-1.1.0-personal.7.apk` | `A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84` |
+| 主机插件 | **0.1.12** | `dsh-android-deepseek-harness-app-plugin-0.1.12.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -194,7 +210,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.0.5 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.0 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
@@ -246,6 +262,8 @@ node setup/dsh-mobile-setup.mjs install --dry-run --json
 - 公网访问必须自己加保护：中继密码、DSH 登录、或 Cloudflare Access。
 - 文件操作限定在安装器配置的根目录内，并写本地审计日志。
 - 没有项目服务器，因此也没有「项目被拖库」这条风险路径。
+- **不进云备份**：1.1.0 起 `allowBackup="false"`，中继令牌、主机列表、会话快照不再进入安卓自动备份；换机走设置里的显式导出，**导出文件不含任何凭据**。
+- **网页链接处理默认关闭**：开成 opt-in 后也只接管与你已保存设备同源的链接，其余交给浏览器。
 
 细节见 [SECURITY.md](SECURITY.md)。
 

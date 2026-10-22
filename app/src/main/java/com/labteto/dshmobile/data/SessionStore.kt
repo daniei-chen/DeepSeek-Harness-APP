@@ -350,8 +350,6 @@ class SessionStore @Inject constructor(
         available = { pluginManagementAvailable.value != false })
     val connectionState = connectionManager.state
     val activeHostKey: String? get() = connectionManager.state.value.host?.let { "${it.baseUrl}|${it.id}" }
-    internal val panels = com.labteto.dshmobile.ui.screens.main.PanelRepository()
-    internal val composers = com.labteto.dshmobile.ui.screens.main.ComposerRepository(context.getSharedPreferences("composer-drafts", android.content.Context.MODE_PRIVATE))
     fun apiForHost(key: String?): DshApiClient? = if (key != null && key == activeHostKey) connectionManager.connectedApi else null
     fun muxForHost(key: String?) = if (key != null && key == activeHostKey) connectionManager.generation?.mux else null
     fun retryConnection() = connectionManager.reconnectIfNeeded()

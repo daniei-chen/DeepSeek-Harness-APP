@@ -145,6 +145,9 @@ class NotificationObserver @Inject constructor(
         // Suppress only the completion the user can already see happening.
         if (appInForeground && store.isSessionOpen(event.sessionId)) return
 
+        // Everything that is not an approval can be answered from the shade: the turn is over, so
+        // the useful action is "queue this for the session", not "open the app and retype it". An
+        // approval is a decision between two buttons and deliberately keeps only those.
         val spec = when (event) {
             is CompletionEvent.TurnComplete -> {
                 if (!settings.notifyTurnComplete) return
@@ -152,6 +155,7 @@ class NotificationObserver @Inject constructor(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
                     title = context.getString(R.string.notif_turn_complete),
                     text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
+                    reply = true,
                 )
             }
             is CompletionEvent.GoalComplete -> {
@@ -160,6 +164,7 @@ class NotificationObserver @Inject constructor(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
                     title = context.getString(R.string.notif_goal_complete),
                     text = event.objective.orEmpty().ifBlank { context.getString(R.string.notif_session_fallback) },
+                    reply = true,
                 )
             }
             is CompletionEvent.GoalBlocked -> {
@@ -168,6 +173,7 @@ class NotificationObserver @Inject constructor(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
                     title = context.getString(R.string.notif_goal_blocked),
                     text = event.reason.orEmpty().ifBlank { context.getString(R.string.notif_session_fallback) },
+                    reply = true,
                 )
             }
             is CompletionEvent.ReviewRequested -> {
@@ -190,6 +196,7 @@ class NotificationObserver @Inject constructor(
                     title = context.getString(R.string.notif_question),
                     text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
                     actionLabel = context.getString(R.string.notif_open),
+                    reply = true,
                 )
             }
             is CompletionEvent.SessionIdle -> {
@@ -198,6 +205,7 @@ class NotificationObserver @Inject constructor(
                     channel = DshNotifications.CHANNEL_COMPLETIONS,
                     title = context.getString(R.string.notif_session_idle),
                     text = sessionTitle(event.sessionId) ?: context.getString(R.string.notif_session_fallback),
+                    reply = true,
                 )
             }
         }
@@ -213,6 +221,7 @@ class NotificationObserver @Inject constructor(
             sessionId = event.sessionId,
             actionLabel = spec.actionLabel,
             approvalId = spec.approvalId,
+            replyEnabled = spec.reply,
         )
     }
 
@@ -222,6 +231,8 @@ class NotificationObserver @Inject constructor(
         val text: String,
         val actionLabel: String? = null,
         val approvalId: String? = null,
+        /** Hang a direct-reply field on this notification (never set together with [approvalId]). */
+        val reply: Boolean = false,
     )
 
     private fun sessionTitle(sessionId: String): String? =

@@ -11,7 +11,6 @@ import com.labteto.dshmobile.core.wire.LoopConfig
 import com.labteto.dshmobile.core.wire.GenerationFailure
 import com.labteto.dshmobile.core.wire.HandshakeStep
 import com.labteto.dshmobile.core.wire.LoopSinks
-import com.labteto.dshmobile.ui.screens.connect.ConnectFailure
 import com.labteto.dshmobile.core.wire.HostGeneration
 import com.labteto.dshmobile.core.wire.RemoteStreamMux
 import com.labteto.dshmobile.core.wire.dto.RemoteEventFrame

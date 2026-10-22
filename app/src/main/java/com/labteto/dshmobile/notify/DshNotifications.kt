@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.webshell.WebShellActivity
@@ -53,6 +54,12 @@ class DshNotifications @Inject constructor(
      * Post a completion/action notification that deep-links to a session.
      * [canPost] gates the POST_NOTIFICATIONS runtime permission (API 33+);
      * the lint suppression covers that checked gate.
+     *
+     * [replyEnabled] hangs a free-form RemoteInput reply action on the notification, so a turn that
+     * has already ended can be answered from the shade ("queue this" rather than "open the app and
+     * retype it"). [ReplyReceiver] does the sending. Approval notifications never get it: they are
+     * waiting on a decision between two buttons, not on prose, and a text field there would invite
+     * an answer the harness cannot accept.
      */
     @android.annotation.SuppressLint("MissingPermission")
     fun postSession(
@@ -63,6 +70,7 @@ class DshNotifications @Inject constructor(
         sessionId: String?,
         actionLabel: String? = null,
         approvalId: String? = null,
+        replyEnabled: Boolean = false,
     ) {
         if (!canPost()) return
         val open = Intent(context, WebShellActivity::class.java).apply {
@@ -108,10 +116,53 @@ class DshNotifications @Inject constructor(
                     requestCode = id * 10 + 2,
                 ),
             )
-        } else if (actionLabel != null) {
-            builder.addAction(0, actionLabel, pending)
+        } else {
+            // Reply first so it is the primary action; "open" stays available beside it.
+            if (replyEnabled && sessionId != null) {
+                builder.addAction(replyAction(sessionId = sessionId, notificationId = id))
+            }
+            if (actionLabel != null) {
+                builder.addAction(0, actionLabel, pending)
+            }
         }
         NotificationManagerCompat.from(context).notify(id, builder.build())
+    }
+
+    /**
+     * The free-form reply action: one RemoteInput, one explicit broadcast.
+     *
+     * The PendingIntent has to be **mutable** on Android 12+: the system writes the typed text into
+     * the broadcast as extras, and an immutable PendingIntent cannot receive them (the reply is
+     * silently dropped). It is explicit — an app-internal component — so nothing else can hijack
+     * it, and the mutable flag simply does not exist before API 31, where PendingIntents are
+     * mutable by default.
+     */
+    private fun replyAction(
+        sessionId: String,
+        notificationId: Int,
+    ): NotificationCompat.Action {
+        val remoteInput = RemoteInput.Builder(ReplyReceiver.RESULT_KEY)
+            .setLabel(context.getString(R.string.notif_reply_hint))
+            .build()
+        val intent = Intent(context, ReplyReceiver::class.java).apply {
+            action = ReplyReceiver.ACTION_REPLY
+            putExtra(EXTRA_SESSION_ID, sessionId)
+            putExtra(ReplyReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val mutableFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+        val replyPending = PendingIntent.getBroadcast(
+            context,
+            notificationId * 10 + REPLY_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or mutableFlag,
+        )
+        return NotificationCompat.Action.Builder(
+            R.drawable.ic_notification_whale,
+            context.getString(R.string.notif_reply_label),
+            replyPending,
+        )
+            .addRemoteInput(remoteInput)
+            .build()
     }
 
     private fun actionIntent(
@@ -141,6 +192,15 @@ class DshNotifications @Inject constructor(
         const val CHANNEL_CONNECTION = "connection"
         const val CHANNEL_CONNECTION_LIVE = "connection_live"
         const val EXTRA_SESSION_ID = "dsh_session_id"
+
+        /**
+         * Request-code slot on one notification id: 1 approve, 2 reject, 3 reply.
+         *
+         * Approve and reject are minted as `id * 10 + 1` / `+ 2`; the reply field takes the next
+         * slot on the same grid rather than its own numbering, so no two PendingIntents the app
+         * derives from one notification id can ever collide.
+         */
+        private const val REPLY_REQUEST_CODE = 3
     }
 }
 

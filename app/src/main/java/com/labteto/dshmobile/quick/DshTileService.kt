@@ -9,7 +9,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.labteto.dshmobile.webshell.WebShellActivity
 import com.labteto.dshmobile.R
-import com.labteto.dshmobile.ui.AppLaunchAction
+import com.labteto.dshmobile.webshell.AppLaunchAction
 
 /**
  * Fork: a Quick Settings tile that opens the app on the voice prompt.
