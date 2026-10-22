@@ -17,9 +17,22 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-22):
 
-- APK **1.0.5**, `versionCode` **50005**, `DeepSeek-Harness-1.0.5-personal.6.apk`
-- Host plugin **0.1.11**, `dsh-android-deepseek-harness-app-plugin-0.1.11.tgz`
+- APK **1.1.0**, `versionCode` **50100**, `DeepSeek-Harness-1.1.0-personal.7.apk`
+- Host plugin **0.1.12**, `dsh-android-deepseek-harness-app-plugin-0.1.12.tgz`
 - DSH tested against `0.2.1`
+
+## What 1.1.0 changed
+
+The native Compose tree is **gone**. `app/src/main/java/com/labteto/dshmobile/ui/` held ~25 k lines
+that no entry point reached — the manifest declares exactly one activity, `WebShellActivity`, which
+is an `AppCompatActivity` around a `WebView`. R8 had already stripped it from the dex, but the ML Kit
+Chinese OCR it (alone) pulled in shipped as 9.4 MB of native library: 76 % of the APK. Deleting the
+tree took the download from 12.3 MB to ~3 MB and removed the Compose compiler, the Compose BOM,
+navigation-compose, hilt-navigation-compose and ML Kit from the build. If you need the old UI it
+lives in git history at tag `v1.0.5`.
+
+Everything that used to live in that package and was still reachable moved: `ConnectFailure` to
+`connection/`, `AppLaunchAction` to `webshell/`. Do not recreate a `ui/` package.
 
 ## Hard rules
 
@@ -36,8 +49,11 @@ Current release (2026-10-22):
    address. Never commit a real host, token, cookie or relay fingerprint.
 6. **File operations are deliberately destructive and unconfirmed.** The user rejected a read-only
    mode and a second delete confirmation; do not reintroduce either.
-7. **The visible product is `WebShellActivity`**, not the native Compose `AppRoot`. UI changes that
-   must reach users go through the WebView shell and `combined-plugin/lib/client.js`.
+7. **The visible product is `WebShellActivity`**, and since 1.1.0 it is the *only* UI. UI changes
+   that must reach users go through the WebView shell and `combined-plugin/lib/client.js`. The app
+   and the plugin are two halves installed separately: after touching `combined-plugin/`, both the
+   `.tgz` and the APK have to be rebuilt and the new host plugin version reflected in
+   `BuildConfig.PLUGIN_VERSION` (the shell compares them and says which side is behind).
 
 ## Build and test
 
@@ -49,7 +65,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.0.5 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.0 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

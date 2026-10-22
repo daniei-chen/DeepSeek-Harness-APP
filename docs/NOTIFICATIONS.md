@@ -22,6 +22,17 @@ pending Remote Event waterfall directly, so the user does not have to open the a
 case. The action works while the app process still owns the live connection; if Android killed the
 process, the tap opens the app instead of claiming a success it cannot prove.
 
+Completion, goal and question notifications additionally carry a **reply field** (`RemoteInput`).
+Text typed there is sent with `mode = "queue"` to the session the notification names, because a reply
+written in the shade always follows the turn it answers — "send this next" is the only honest intent.
+Approvals deliberately get no reply field: they are waiting on a decision between two buttons, and a
+text box would invite an answer the harness cannot accept. Same boundary as approve/reject otherwise:
+with the process gone there is no live API client to send through, so `ReplyReceiver` reports failure
+rather than a reply that never left the phone.
+
+The reply `PendingIntent` is explicit and **mutable** on Android 12+; the system writes the typed text
+into the broadcast as extras, and an immutable one silently drops it.
+
 Android requires:
 
 - `POST_NOTIFICATIONS` runtime permission (Android 13+);

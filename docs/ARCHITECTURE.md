@@ -1,18 +1,23 @@
 # Architecture
 
 ```text
-Android app
-├─ Compose settings/onboarding (future product surface)
+Android app  (one activity, one WebView — the native Compose tree was removed in 1.1.0)
 ├─ WebView shell (chat = real DSH web UI)
-│  └─ injected client bundle (drawer, stats, file menu, insets)
-├─ connection profiles
-├─ foreground notification service (future)
-└─ host bridge (future: events, pairing, push)
+│  └─ injected client bundle (drawer, stats, file menu, insets, share insertion)
+├─ connection profiles + native event connection (notifications, approvals, replies)
+├─ foreground notification service (ntfy / UnifiedPush bridges)
+├─ connection doctor + page-event timeline (diagnostics)
+└─ settings transfer (JSON in/out, no credentials)
 
 DSH host
 ├─ dsh-file-ops bundle (required for file panel actions)
+├─ dsh-mobile routes (/dsh-mobile/info, /dsh-mobile/audit, /dsh-mobile/relay/pair)
 └─ optional notification publisher (ntfy/UnifiedPush)
 ```
+
+The app and the host plugin are updated separately, so the shell compares the plugin version the
+page advertises (`window.__dshMobilePlugin.version`) with `BuildConfig.PLUGIN_VERSION` and reports
+which half is stale.
 
 ## Principles
 

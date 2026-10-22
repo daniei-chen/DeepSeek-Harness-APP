@@ -31,8 +31,8 @@ node setup/dsh-mobile-setup.mjs status --json
 # 3) restart DSH (required: the plugin only loads at process start)
 
 # 4) install the APK on the phone
-curl -L -O https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.5/DeepSeek-Harness-1.0.5-personal.6.apk
-adb install -r DeepSeek-Harness-1.0.5-personal.6.apk
+curl -L -O https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.0/DeepSeek-Harness-1.1.0-personal.7.apk
+adb install -r DeepSeek-Harness-1.1.0-personal.7.apk
 ```
 
 Then open the app → `设置 → 连接 → 添加设备` → enter the DSH address (or scan the relay QR).
@@ -43,13 +43,13 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 
 | Item | Value |
 | --- | --- |
-| App release | **v1.0.5** |
-| APK file | `DeepSeek-Harness-1.0.5-personal.6.apk` |
-| APK `versionCode` | **50005** — must be **greater** than the installed one |
-| APK SHA-256 | `A55B626A9EC540B54D53671D4D00E060B6D681190FB8E49C7E46BF407988B968` |
-| Host plugin | **0.1.11** |
-| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.11.tgz` |
-| Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
+| App release | **v1.1.0** |
+| APK file | `DeepSeek-Harness-1.1.0-personal.7.apk` |
+| APK `versionCode` | **50100** — must be **greater** than the installed one |
+| APK SHA-256 | `A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84` |
+| Host plugin | **0.1.12** |
+| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.12.tgz` |
+| Plugin SHA-256 | `ABB4A1CE694C4B29B5B8D2BF336B4EA5A0CF622D78AC284ED8F78C2928323ABA` |
 | Responsive base (vendor) | `vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` |
 | DSH tested against | `0.2.1` (desktop profile; `0.2.1-rc.2` also works) |
 | Android | 8.0+ (`minSdk 26`) |
@@ -57,17 +57,24 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 
 Direct downloads:
 
-- APK: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.5/DeepSeek-Harness-1.0.5-personal.6.apk>
-- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.11/dsh-android-deepseek-harness-app-plugin-0.1.11.tgz>
+- APK: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.0/DeepSeek-Harness-1.1.0-personal.7.apk>
+- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.12/dsh-android-deepseek-harness-app-plugin-0.1.12.tgz>
 
 Checksums:
 
 ```bash
-sha256sum DeepSeek-Harness-1.0.5-personal.6.apk
-# A55B626A9EC540B54D53671D4D00E060B6D681190FB8E49C7E46BF407988B968
-sha256sum dsh-android-deepseek-harness-app-plugin-0.1.11.tgz
-# 3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5
+sha256sum DeepSeek-Harness-1.1.0-personal.7.apk
+# A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84
+sha256sum dsh-android-deepseek-harness-app-plugin-0.1.12.tgz
+# ABB4A1CE694C4B29B5B8D2BF336B4EA5A0CF622D78AC284ED8F78C2928323ABA
 ```
+
+**1.1.0 self-check.** The app and the plugin are updated separately, so the shell reads the plugin
+version out of the page (`window.__dshMobilePlugin.version`) and compares it with the build it shipped
+against. After installing, the top of 设置 should read `主机插件 0.1.12 · 与本应用同步`. If it says
+`低于 …` or `主机没有在提供手机插件`, the host half is not active: re-run step 2 and **restart DSH**.
+Two features need plugin 0.1.12 or newer — sharing text into the composer, and the notification reply
+field. With an older plugin the share falls back to the clipboard and the reply field is absent.
 
 ---
 
@@ -97,7 +104,7 @@ node setup/dsh-mobile-setup.mjs install \
 
 ```bash
 curl -L -o /tmp/dsh-app-plugin.tgz \
-  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.11/dsh-android-deepseek-harness-app-plugin-0.1.11.tgz
+  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.12/dsh-android-deepseek-harness-app-plugin-0.1.12.tgz
 node setup/dsh-mobile-setup.mjs install --profile desktop \
   --app-plugin /tmp/dsh-app-plugin.tgz --file-root "$HOME" --relay-port 3443 --yes
 ```
@@ -196,15 +203,15 @@ node setup/dsh-mobile-setup.mjs pair --json
 ### 3.1 Install the APK
 
 ```bash
-curl -L -O https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.5/DeepSeek-Harness-1.0.5-personal.6.apk
+curl -L -O https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.0/DeepSeek-Harness-1.1.0-personal.7.apk
 ```
 
 With a device connected over ADB:
 
 ```bash
-adb install -r DeepSeek-Harness-1.0.5-personal.6.apk
+adb install -r DeepSeek-Harness-1.1.0-personal.7.apk
 adb shell dumpsys package com.labteto.dshmobile.kaogong | grep -E "versionCode|versionName"
-# versionCode=50005 versionName=1.0.5
+# versionCode=50100 versionName=1.1.0
 ```
 
 Without ADB: open the APK download link on the phone and install it. Allow "install unknown apps"
@@ -236,7 +243,7 @@ The app has **no built-in URL** — this is deliberate.
 
 ### 3.3 The in-app pairing QR (`设置 → 远控`)
 
-Available **after** the phone is connected once, and only with host plugin **0.1.11+**. It shows a
+Available **after** the phone is connected once, and only with host plugin **0.1.12+**. It shows a
 fresh relay invitation drawn on the phone (code, expiry, copy link/code, paired devices) so a
 second device can be paired without opening the desktop page.
 
@@ -248,7 +255,7 @@ If it says "主机上的 APP 插件还是旧版", the host is still running an o
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `INSTALL_FAILED_VERSION_DOWNGRADE` / `安装失败(-25) 无法降级安装` | the APK's `versionCode` is lower than the installed app | use the official asset (1.0.5 = **50005**); never pass a lower `DSH_VERSION_CODE` when building |
+| `INSTALL_FAILED_VERSION_DOWNGRADE` / `安装失败(-25) 无法降级安装` | the APK's `versionCode` is lower than the installed app | use the official asset (1.1.0 = **50100**); never pass a lower `DSH_VERSION_CODE` when building |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | different signing key | uninstall the old app once, then install |
 | App opens Settings, cannot connect | DSH binds `127.0.0.1` (desktop default) | use the relay (3.2) or bind DSH to the LAN address |
 | `ERR_CONNECTION_REFUSED` on `https://127.0.0.1:3443/...` from the phone | `127.0.0.1` is the phone itself | use `https://<host-lan-ip>:3443/...` |
@@ -257,7 +264,7 @@ If it says "主机上的 APP 插件还是旧版", the host is still running an o
 | Relay asks for a password on first open | no password is set yet | open `https://127.0.0.1:3443/relay/password` on the host and set one |
 | `Failed to load plugins` / `dsh-relay: pending (waiting for service: settingsScope)` | relay's browser card is incompatible with DSH 0.2.1 | the setup installer disables it (`disableRelayClientCard`); re-run `install` once, then restart |
 | `远控` says the host plugin is old | DSH still runs the previous plugin | restart DSH; confirm `status --json` shows `app: true` |
-| Update check says "up to date" but a release exists | older client read GitHub's `/releases/latest` (ordered by creation time; plugin releases are now pre-releases) | update to **1.0.5+**, which reads the release list and keeps only app-version tags |
+| Update check says "up to date" but a release exists | older client read GitHub's `/releases/latest` (ordered by creation time; plugin releases are now pre-releases) | update to **1.1.0+**, which reads the release list and keeps only app-version tags |
 | Page renders in a strip / drawer offset | `dsh-bloom-theme` + a stale WebView viewport | 0.9.35+ repairs automatically; `设置 → 诊断 → 修复界面排版`; or disable Bloom on the phone |
 | File panel is empty after opening | DSH's first `listDirectory` does not paint | the client refreshes once after 1.2 s; if still empty, reopen the panel |
 | Notifications never arrive after the phone sleeps | Android killed the app | enable `设置 → 后台`, allow autostart/battery exemption, and run self-hosted ntfy/UnifiedPush |
@@ -279,11 +286,11 @@ Uninstalling the host plugin does not affect the phone app; remove the device in
 
 1. Bump `combined-plugin/package.json` if the plugin changed; `npm pack --pack-destination dist`.
 2. Build the APK **without** `DSH_VERSION_CODE` so the computed, monotonically increasing code is
-   used (`1.0.5 → 936 + 31000 = 50005`):
+   used (`1.1.0 → 10100 + 40000 = 50100`):
    ```bash
-   DSH_VERSION_NAME=1.0.5 ./gradlew :app:assembleRelease
+   DSH_VERSION_NAME=1.1.0 ./gradlew :app:assembleRelease
    ```
-   (Windows: `$env:DSH_VERSION_NAME="1.0.5"; .\gradlew.bat :app:assembleRelease`)
+   (Windows: `$env:DSH_VERSION_NAME="1.1.0"; .\gradlew.bat :app:assembleRelease`)
 3. Verify: `aapt dump badging app-release.apk | head -1` — `versionCode` must be **greater** than the
    previous release.
 4. Publish plugin releases as **pre-releases** (`gh release create … --prerelease`) so they never
