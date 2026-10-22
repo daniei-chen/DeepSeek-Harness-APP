@@ -767,9 +767,9 @@
     <string name="device_exit">退出软件</string>
     <string name="device_current">当前设备</string>
     <string name="device_add_title">添加设备</string>
-    <string name="device_add_description">输入 DeepSeek Harness 的网址，添加后立即连接。</string>
-    <string name="device_add_hint">https://</string>
-    <string name="device_url_invalid">请输入以 http:// 或 https:// 开头的有效地址</string>
+    <string name="device_add_description">输入 DeepSeek Harness 的地址。协议可以省略：直接填 dsh.example.com，https 连不上时会自动再试 http。</string>
+    <string name="device_add_hint">dsh.example.com 或 192.168.1.5:3080</string>
+    <string name="device_url_invalid">请输入主机名或完整地址，例如 dsh.example.com、https://dsh.example.com、192.168.1.5:3080</string>
     <string name="device_rename_title">设备改名</string>
     <string name="device_rename_description">给这台设备起一个容易识别的名字。</string>
     <string name="device_name_hint">设备名称</string>

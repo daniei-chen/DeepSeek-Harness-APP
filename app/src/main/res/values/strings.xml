@@ -769,9 +769,9 @@
     <string name="device_exit">Exit app</string>
     <string name="device_current">Current device</string>
     <string name="device_add_title">Add device</string>
-    <string name="device_add_description">Enter the address of your DeepSeek Harness deployment; it connects as soon as it is added.</string>
-    <string name="device_add_hint">https://</string>
-    <string name="device_url_invalid">Enter a valid address starting with http:// or https://</string>
+    <string name="device_add_description">Enter the address of your DeepSeek Harness deployment. A scheme is optional: dsh.example.com works, and http is tried automatically when https fails.</string>
+    <string name="device_add_hint">dsh.example.com or 192.168.1.5:3080</string>
+    <string name="device_url_invalid">Enter a host or URL, e.g. dsh.example.com, https://dsh.example.com, 192.168.1.5:3080</string>
     <string name="device_rename_title">Rename device</string>
     <string name="device_rename_description">Give this device a name you will recognize.</string>
     <string name="device_name_hint">Device name</string>
