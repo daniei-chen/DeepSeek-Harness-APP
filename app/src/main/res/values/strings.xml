@@ -1070,6 +1070,13 @@
 
     <string name="shell_diagnostics_health">Page health (sampled %1$d s ago)</string>
     <string name="shell_diagnostics_self_reloads">Self-reloads (no shell action behind them): %1$d</string>
+
+    <!-- 1.1.2: the settings sheet is grouped, so each block needs a name. -->
+    <string name="shell_group_connection">Connection</string>
+    <string name="shell_group_phone">On this phone</string>
+    <string name="shell_group_alerts">Alerts &amp; background</string>
+    <string name="shell_group_data">Data &amp; links</string>
+    <string name="shell_group_support">Diagnostics &amp; support</string>
 </resources>
 
 

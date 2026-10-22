@@ -1,10 +1,10 @@
 {
-  "version": "1.1.1",
-  "versionCode": 50101,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.1/DeepSeek-Harness-1.1.1-personal.8.apk",
-  "sha256": "5B45B738CDF153A14C90A7CE117D9A8B3B43F9C6A3E8A03FA97386B5D3855536",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.1",
+  "version": "1.1.2",
+  "versionCode": 50102,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.2/DeepSeek-Harness-1.1.2-personal.9.apk",
+  "sha256": "0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.2",
   "minPluginVersion": "0.1.13",
-  "notes": "Stability: host plugin was pinned to 0.1.7 (2 s stats poll); no synthetic resize, theme repaint guard, prefetch fix, page-health instrumentation",
-  "generatedAt": "2026-10-22T12:15:00.986Z"
+  "notes": "Settings sheet is grouped and scrollable; refresh and check-update are prominent actions",
+  "generatedAt": "2026-10-22T13:16:00.327Z"
 }

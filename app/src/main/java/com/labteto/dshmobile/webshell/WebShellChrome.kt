@@ -20,6 +20,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.labteto.dshmobile.BuildConfig
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.DoctorReport
@@ -327,12 +329,6 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
 
         card.addView(divider(colors))
         card.addView(
-            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
-                dialog.dismiss()
-                onRefresh()
-            },
-        )
-        card.addView(
             menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
                 dialog.dismiss()
                 onExit()
@@ -385,17 +381,21 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_title)) { dialog.dismiss() })
         card.addView(aboutCard(colors, versionName, pluginVersion, onSource))
         card.addView(
-            settingsRow(
+            actionRow(
                 colors = colors,
-                iconRes = R.drawable.ic_shell_refresh,
-                title = activity.getString(R.string.shell_settings_check_update),
-                subtitle = activity.getString(R.string.shell_settings_update_hint),
-            ) {
-                dialog.dismiss()
-                onCheckUpdate()
-            },
+                left = R.drawable.ic_shell_refresh to activity.getString(R.string.webshell_action_refresh),
+                leftAction = {
+                    dialog.dismiss()
+                    onRefresh()
+                },
+                right = R.drawable.ic_shell_check to activity.getString(R.string.shell_settings_check_update),
+                rightAction = {
+                    dialog.dismiss()
+                    onCheckUpdate()
+                },
+            ),
         )
-        card.addView(divider(colors))
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_connection)))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -408,6 +408,22 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onConnection()
             },
         )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_notifications,
+                title = activity.getString(R.string.shell_inbox_title),
+                subtitle = if (inboxCount > 0) {
+                    activity.getString(R.string.shell_inbox_count, inboxCount)
+                } else {
+                    activity.getString(R.string.shell_inbox_hint)
+                },
+            ) {
+                dialog.dismiss()
+                onInbox()
+            },
+        )
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_phone)))
         if (!simpleMode) {
             card.addView(
                 settingsRow(
@@ -424,21 +440,6 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         card.addView(
             settingsRow(
                 colors = colors,
-                iconRes = R.drawable.ic_shell_notifications,
-                title = activity.getString(R.string.shell_inbox_title),
-                subtitle = if (inboxCount > 0) {
-                    activity.getString(R.string.shell_inbox_count, inboxCount)
-                } else {
-                    activity.getString(R.string.shell_inbox_hint)
-                },
-            ) {
-                dialog.dismiss()
-                onInbox()
-            },
-        )
-        card.addView(
-            settingsRow(
-                colors = colors,
                 iconRes = R.drawable.ic_shell_device,
                 title = activity.getString(R.string.shell_mobile_access),
                 subtitle = activity.getString(R.string.shell_mobile_access_hint),
@@ -447,17 +448,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onMobileSetup()
             },
         )
-        card.addView(
-            settingsRow(
-                colors = colors,
-                iconRes = R.drawable.ic_shell_settings,
-                title = activity.getString(R.string.shell_diagnostics),
-                subtitle = activity.getString(R.string.shell_diagnostics_hint),
-            ) {
-                dialog.dismiss()
-                onDiagnostics()
-            },
-        )
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_alerts)))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -488,6 +479,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onBackground()
             },
         )
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_data)))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -528,13 +520,19 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onImport()
             },
         )
-        card.addView(divider(colors))
+        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_support)))
         card.addView(
-            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_settings,
+                title = activity.getString(R.string.shell_diagnostics),
+                subtitle = activity.getString(R.string.shell_diagnostics_hint),
+            ) {
                 dialog.dismiss()
-                onRefresh()
+                onDiagnostics()
             },
         )
+        card.addView(divider(colors))
         card.addView(
             menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
                 dialog.dismiss()
@@ -1824,12 +1822,6 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
 
         card.addView(divider(colors))
         card.addView(
-            menuRow(colors, R.drawable.ic_shell_refresh, activity.getString(R.string.webshell_action_refresh)) {
-                dialog.dismiss()
-                onRefresh()
-            },
-        )
-        card.addView(
             menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {
                 dialog.dismiss()
                 onExit()
@@ -2219,11 +2211,36 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
 
     // ---- shared building blocks --------------------------------------------
 
+    /**
+     * Present a page, scrollable and clear of the system bars.
+     *
+     * The window used to be sized to WRAP_CONTENT, which is fine for a confirmation and wrong for
+     * every real page: the settings sheet is a single column of thirteen rows, so anything past the
+     * screen edge was simply clipped — the last row could not be reached at all. The cap plus an
+     * inner ScrollView means a page that fits still looks centred, and one that does not scrolls
+     * instead of losing its tail.
+     */
     private fun show(dialog: Dialog, content: View, gravity: Int) {
-        dialog.setContentView(content)
+        val metrics = activity.resources.displayMetrics
+        val bottomInset = runCatching {
+            val insets = ViewCompat.getRootWindowInsets(activity.window?.decorView ?: return@runCatching 0)
+            insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+        }.getOrDefault(0)
+        val maxHeight = (metrics.heightPixels * 0.88f).toInt() - bottomInset
+        val scrollable = if (content is ScrollView) {
+            content
+        } else {
+            ScrollView(activity).apply {
+                isFillViewport = true
+                clipToPadding = false
+                setPadding(0, 0, 0, bottomInset)
+                addView(content, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+        }
+        dialog.setContentView(scrollable)
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, maxHeight)
             setGravity(gravity)
             setDimAmount(0.35f)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
@@ -2415,6 +2432,60 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         )
         return row
     }
+
+    /**
+     * Two prominent actions side by side, under the masthead.
+     *
+     * These used to be ordinary list rows — refresh at the very bottom of the page, check-update at
+     * the top — which made both feel like footnotes and left refresh unreachable once the sheet
+     * overflowed. They are pills now: same weight, comfortable 46 dp targets, both in the first
+     * screenful.
+     */
+    private fun actionRow(
+        colors: Colors,
+        left: Pair<Int, String>,
+        leftAction: () -> Unit,
+        right: Pair<Int, String>,
+        rightAction: () -> Unit,
+    ): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        setPadding(dp(12), dp(10), dp(12), dp(6))
+        addView(
+            actionPill(colors, left.first, left.second, leftAction),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(5) },
+        )
+        addView(
+            actionPill(colors, right.first, right.second, rightAction),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(5) },
+        )
+    }
+
+    private fun actionPill(colors: Colors, iconRes: Int, label: String, action: () -> Unit): LinearLayout =
+        LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            minimumHeight = dp(46)
+            background = fieldBackground(colors)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { action() }
+            addView(
+                ImageView(activity).apply {
+                    setImageResource(iconRes)
+                    setColorFilter(if (colors.card == Color.WHITE) Color.parseColor("#3964FE") else Color.parseColor("#7A9BFF"))
+                    layoutParams = LinearLayout.LayoutParams(dp(17), dp(17))
+                },
+            )
+            addView(
+                TextView(activity).apply {
+                    text = label
+                    textSize = 13.5f
+                    maxLines = 1
+                    setTextColor(colors.primary)
+                    setPadding(dp(7), 0, 0, 0)
+                },
+            )
+        }
 
     private fun sectionLabel(colors: Colors, label: String): TextView = TextView(activity).apply {
         text = label

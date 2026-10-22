@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.1-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.2-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.2：设置页重做
+
+| 问题 | 修法 |
+| --- | --- |
+| 最后一行被屏幕切掉 | 弹层原来按内容高度铺满，超出屏幕的部分直接丢失——「刷新页面」就是这么没的。现在整页包在 ScrollView 里，高度封顶 88%，并留出导航栏安全区；**所有弹层**都受益。 |
+| 「刷新」又小又难找 | 刷新和检查更新从"列表里的一行"变成顶部两个并排的胶囊按钮（46dp 触控，蓝色图标），第一屏就能点到。 |
+| 一列 13 行没有层次 | 按功能分五组：连接 / 这台手机 / 通知与后台 / 数据与链接 / 诊断与支持，每组一个浅灰标题；退出设备仍在最底下、红色。 |
 
 ---
 
@@ -187,7 +197,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.1-personal.8.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.2-personal.9.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -214,7 +224,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.1**（`versionCode 50101`） | `DeepSeek-Harness-1.1.1-personal.8.apk` | `5B45B738CDF153A14C90A7CE117D9A8B3B43F9C6A3E8A03FA97386B5D3855536` |
+| App | **1.1.2**（`versionCode 50102`） | `DeepSeek-Harness-1.1.2-personal.9.apk` | `0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030` |
 | 主机插件 | **0.1.13** | `dsh-android-deepseek-harness-app-plugin-0.1.13.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
@@ -227,7 +237,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.1 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.2 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
