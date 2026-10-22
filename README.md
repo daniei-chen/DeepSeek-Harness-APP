@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.0-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.1-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,23 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.1：把「乱刷新」查到底
+
+这版是稳定性专项。先说结论：**最可能的真凶不在 app 里，而在你电脑上装的那个插件包**。
+
+| 发现 | 说明 |
+| --- | --- |
+| **主机插件被钉在 0.1.7** | DSH 桌面 profile 的 `package.json` 里，`@dsh-android/deepseek-harness-app-plugin` 指向 `dist/…-0.1.7.tgz`。那个包里的 `client.js` 第 258 行就是 `window.setInterval(compactStats, 2000)` —— **每 2 秒重写一次模型和速度读数**。所以就算 app 侧把定时器删了，只要依赖还钉在老包上，症状就会原样回来。 |
+| **仓库里还留着两个会复现它的老包** | `mobile-web-plugin/`（`setInterval` 3000 / 2000 / 1500 三个都在）和 `host-plugin/`，而文档还在教人装它们。1.1.1 把两个目录删掉、文档改成只有一个 `combined-plugin/`。 |
+| **shell 自己也会让页面重排** | `viewportSync()` 原来在"有变化"时 dispatch 一个**合成 `resize`**。而 DSH 在 resize 时会**重挂 composer 并重读模型列表** —— 这就是"它自己刷新了"。现在不再发合成事件（真被系统 resize 时平台本来就会发），改用布局视口 `innerHeight` 而不是 `visualViewport.height`，并且只在布局高度真变了才写。 |
+| **一次白闪的根因** | `applyPageTheme()` 没有差异判断：页面每次因主题相关渲染重设 `data-ds-dark-theme`，bridge 回调都会重刷整块 WebView 背景 + 4 个子视图 + 两条系统栏。暗色下就是一次白闪。现在加了提前返回，只有重建 WebView 才强制重刷。 |
+| **每次加载多抓一份 HTML** | 预取拦截里比较的是 `…?dsh_android=1` 和裸地址，永远不相等 → 预取从未命中，每次加载都抓两遍文档。已改成去 query 比较。 |
+| **打开会话被导航两次** | `onPageCommitVisible` 和 `onPageFinished` 都调 `openPendingSession()`，第一次的回调还没回来第二次就发了。加了 in-flight 守卫。 |
+| **UI 线程读盘** | 5 处 `runBlocking { hostsStore.settings.first() }` 在打开设置/通知页时阻塞主线程，换成 onCreate 里已经在收集的缓存镜像。 |
+| **给"谁刷新的"装上了仪表** | 诊断页新增**页面健康**：`sync/layoutWrite/composerRemount/api` 计数（2 分钟窗口），以及**自行重载次数** —— 页面事件里凡是没有任何 shell 动作能解释的主框架加载，会被标成 `SELF` 并单独计数。下次再"自己刷新"，打开 设置 → 诊断 → 复制，一行字就能定位是谁。 |
 
 ---
 
@@ -170,7 +187,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.0-personal.7.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.1-personal.8.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -197,8 +214,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.0**（`versionCode 50100`） | `DeepSeek-Harness-1.1.0-personal.7.apk` | `A63C1E55BA2985A3DBDDB0228A0D1E2938A639270F514DB34448DF0B34AF8C84` |
-| 主机插件 | **0.1.12** | `dsh-android-deepseek-harness-app-plugin-0.1.12.tgz` | 见 Release 页面 |
+| App | **1.1.1**（`versionCode 50101`） | `DeepSeek-Harness-1.1.1-personal.8.apk` | `5B45B738CDF153A14C90A7CE117D9A8B3B43F9C6A3E8A03FA97386B5D3855536` |
+| 主机插件 | **0.1.13** | `dsh-android-deepseek-harness-app-plugin-0.1.13.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -210,7 +227,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.0 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.1 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

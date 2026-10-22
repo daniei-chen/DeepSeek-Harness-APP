@@ -17,7 +17,7 @@ Include:
 
 - app version and Android/WebView version;
 - connection route (LAN / own HTTPS / tunnel);
-- whether the host plugins from `host-plugin/` and `mobile-web-plugin/` are installed;
+- the host plugin version the app reports in Settings (`主机插件 …`), and whether DSH was restarted after installing it;
 - a screenshot or log with secrets removed.
 
 Security issues: see [`SECURITY.md`](SECURITY.md).
