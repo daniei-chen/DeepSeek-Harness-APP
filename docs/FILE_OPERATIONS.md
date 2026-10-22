@@ -2,8 +2,8 @@
 
 The workspace file panel is read-only in the stock DSH `workspaceFiles` API. This project adds the
 missing file verbs through the combined APP plugin's `/dsh-file-ops` route
-(`@dsh-android/deepseek-harness-app-plugin`). The legacy `host-plugin/` bundle covers the original
-download/delete pair only.
+(`@dsh-android/deepseek-harness-app-plugin`), which is the only host package — the legacy
+`host-plugin/` bundle was removed in 1.1.1 after being folded into it.
 
 ## Install
 

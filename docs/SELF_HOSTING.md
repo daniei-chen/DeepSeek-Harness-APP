@@ -30,10 +30,19 @@ Or download a signed APK from the repository releases.
 
 ## 4. Add the host plugin
 
-Install `host-plugin/` as described in its README. This is required for workspace file
-download/delete. Set `DSH_FILE_OPS_ROOTS` to the folders the file panel may touch.
+There is exactly one host plugin: `combined-plugin/`. It carries the phone adaptation, the
+workspace file verbs and the `/dsh-mobile` routes, and the installer packs and installs it:
 
-Install `mobile-web-plugin/` for the phone UI and the file-panel `⋯` menu.
+```bash
+node setup/dsh-mobile-setup.mjs install --profile desktop --file-root "$HOME" --yes
+```
+
+Set `DSH_FILE_OPS_ROOTS` to the folders the file panel may touch. Then **restart DSH** — the plugin
+only loads at process start.
+
+The two older packages that used to live here (`host-plugin/`, `mobile-web-plugin/`) were removed in
+1.1.1: they had been folded into `combined-plugin/`, and the phone adaptation they carried still ran
+three periodic timers that made the web UI repaint on its own. Do not install them.
 
 ## 5. Pair the phone
 

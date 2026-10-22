@@ -1064,6 +1064,9 @@
     <string name="shell_network_restored">网络已恢复，正在重连</string>
     <string name="shell_network_lost">网络已断开</string>
     <string name="shell_link_open_failed">这台手机上没有能打开该链接的应用</string>
+
+    <string name="shell_diagnostics_health">页面健康（%1$d 秒前采样）</string>
+    <string name="shell_diagnostics_self_reloads">自行重载（shell 没有发起）：%1$d 次</string>
 </resources>
 
 
