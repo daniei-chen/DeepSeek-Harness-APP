@@ -6,9 +6,13 @@ import { fileURLToPath } from "node:url";
 
 /**
  * lib/client.js is a browser bundle (`window.__ModuleLoader__.load(...)` + DOM access), so it
- * cannot be imported in Node. These guards read it as text and pin the three plugin-side contracts
- * the Android shell relies on:
+ * cannot be imported in Node. These guards read it as text and pin the plugin-side contracts the
+ * Android shell and the phone layout rely on:
  *  - no periodic timers: the page must not refresh itself (the phone kept reporting it did),
+ *  - a reading is written to the composer element (card / dock), not to <html>, and never to a
+ *    React-owned node's inline style,
+ *  - the speed/usage slots are width-pinned and tabular, so streaming digits cannot reflow the
+ *    dock row; the model name ellipsizes instead,
  *  - `window.__dshInsertComposerText` exists and uses the React-safe insertion path,
  *  - the reported bundle version matches package.json.
  */
@@ -45,7 +49,7 @@ function debounceDelay(anchor, endAnchor) {
     return Number(match[1]);
 }
 
-const composerRegion = () => sliceBetween("const compactActivity = () => {", "installFileActions();");
+const composerRegion = () => sliceBetween("const varHost = (name) => {", "installFileActions();");
 const filePanelRegion = () => sliceBetween("function installFileActions() {", "    const inject = [];");
 
 test("the bundle still parses as a script", () => {
@@ -89,9 +93,119 @@ test("composer readings are re-attached by a debounced observer plus one visibil
     // the bottom row churn while the model was streaming.
     assert.match(
         source,
-        /if \(\(rootStyle\.getPropertyValue\(name\) \|\| ""\) !== quoted\) rootStyle\.setProperty\(name, quoted\);/,
+        /if \(\(hostStyle\.getPropertyValue\(name\) \|\| ""\) !== quoted\) hostStyle\.setProperty\(name, quoted\);/,
         "setVar must compare before writing",
     );
+});
+
+test("reading variables live on the composer, with <html> only as a fallback", () => {
+    const region = composerRegion();
+    const varHost = sliceBetween("const varHost = (name) => {", "const setVar = (name, value) => {");
+    // The model label belongs to the card; the two stats belong to the dock, with the seat as the
+    // fallback for a build that renders the dock under a different slot name.
+    assert.match(varHost, /return document\.querySelector\("\[data-composer-card\]"\) \|\| document\.documentElement;/);
+    assert.match(varHost, /document\.querySelector\('\[data-slot="conversation\.composer\.dock"\]'\) \|\|/);
+    assert.match(varHost, /document\.querySelector\("\[data-composer-seat\]"\) \|\|/);
+
+    const setVar = sliceBetween("const setVar = (name, value) => {", "const compactActivity");
+    assert.match(setVar, /const hostStyle = varHost\(name\)\.style;/);
+    assert.match(
+        setVar,
+        /if \(\(hostStyle\.getPropertyValue\(name\) \|\| ""\) !== quoted\) hostStyle\.setProperty\(name, quoted\);/,
+    );
+    // A reading must not invalidate the whole document's style: nothing in this region touches
+    // documentElement.style directly.
+    assert.doesNotMatch(region, /document\.documentElement\.style/);
+});
+
+test("a reading is written to its composer host, once per change", () => {
+    class FakeStyle {
+        constructor() {
+            this.props = new Map();
+            this.writes = [];
+        }
+        getPropertyValue(name) {
+            return this.props.get(name) || "";
+        }
+        setProperty(name, value) {
+            this.props.set(name, value);
+            this.writes.push([name, value]);
+        }
+    }
+    class FakeElement {
+        constructor() {
+            this.style = new FakeStyle();
+        }
+    }
+
+    const card = new FakeElement();
+    const dock = new FakeElement();
+    const seat = new FakeElement();
+    const html = new FakeElement();
+    let table = {
+        "[data-composer-card]": card,
+        '[data-slot="conversation.composer.dock"]': dock,
+        "[data-composer-seat]": seat,
+    };
+    const fakeDocument = { querySelector: (selector) => table[selector] ?? null, documentElement: html };
+    const factorySource = sliceBetween("const varHost = (name) => {", "const compactActivity").trimEnd();
+    const setVar = new Function("document", `${factorySource}\nreturn setVar;`)(fakeDocument);
+
+    setVar("--dsh-mobile-model", "DeepSeek V4");
+    setVar("--dsh-mobile-speed", "9 tok/s");
+    setVar("--dsh-mobile-usage", "24.3k · 45%");
+    assert.equal(card.style.props.get("--dsh-mobile-model"), '"DeepSeek V4"');
+    assert.equal(dock.style.props.get("--dsh-mobile-speed"), '"9 tok/s"');
+    assert.equal(dock.style.props.get("--dsh-mobile-usage"), '"24.3k · 45%"');
+    assert.equal(html.style.writes.length, 0, "<html> must stay untouched while the composer exists");
+    assert.equal(card.style.props.has("--dsh-mobile-speed"), false, "dock readings must not leak onto the card");
+
+    const before = dock.style.writes.length;
+    setVar("--dsh-mobile-speed", "9 tok/s");
+    assert.equal(dock.style.writes.length, before, "an unchanged reading must not be written again");
+    setVar("--dsh-mobile-speed", "128.4 tok/s");
+    assert.equal(dock.style.writes.length, before + 1, "a changed reading must be written");
+
+    table = {
+        "[data-composer-card]": null,
+        '[data-slot="conversation.composer.dock"]': null,
+        "[data-composer-seat]": null,
+    };
+    setVar("--dsh-mobile-speed", "42 tok/s");
+    assert.equal(html.style.props.get("--dsh-mobile-speed"), '"42 tok/s"', "<html> is the fallback host");
+});
+
+test("CSS pins the reading slots so streaming digits cannot reflow the dock", () => {
+    const css = sliceBetween("const CSS = `", "\n`;");
+    assert.match(css, /font-variant-numeric: tabular-nums/, "digits must be tabular");
+    const activity = sliceBetween('[data-composer-stat="activity"] button::after', '[data-composer-stat="usage"]');
+    assert.match(activity, /min-width: \d+ch;/);
+    assert.match(activity, /text-align: right;/);
+    const usage = sliceBetween('[data-composer-stat="usage"] button::after', '[data-composer-stat] svg');
+    assert.match(usage, /min-width: \d+ch;/);
+    assert.match(usage, /text-align: right;/);
+    // The model name is variable length, so it ellipsizes instead of widening its trigger.
+    const model = sliceBetween('button[aria-label*="选择模型"]::after', 'button[aria-label*="选择模型"] span');
+    assert.match(model, /max-width: 100%;/);
+    assert.match(model, /overflow: hidden;/);
+    assert.match(model, /text-overflow: ellipsis;/);
+});
+
+test("the plugin writes no inline style to a React-owned node", () => {
+    assert.doesNotMatch(source, /root\.style\.display/);
+    assert.doesNotMatch(source, /style\.display = ""/);
+    // The only inline-style write left is the hidden <input> the plugin created itself.
+    assert.deepEqual(
+        codeLines(source).filter((line) => /\.style\.display\s*=/.test(line)),
+        ['input.style.display = "none";'],
+    );
+});
+
+test("both plugin stylesheets are id-guarded against duplicate injection", () => {
+    assert.match(source, /if \(document\.getElementById\("dsh-plugin-responsive-style"\) === null\) \{/);
+    assert.match(source, /style\.id = "dsh-plugin-responsive-style";/);
+    assert.match(source, /if \(document\.getElementById\("dsh-file-actions-style"\) === null\) \{/);
+    assert.match(source, /style\.id = "dsh-file-actions-style";/);
 });
 
 test("file-panel decoration keeps its semantics on a debounced observer", () => {
@@ -267,5 +381,5 @@ test("the reported bundle version matches package.json and is new enough for the
         if (b !== minor) return b > minor;
         return c >= patch;
     };
-    assert.ok(atLeast(pkg.version, [0, 1, 12]), `plugin version ${pkg.version} predates the share bridge`);
+    assert.ok(atLeast(pkg.version, [0, 1, 13]), `plugin version ${pkg.version} predates the reading-scope fix`);
 });

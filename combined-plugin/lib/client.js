@@ -35,6 +35,11 @@ html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"]::after,
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"]::after {
   content: var(--dsh-mobile-model, "");
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
   white-space: nowrap;
   font: inherit;
   color: inherit;
@@ -55,24 +60,39 @@ html[data-dsh-mobile-form] [data-slot="conversation.composer.dock"] {
 html[data-dsh-mobile-form] [data-composer-stat] {
   flex: 0 0 auto !important;
   max-width: 45vw !important;
+  font-variant-numeric: tabular-nums;
 }
 html[data-dsh-mobile-form] [data-composer-stat] span[class*="_label"] {
   display: none !important;
 }
 /* The label text is owned by React and is rewritten on every stream tick; render our reading
-   through a root-level CSS variable instead of touching React's nodes. */
+   through a CSS variable instead of touching React's nodes. The variable is set on the composer
+   element itself (card / dock), not on <html>, so a reading re-derives inside the composer subtree
+   only instead of invalidating the whole document's style. The value is inherited by the ::after
+   below exactly as before.
+   Both slots are pinned to a fixed width: "9 tok/s" and "128.4 tok/s" must occupy the same
+   horizontal space, otherwise every digit that streams in reflows the entire dock row — the
+   "bottom line refreshes by itself" the phone kept reporting. */
 html[data-dsh-mobile-form] [data-composer-stat="activity"] button::after,
 html[data-dsh-mobile-form] [data-composer-stat="activity"] span[class*="_pill"]::after {
   content: var(--dsh-mobile-speed, "");
-  white-space: nowrap;
+  display: inline-block;
+  min-width: 11ch;
+  text-align: right;
   font: inherit;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: inherit;
 }
 html[data-dsh-mobile-form] [data-composer-stat="usage"] button::after,
 html[data-dsh-mobile-form] [data-composer-stat="usage"] span[class*="_pill"]::after {
   content: var(--dsh-mobile-usage, "");
-  white-space: nowrap;
+  display: inline-block;
+  min-width: 14ch;
+  text-align: right;
   font: inherit;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: inherit;
 }
 html[data-dsh-mobile-form] [data-composer-stat] svg {
@@ -141,7 +161,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.12";
+    const PLUGIN_VERSION = "0.1.13";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -177,15 +197,36 @@ html[data-dsh-glass="off"] body::after {
         }
       } catch (e) {}
 
-      const style = document.createElement("style");
-      style.dataset.plugin = "@dsh-android/dsh-client-ui-responsive-bundle";
-      style.textContent = CSS;
-      document.head.appendChild(style);
+      // Idempotent like the shell's #dsh-shell-glass rule: apply() runs again on every plugin
+      // hot-remount, and without a guard each pass appended another copy of the same sheet.
+      if (document.getElementById("dsh-plugin-responsive-style") === null) {
+        const style = document.createElement("style");
+        style.id = "dsh-plugin-responsive-style";
+        style.dataset.plugin = "@dsh-android/dsh-client-ui-responsive-bundle";
+        style.textContent = CSS;
+        document.head.appendChild(style);
+      }
+
+      /**
+       * Nearest stable element that owns a reading. Writing the variable one level down keeps the
+       * style invalidation inside the composer instead of restyling the whole document; <html> is
+       * only the fallback for a reading whose composer part has not mounted yet, and the CSS reads
+       * the variable by inheritance from either place.
+       */
+      const varHost = (name) => {
+        if (name === "--dsh-mobile-model") {
+          return document.querySelector("[data-composer-card]") || document.documentElement;
+        }
+        return document.querySelector('[data-slot="conversation.composer.dock"]') ||
+          document.querySelector("[data-composer-seat]") ||
+          document.documentElement;
+      };
 
       const setVar = (name, value) => {
-        const rootStyle = document.documentElement.style;
+        const hostStyle = varHost(name).style;
+        if (hostStyle === null || hostStyle === undefined) return;
         const quoted = JSON.stringify(value);
-        if ((rootStyle.getPropertyValue(name) || "") !== quoted) rootStyle.setProperty(name, quoted);
+        if ((hostStyle.getPropertyValue(name) || "") !== quoted) hostStyle.setProperty(name, quoted);
       };
 
       const compactActivity = () => {
@@ -232,7 +273,8 @@ html[data-dsh-glass="off"] body::after {
         if (tokens === "") return;
         const percent = text.match(/(\d+(?:\.\d+)?%)/);
         const wanted = percent === null ? tokens : tokens + " · " + percent[1];
-        if (root.style.display !== "") root.style.display = "";
+        // No inline style is touched here: this pill is React's node, and resetting its `display`
+        // fought React's own value — it was the only place the plugin wrote to a React node.
         setVar("--dsh-mobile-usage", wanted);
       };
 
@@ -578,8 +620,12 @@ html[data-dsh-glass="off"] body::after {
         }
         .dsh-file-preview-body img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
       `;
+      // Same id guard as the shell's #dsh-shell-glass: a plugin hot-remount must not stack copies.
       style.dataset.plugin = "@dsh-android/dsh-file-actions";
-      document.head.appendChild(style);
+      if (document.getElementById("dsh-file-actions-style") === null) {
+        style.id = "dsh-file-actions-style";
+        document.head.appendChild(style);
+      }
 
       let openMenu = null;
       const closeMenu = () => {
