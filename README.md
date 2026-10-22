@@ -36,9 +36,11 @@ adb install -r DeepSeek-Harness-0.9.36-personal.96.apk
 
 Then `设置 → 连接 → 添加设备` (or scan the relay QR at `https://<host>:3443/relay/pair`).
 
+Remote access not reachable? Follow [docs/SETUP_HTTP.md](docs/SETUP_HTTP.md) — it walks through Tailscale, Cloudflare Tunnel, frp and port forwarding, and explains why the tunnel should point at the relay's 3443 port.
+
 ## Latest
 
-- **APK 1.0.3** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
+- **APK 1.0.4** — Settings → 远控 shows the relay pairing QR inside the app itself, with code,
   expiry and paired-device entry; layout recovery for pages left at a stale height (auto on
   resume / keyboard close, plus 设置 → 诊断 → 修复界面排版); QR scan, mDNS + subnet LAN discovery,
   device health, fleet overview, cross-host inbox, session cockpit and actionable notifications.
@@ -54,13 +56,13 @@ Install facts (used by `docs/INSTALL_FOR_AGENTS.md`):
 
 | | |
 | --- | --- |
-| APK `versionCode` | **50003** (must be greater than the installed one) |
-| APK SHA-256 | `73CBF8732383632087A24AA00B5A38FD1ACEC641407E6A48828B41F04A5D92F6` |
+| APK `versionCode` | **50004** (must be greater than the installed one) |
+| APK SHA-256 | `410521C5ED1AA5697E7C5C11627BF9F3A9735F7A8894AF6CE159E7EA9349CF07` |
 | Plugin SHA-256 | `3A46CA179080A9AB09B87A47114786CBE7ECC9EDAE4AA74A6E173E19141693F5` |
 
 Downloads:
 
-- [APK v1.0.3](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.3)
+- [APK v1.0.4](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.4)
 - [Host plugin 0.1.11](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/app-plugin-v0.1.11)
 
 ## What is inside
@@ -159,7 +161,7 @@ rollback.
 - [Agent rules](AGENTS.md) — hard constraints for anyone changing this repo
 - [One-command host setup](setup/README.md)
 - [Self-hosting](docs/SELF_HOSTING.md)
-- [Set up HTTP/HTTPS](docs/SETUP_HTTP.md)
+- [远程访问：打隧道 / HTTP / HTTPS](docs/SETUP_HTTP.md) — Tailscale / Cloudflare Tunnel / frp / 端口映射全流程
 - [Connections](docs/CONNECTIONS.md)
 - [Notifications and self-hosted push](docs/NOTIFICATIONS.md)
 - [File operations](docs/FILE_OPERATIONS.md)

@@ -351,6 +351,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         currentDeviceName: String?,
         versionName: String,
+        simpleMode: Boolean,
         inboxCount: Int,
         notificationsEnabled: Boolean,
         backgroundEnabled: Boolean,
@@ -401,17 +402,19 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onConnection()
             },
         )
-        card.addView(
-            settingsRow(
-                colors = colors,
-                iconRes = R.drawable.ic_shell_link,
-                title = activity.getString(R.string.shell_remote),
-                subtitle = activity.getString(R.string.shell_remote_hint),
-            ) {
-                dialog.dismiss()
-                onRemote()
-            },
-        )
+        if (!simpleMode) {
+            card.addView(
+                settingsRow(
+                    colors = colors,
+                    iconRes = R.drawable.ic_shell_link,
+                    title = activity.getString(R.string.shell_remote),
+                    subtitle = activity.getString(R.string.shell_remote_hint),
+                ) {
+                    dialog.dismiss()
+                    onRemote()
+                },
+            )
+        }
         card.addView(
             settingsRow(
                 colors = colors,
@@ -498,6 +501,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
 
     fun showConnectionPage(
         dark: Boolean,
+        simpleMode: Boolean,
         onManageDevices: () -> Unit,
         onScanQr: () -> Unit,
         onPairCode: () -> Unit,
@@ -508,6 +512,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onDeviceHealth: () -> Unit,
         onDoctor: () -> Unit,
         onTestConnection: () -> Unit,
+        onToggleSimple: () -> Unit,
         onBack: () -> Unit,
     ) {
         val colors = Colors(dark)
@@ -525,24 +530,26 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onManageDevices()
             },
         )
-        card.addView(
-            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_scan_qr), activity.getString(R.string.shell_settings_scan_qr_hint)) {
-                dialog.dismiss()
-                onScanQr()
-            },
-        )
-        card.addView(
-            settingsRow(colors, R.drawable.ic_shell_edit, activity.getString(R.string.shell_pair_row), activity.getString(R.string.shell_pair_row_hint)) {
-                dialog.dismiss()
-                onPairCode()
-            },
-        )
-        card.addView(
-            settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_scan_lan), activity.getString(R.string.shell_settings_scan_lan_hint)) {
-                dialog.dismiss()
-                onScanLan()
-            },
-        )
+        if (!simpleMode) {
+            card.addView(
+                settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_scan_qr), activity.getString(R.string.shell_settings_scan_qr_hint)) {
+                    dialog.dismiss()
+                    onScanQr()
+                },
+            )
+            card.addView(
+                settingsRow(colors, R.drawable.ic_shell_edit, activity.getString(R.string.shell_pair_row), activity.getString(R.string.shell_pair_row_hint)) {
+                    dialog.dismiss()
+                    onPairCode()
+                },
+            )
+            card.addView(
+                settingsRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_scan_lan), activity.getString(R.string.shell_settings_scan_lan_hint)) {
+                    dialog.dismiss()
+                    onScanLan()
+                },
+            )
+        }
         card.addView(
             settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_network_info), activity.getString(R.string.shell_settings_network_info_hint)) {
                 dialog.dismiss()
@@ -565,6 +572,19 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             settingsRow(colors, R.drawable.ic_shell_notifications, activity.getString(R.string.shell_device_health), activity.getString(R.string.shell_device_health_hint)) {
                 dialog.dismiss()
                 onDeviceHealth()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors,
+                R.drawable.ic_shell_settings,
+                activity.getString(
+                    if (simpleMode) R.string.shell_advanced_show else R.string.shell_advanced_hide,
+                ),
+                activity.getString(R.string.shell_simple_mode_hint),
+            ) {
+                dialog.dismiss()
+                onToggleSimple()
             },
         )
         card.addView(

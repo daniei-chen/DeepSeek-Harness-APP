@@ -1121,6 +1121,9 @@ class WebShellActivity : AppCompatActivity() {
             dark = pageDark,
             currentDeviceName = currentName,
             versionName = versionName,
+            simpleMode = runCatching {
+                runBlocking { hostsStore.settings.first().simpleMode }
+            }.getOrDefault(true),
             inboxCount = inboxRows.count { it.action },
             notificationsEnabled = notifications.canPost() &&
                 NotificationManagerCompat.from(this).areNotificationsEnabled(),
@@ -1339,8 +1342,12 @@ class WebShellActivity : AppCompatActivity() {
     }
 
     private fun showConnectionPage() {
+        val simple = runCatching {
+            runBlocking { hostsStore.settings.first().simpleMode }
+        }.getOrDefault(true)
         chrome.showConnectionPage(
             dark = pageDark,
+            simpleMode = simple,
             onManageDevices = { showDeviceManager() },
             onScanQr = { openQrScanner() },
             onPairCode = { showPairingCodeDialog() },
@@ -1351,6 +1358,13 @@ class WebShellActivity : AppCompatActivity() {
             onDeviceHealth = { checkDeviceHealth() },
             onDoctor = { runConnectionDoctor() },
             onTestConnection = { testConnection() },
+            onToggleSimple = {
+                lifecycleScope.launch {
+                    val current = hostsStore.settingsOnce().simpleMode
+                    hostsStore.setSetting { it.copy(simpleMode = !current) }
+                    showConnectionPage()
+                }
+            },
             onBack = { showSettings() },
         )
     }

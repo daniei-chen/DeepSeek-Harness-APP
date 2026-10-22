@@ -944,6 +944,9 @@
     <string name="shell_settings_copied">已复制</string>
     <string name="shell_settings_test_connection">测试当前连接</string>
     <string name="shell_settings_test_connection_hint">检查地址可达性与延迟</string>
+    <string name="shell_simple_mode_hint">隐藏扫码、配对码和局域网扫描</string>
+    <string name="shell_advanced_show">显示高级连接方式</string>
+    <string name="shell_advanced_hide">隐藏高级连接方式</string>
     <string name="shell_pair_title">配对码连接</string>
     <string name="shell_pair_description">输入电脑上显示的中继地址和 8 位配对码。地址填中继本身，不是 DSH 的端口。</string>
     <string name="shell_pair_address_hint">https://192.168.2.13:3443</string>
