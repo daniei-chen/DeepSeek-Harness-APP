@@ -37,7 +37,24 @@ internal class ShellDevices(context: Context) {
 
     fun load(): List<ShellDevice> {
         val raw = prefs.getString(KEY_DEVICES, null) ?: return emptyList()
-        return runCatching { WireJson.decodeFromString(serializer, raw) }.getOrDefault(emptyList())
+        val devices = runCatching { WireJson.decodeFromString(serializer, raw) }
+            .getOrDefault(emptyList())
+        // Repair addresses already on disk. A scheme pasted into the "https://"-prefilled field used
+        // to be stored verbatim as `https://http//host`, which parses as host "http" — a device
+        // that can never connect and looks like a server problem. Fixing it on read means the user
+        // does not have to delete and re-add the device.
+        var repaired = false
+        val fixed = devices.map { device ->
+            val parsed = parseServerAddress(device.url)
+            if (parsed == null || parsed.url == device.url) {
+                device
+            } else {
+                repaired = true
+                device.copy(url = parsed.url, alternateUrl = parsed.alternateUrl ?: device.alternateUrl)
+            }
+        }
+        if (repaired) save(fixed)
+        return fixed
     }
 
     fun currentId(): String? = prefs.getString(KEY_CURRENT, null)

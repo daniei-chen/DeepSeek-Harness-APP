@@ -14,7 +14,7 @@ plugins {
  * upgrade at all. The code is derived from the name so it rises with semver on its own; the
  * fallback is what a local `assembleRelease` builds.
  */
-val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.2"
+val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.3"
 
 // Visible version restarts at 0.0.0 per the rebuild brief, but Android still needs a rising
 // versionCode to upgrade over the old build, so DSH_VERSION_CODE can override it independently.
@@ -58,7 +58,7 @@ android {
         // The host plugin build this app is paired with. The two halves are installed separately, so
         // the shell reads the version the page advertises and says which side is behind instead of
         // letting a half-updated install look like a bug in the app.
-        buildConfigField("String", "PLUGIN_VERSION", "\"0.1.13\"")
+        buildConfigField("String", "PLUGIN_VERSION", "\"0.1.16\"")
     }
 
     buildTypes {

@@ -6,26 +6,41 @@ window.__ModuleLoader__.load({
     Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 
     const CSS = `
-/* Model trigger: give it the free width next to the upload control, but keep a real minimum so a
-   narrow flex row can never collapse the label to an icon-sized zero. */
+/* Model trigger: one line, and it takes the free width next to the upload control.
+   The label is the only place the phone says which model a message will run on, so it gets the whole
+   leftover row to itself — the old hard cap of 132px cut "DeepSeek-V4.1-Flash" in half even though
+   there was room. Ellipsis survives only as the last resort for a name that cannot fit even then;
+   the row never wraps. */
 html[data-dsh-mobile-form] [data-composer-card] [class*="_root"]:has(> button[aria-label*="选择模型"]),
 html[data-dsh-mobile-form] [data-composer-card] [class*="_root"]:has(> button[aria-label*="Select model"]) {
   flex: 1 1 auto !important;
   min-width: 120px !important;
   max-width: none !important;
+  flex-wrap: nowrap !important;
 }
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"],
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"] {
   width: auto !important;
-  max-width: 132px !important;
-  margin-left: -8px !important;
-  font-size: 12px !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding-left: 0 !important;
+  /* Start further left: the two controls before it used to leave a gap wide enough to eat two
+     characters of the model name, and the name is what a person checks before sending. */
+  margin-left: -18px !important;
+  font-size: 11.5px !important;
   justify-content: flex-start !important;
 }
-html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"] span[class*="_triggerEffort"],
-html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"] span[class*="_triggerEffort"],
+/* The chevron is chrome; the effort reading is not. Hiding the effort was why the phone could not
+   show which reasoning level a message would use — it is folded into the label's variable instead,
+   so it costs no extra width beyond its own characters. */
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"] svg[class*="_chevron"],
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"] svg[class*="_chevron"] {
+  display: none !important;
+}
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"] span[class*="_triggerEffort"],
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"] span[class*="_triggerEffort"] {
   display: none !important;
 }
 html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"] span[class*="_triggerLabel"],
@@ -161,7 +176,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.13";
+    const PLUGIN_VERSION = "0.1.17";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -220,6 +235,25 @@ html[data-dsh-glass="off"] body::after {
         return document.querySelector('[data-slot="conversation.composer.dock"]') ||
           document.querySelector("[data-composer-seat]") ||
           document.documentElement;
+      };
+
+      /**
+       * Run a maintenance pass when the page is not painting.
+       *
+       * Both passes read the DOM with attribute-substring selectors, which walk the whole document.
+       * During a streaming reply the page commits a React update many times a second, and a plain
+       * 250 ms timer can land on top of one of those commits: the work is small, but it is charged to
+       * the same frame the reply is painted in. Idle scheduling puts it after the paint — same total
+       * work, none of it in front of the text.
+       */
+      const whenIdle = (fn) => {
+        try {
+          if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(fn, { timeout: 500 });
+            return;
+          }
+        } catch (e) {}
+        window.setTimeout(fn, 80);
       };
 
       const setVar = (name, value) => {
@@ -285,7 +319,14 @@ html[data-dsh-glass="off"] body::after {
         const model = document.querySelector('[data-composer-card] button[aria-label*="选择模型"], [data-composer-card] button[aria-label*="Select model"]');
         const modelLabel = model === null ? null : model.querySelector('span[class*="_triggerLabel"]');
         const modelText = modelLabel === null ? "" : (modelLabel.textContent || "").trim();
-        if (modelText !== "") setVar("--dsh-mobile-model", modelText);
+        if (modelText !== "") {
+          // The reasoning effort lives in a sibling span this stylesheet hides (it costs a line of its
+          // own in the upstream layout). Fold it into the label instead: "DeepSeek-V4.1-Flash · 高"
+          // says both things the trigger is for, in the width of one label.
+          const effortNode = model === null ? null : model.querySelector('span[class*="_triggerEffort"]');
+          const effortText = effortNode === null ? "" : (effortNode.textContent || "").trim();
+          setVar("--dsh-mobile-model", effortText === "" ? modelText : modelText + " · " + effortText);
+        }
       };
       window.__dshCompactStats = compactStats;
 
@@ -361,7 +402,7 @@ html[data-dsh-glass="off"] body::after {
         if (structuralTimer !== 0) return;
         structuralTimer = window.setTimeout(() => {
           structuralTimer = 0;
-          observe();
+          whenIdle(observe);
         }, 250);
       };
       try {
@@ -963,7 +1004,7 @@ html[data-dsh-glass="off"] body::after {
         if (decorTimer !== 0) return;
         decorTimer = window.setTimeout(() => {
           decorTimer = 0;
-          decorate();
+          whenIdle(decorate);
         }, 250);
       };
       try {

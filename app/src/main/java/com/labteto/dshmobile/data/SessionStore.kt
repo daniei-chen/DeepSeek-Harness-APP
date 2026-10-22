@@ -842,7 +842,7 @@ class SessionStore @Inject constructor(
             is RemoteEventFrame.Cancel -> handleWaterfallCancelled(frame.eventId)
             // Consumed by the connection loop's handshake; it never forwards one.
             is RemoteEventFrame.Ready -> Unit
-            is RemoteEventFrame.Unknown -> log("unknown host event frame ${frame.type}")
+            is RemoteEventFrame.Unknown -> logThrottled("frame:" + frame.type, "unknown host event frame ${frame.type}")
         }
     }
 
@@ -855,7 +855,9 @@ class SessionStore @Inject constructor(
      * advisory.
      */
     private fun handleNotification(event: String, args: List<JsonElement>) {
-        _hostEvents.tryEmit(event to args)
+        // Only when something is listening. Nothing in this build collects hostEvents, and
+        // allocating a Pair per host event on the hot path is pure garbage.
+        if (_hostEvents.subscriptionCount.value > 0) _hostEvents.tryEmit(event to args)
         pluginOperations.event(activeHostKey, event, args)
         fun str(i: Int) = args.getOrNull(i)?.jsonPrimitive?.contentOrNull
         when (event) {
@@ -885,7 +887,7 @@ class SessionStore @Inject constructor(
             // present — settings and credentials among them, which is why nothing here goes stale
             // when they change. Naming the unhandled one in the log is what makes the next gap
             // findable; dropping it silently is how `goal/activation-changed` went unnoticed.
-            else -> log("unhandled emit $event")
+            else -> logThrottled("emit:" + event, "unhandled emit $event")
         }
     }
 
@@ -1019,7 +1021,12 @@ class SessionStore @Inject constructor(
                     }
                     if (frame.sessionId == currentId) {
                         mergeProjectionLocked(frame.key, frame.seq, frame.value)
-                        rebuildCurrentLocked()
+                        // Merge here (cheap, and ordered by seq), rebuild on the shared tick. Hosts
+                        // push a projection per token for tokenUsage/inbox, and folding the whole
+                        // transcript synchronously for each one was the largest piece of work on the
+                        // event path: it held the store lock, so the assistant deltas queued behind
+                        // it. The tick is conflated, so a burst still collapses into one rebuild.
+                        rebuildTicks.trySend(Unit)
                     }
                 }
             }
@@ -2870,6 +2877,25 @@ class SessionStore @Inject constructor(
             is RpcResult.Ok -> Unit
             is RpcResult.Err -> setConnectionError(result.error.message)
         }
+    }
+
+    /**
+     * Log a repetitive event a few times, then once every hundred, with the count.
+     *
+     * These lines sit on the per-frame path (a host event this build does not act on, or a frame
+     * kind it does not know). One logcat write per frame is measurable work for a message nobody
+     * reads, but dropping it entirely is how the next protocol gap goes unnoticed — so the first
+     * few still appear and the rest collapse into a counter.
+     */
+    private val throttledLogs = HashMap<String, Int>()
+
+    private fun logThrottled(key: String, message: String) {
+        val seen = synchronized(throttledLogs) {
+            val next = (throttledLogs[key] ?: 0) + 1
+            throttledLogs[key] = next
+            next
+        }
+        if (seen <= 3 || seen % 100 == 0) log("$message (x$seen)")
     }
 
     private fun log(message: String, throwable: Throwable? = null) {
