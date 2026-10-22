@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.2-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.3-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,19 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.3：重连不误报、模型名完整
+
+| 问题 | 修法 |
+| --- | --- |
+| Wi-Fi 抖一下就报「连接失败」 | 失败不再逐次上报：连续 3 次失败**且**持续 8 秒以上才显示错误，成功立刻清空。期间状态只显示"重连中"。 |
+| 「一直重连」停不下来 | 连续 20 次失败或持续 3 分钟就刹车：停止自动重连，并明确告知"需要手动重连"。手动连接/网络恢复会重新计数。 |
+| 多个入口同时重连，互相打断 | 重建连接加了单飞：网络恢复、后台保活、界面重试三个入口合并成一个周期，不再各自启动一条连接。 |
+| 被 nginx 限流（429）后越试越糟 | 识别 429：暂停自动重连 1 分钟再试一次，而不是每 500ms 撞一次桶。 |
+| 模型名被截断、看不到思考强度 | 模型按钮往左扩 10px、字号 11.5px，并把一直隐藏的「思考强度」并进同一行：`DeepSeek-V4.1-Flash · 高`。 |
+| 流式时后台还在做无用功 | 投影帧改走 50ms 节流（不再每帧同步全量重折）、无人订阅的 hostEvents 不再每个事件造对象、每帧 logcat 改成限流日志、insets 相同值不再发给渲染进程。 |
 
 ---
 
@@ -197,7 +210,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.2-personal.9.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.3-personal.10.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -224,8 +237,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.2**（`versionCode 50102`） | `DeepSeek-Harness-1.1.2-personal.9.apk` | `0B0706AC50BEEE29B05DEEE34E72724B18235E8E2AD8D9AA399D5E4AC87F1030` |
-| 主机插件 | **0.1.13** | `dsh-android-deepseek-harness-app-plugin-0.1.13.tgz` | 见 Release 页面 |
+| App | **1.1.3**（`versionCode 50103`） | `DeepSeek-Harness-1.1.3-personal.10.apk` | `328494D9D1BE793A3F2A2516B56F3AED1EC3E2BB35EC02A0C5864EC6539A4681` |
+| 主机插件 | **0.1.13** | `dsh-android-deepseek-harness-app-plugin-0.1.17.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -237,7 +250,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.2 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.3 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

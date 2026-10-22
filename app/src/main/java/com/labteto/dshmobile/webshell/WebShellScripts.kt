@@ -266,6 +266,22 @@ internal object WebShellScripts {
           var stats = window.__dshShellStats ||
             (window.__dshShellStats = { syncs: 0, resizes: 0, rootFixes: 0, shortRoot: 0 });
           stats.remounts = 0;
+          stats.longTasks = 0;
+          stats.longMs = 0;
+          // Long tasks are the browser's own measure of main-thread stalls over 50 ms: the honest
+          // answer to "is the reply late because the phone is busy". A reply that feels chunky shows
+          // up here; one that arrives late but paints instantly does not — that one is the network.
+          try {
+            if (typeof PerformanceObserver === 'function') {
+              new PerformanceObserver(function (list) {
+                var entries = list.getEntries();
+                for (var i = 0; i < entries.length; i++) {
+                  window.__dshShellStats.longTasks++;
+                  window.__dshShellStats.longMs += Math.round(entries[i].duration);
+                }
+              }).observe({ entryTypes: ['longtask'] });
+            }
+          } catch (e) {}
           try {
             var originalFetch = window.fetch;
             if (typeof originalFetch === 'function') {
@@ -297,7 +313,8 @@ internal object WebShellScripts {
             var s = window.__dshShellStats;
             return 'up=' + Math.round((Date.now() - startedAt) / 1000) + 's' +
               ' sync=' + s.syncs + ' layoutWrite=' + (s.layoutWrites || 0) +
-              ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts;
+              ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts +
+              ' longTask=' + (s.longTasks || 0) + '/' + (s.longMs || 0) + 'ms';
           };
           window.__dshShellNetwork = function (seconds) {
             var since = Date.now() - (seconds || 120) * 1000;
