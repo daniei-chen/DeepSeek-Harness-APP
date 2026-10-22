@@ -1,9 +1,24 @@
-# Release 1.1.1
+# Release 1.1.2
 
 ## What this release is
 
 A self-hosted Android client for DeepSeek Harness. No project cloud, no account, no telemetry,
 no monetization.
+
+## What changed in 1.1.2
+
+The settings sheet was broken, not just plain: `show()` sized the dialog window to
+`WRAP_CONTENT`, and the settings page is a single column of thirteen rows, so everything past the
+screen edge was clipped — the 刷新页面 row could not be reached at all.
+
+- Every page now renders inside a `ScrollView` capped at 88 % of the screen with the navigation-bar
+  inset as bottom padding, so a page that fits stays centred and one that does not scrolls instead of
+  losing its tail.
+- Refresh and check-update moved out of the list into two side-by-side pills under the masthead
+  (46 dp targets, accent icon), because they were the two actions people reach for and they sat at
+  opposite ends of a long column.
+- The rows are grouped — 连接 / 这台手机 / 通知与后台 / 数据与链接 / 诊断与支持 — with a quiet label per
+  group; 退出设备 stays last and destructive.
 
 ## What changed in 1.1.1
 

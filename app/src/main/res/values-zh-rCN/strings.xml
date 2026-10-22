@@ -1067,6 +1067,13 @@
 
     <string name="shell_diagnostics_health">页面健康（%1$d 秒前采样）</string>
     <string name="shell_diagnostics_self_reloads">自行重载（shell 没有发起）：%1$d 次</string>
+
+    <!-- 1.1.2: 设置页分组，每组一个标题。 -->
+    <string name="shell_group_connection">连接</string>
+    <string name="shell_group_phone">这台手机</string>
+    <string name="shell_group_alerts">通知与后台</string>
+    <string name="shell_group_data">数据与链接</string>
+    <string name="shell_group_support">诊断与支持</string>
 </resources>
 
 
