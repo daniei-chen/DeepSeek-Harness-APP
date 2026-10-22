@@ -1039,6 +1039,31 @@
     <string name="shell_settings_update_failed">检查更新失败</string>
     <string name="shell_settings_up_to_date">已是最新版本</string>
     <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
+
+    <!-- 1.1.0: 通知内联回复、设置导出导入、插件版本对齐、网络恢复、分享与自定义 scheme 入口。 -->
+    <string name="notif_reply_label">回复</string>
+    <string name="notif_reply_hint">输入要排队发送的内容…</string>
+    <string name="notif_reply_sent">已发送</string>
+    <string name="shell_settings_export">导出设置</string>
+    <string name="shell_settings_export_hint">把设备、主机和开关存成一个 JSON 文件，不含任何凭据。</string>
+    <string name="shell_settings_export_done">已导出</string>
+    <string name="shell_settings_export_failed">导出失败</string>
+    <string name="shell_settings_import">导入设置</string>
+    <string name="shell_settings_import_hint">从 JSON 文件恢复设备和开关，永远不导入凭据。</string>
+    <string name="shell_settings_import_done">已导入 %1$d 个设备、%2$d 个主机</string>
+    <string name="shell_settings_import_empty">这个文件里没有可导入的内容</string>
+    <string name="shell_settings_import_failed">导入失败：%1$s</string>
+    <string name="shell_link_handler">用本应用打开匹配的链接</string>
+    <string name="shell_link_handler_hint">让安卓把 http 链接交给这个 app。指向你已保存地址的链接在这里打开，其余仍然走浏览器。</string>
+    <string name="shell_plugin_version">主机插件 %1$s</string>
+    <string name="shell_plugin_version_ok">主机插件 %1$s，与本应用同步</string>
+    <string name="shell_plugin_version_old">主机插件 %1$s 低于 %2$s —— 请在电脑上更新</string>
+    <string name="shell_plugin_version_missing">主机没有在提供手机插件</string>
+    <string name="shell_share_inserted">已插入到输入框</string>
+    <string name="shell_share_waiting">正在等待页面加载完成</string>
+    <string name="shell_network_restored">网络已恢复，正在重连</string>
+    <string name="shell_network_lost">网络已断开</string>
+    <string name="shell_link_open_failed">这台手机上没有能打开该链接的应用</string>
 </resources>
 
 

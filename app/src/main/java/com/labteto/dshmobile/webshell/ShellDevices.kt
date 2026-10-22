@@ -125,6 +125,19 @@ internal class ShellDevices(context: Context) {
         return remaining
     }
 
+    /**
+     * Replace the whole list with an imported one.
+     *
+     * Used only by the settings import, which is the one path allowed to overwrite every address at
+     * once. The current selection is kept when its id survived and otherwise falls back to the first
+     * device, so the shell never starts with a pointer to a device that no longer exists.
+     */
+    fun replaceAll(devices: List<ShellDevice>) {
+        if (devices.isEmpty()) return
+        save(devices)
+        if (devices.none { it.id == currentId() }) setCurrent(devices.first().id)
+    }
+
     private fun save(devices: List<ShellDevice>) {
         prefs.edit().putString(KEY_DEVICES, WireJson.encodeToString(serializer, devices)).apply()
     }

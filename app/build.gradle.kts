@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -15,7 +14,7 @@ plugins {
  * upgrade at all. The code is derived from the name so it rises with semver on its own; the
  * fallback is what a local `assembleRelease` builds.
  */
-val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.16.0"
+val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.0"
 
 // Visible version restarts at 0.0.0 per the rebuild brief, but Android still needs a rising
 // versionCode to upgrade over the old build, so DSH_VERSION_CODE can override it independently.
@@ -32,8 +31,9 @@ val dshVersionCode: Int = System.getenv("DSH_VERSION_CODE")?.toIntOrNull() ?: ds
     .coerceAtLeast(1)
     // The visible version restarted at 0.0.0, but versionCode must keep rising past the old 3.x
     // installs; offset the 0.x line so 0.0.1 => 31001, 0.1.0 => 31100. The 1.x line is offset
-    // higher (1.0.0 => 50000) so a 1.0 release is an upgrade over every 0.x build — a bare
-    // 10000 would read as a downgrade to Android.
+    // higher (1.0.0 => 50000) so a 1.0 release is an upgrade over every 0.x build — and every
+    // later 1.x release lands above 1.0.5 (50005) and 1.1.0 (50100), which is what Android
+    // compares. Never pass a lower DSH_VERSION_CODE: the install reports -25 and stops.
     .let { base ->
         when {
             dshVersionName.startsWith("0.") -> base + 31_000
@@ -55,9 +55,10 @@ android {
         versionName = dshVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
-        // Fork: ML Kit's bundled OCR ships one native blob per ABI. x86/x86_64 only matter to
-        // emulators, and dropping them keeps the single download URL ~22 MB smaller.
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        // The host plugin build this app is paired with. The two halves are installed separately, so
+        // the shell reads the version the page advertises and says which side is behind instead of
+        // letting a half-updated install look like a bug in the app.
+        buildConfigField("String", "PLUGIN_VERSION", "\"0.1.12\"")
     }
 
     buildTypes {
@@ -65,20 +66,11 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
-            // Fork: Phase E. The dex was ~14 MB compressed before shrinking; R8 + resource shrink
-            // are the only remaining large lever after the native libraries were compressed.
+            // R8 + resource shrink: the shell carries a WebView, not a UI toolkit, so the dex is
+            // small and the only real lever left is keeping it that way.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-    }
-
-    packaging {
-        jniLibs {
-            // Fork: ML Kit's OCR pipeline is ~17 MB of uncompressed .so across the two arm ABIs.
-            // Storing them compressed roughly halves the download; the platform extracts them at
-            // install time (extractNativeLibs=true), which minSdk 26 handles.
-            useLegacyPackaging = true
         }
     }
 
@@ -110,8 +102,10 @@ android {
         jvmTarget = "17"
     }
 
+    // 1.1.0 deleted the unreachable Compose tree (`ui/`), which was the module's only consumer of
+    // the Compose compiler, the Compose BOM, navigation-compose and ML Kit's Chinese OCR. The
+    // product surface is WebShellActivity, a plain AppCompatActivity around one WebView.
     buildFeatures {
-        compose = true
         buildConfig = true
     }
 
@@ -153,7 +147,7 @@ android {
             "TypographyDashes",
         )
         // `HardcodedText` is deliberately absent: it only inspects XML layouts, and this app has
-        // none. Compose string literals have to be caught in review.
+        // no UI layouts of its own (the widget's RemoteViews is the exception, and it is text-free).
     }
 }
 
@@ -162,23 +156,11 @@ dependencies {
     implementation("org.yaml:snakeyaml:2.5")
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.service)
-    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
-
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -194,22 +176,10 @@ dependencies {
     // it works on a de-Googled device, and pairing is the one flow a user cannot route around.
     implementation(libs.zxing.android.embedded)
 
-    // Fork: bundled on-device OCR for the "photo to text" row; no Play Services needed.
-    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     // The mock harness carries this project's port of the host's answer-acceptance law. The
     // conformance test runs the real encoder through it rather than through a copy, because a copy
     // is a second thing to keep in step and the failure it guards against is a silent one.
     testImplementation(project(":mock-harness"))
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.test.runner)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
-
-

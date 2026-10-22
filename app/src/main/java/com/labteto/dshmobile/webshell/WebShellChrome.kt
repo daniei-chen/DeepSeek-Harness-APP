@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.labteto.dshmobile.BuildConfig
 import com.labteto.dshmobile.R
 import com.labteto.dshmobile.connection.DoctorReport
 import com.labteto.dshmobile.connection.DoctorStatus
@@ -351,11 +352,13 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         dark: Boolean,
         currentDeviceName: String?,
         versionName: String,
+        pluginVersion: String?,
         simpleMode: Boolean,
         inboxCount: Int,
         notificationsEnabled: Boolean,
         backgroundEnabled: Boolean,
         ntfyEnabled: Boolean,
+        linkHandlerEnabled: Boolean,
         onConnection: () -> Unit,
         onRemote: () -> Unit,
         onInbox: () -> Unit,
@@ -363,6 +366,9 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onDiagnostics: () -> Unit,
         onNotifications: () -> Unit,
         onBackground: () -> Unit,
+        onToggleLinkHandler: () -> Unit,
+        onExport: () -> Unit,
+        onImport: () -> Unit,
         onCheckUpdate: () -> Unit,
         onSource: () -> Unit,
         onRefresh: () -> Unit,
@@ -377,7 +383,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             setPadding(dp(8), dp(10), dp(8), dp(8))
         }
         card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_title)) { dialog.dismiss() })
-        card.addView(aboutCard(colors, versionName, onSource))
+        card.addView(aboutCard(colors, versionName, pluginVersion, onSource))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -480,6 +486,46 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             ) {
                 dialog.dismiss()
                 onBackground()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_link,
+                title = activity.getString(R.string.shell_link_handler),
+                subtitle = activity.getString(R.string.shell_link_handler_hint) + " · " +
+                    activity.getString(
+                        if (linkHandlerEnabled) {
+                            R.string.shell_settings_background_on
+                        } else {
+                            R.string.shell_settings_background_off
+                        },
+                    ),
+            ) {
+                dialog.dismiss()
+                onToggleLinkHandler()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_edit,
+                title = activity.getString(R.string.shell_settings_export),
+                subtitle = activity.getString(R.string.shell_settings_export_hint),
+            ) {
+                dialog.dismiss()
+                onExport()
+            },
+        )
+        card.addView(
+            settingsRow(
+                colors = colors,
+                iconRes = R.drawable.ic_shell_check,
+                title = activity.getString(R.string.shell_settings_import),
+                subtitle = activity.getString(R.string.shell_settings_import_hint),
+            ) {
+                dialog.dismiss()
+                onImport()
             },
         )
         card.addView(divider(colors))
@@ -1469,7 +1515,12 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         show(dialog, root, gravity = Gravity.CENTER)
     }
 
-    private fun aboutCard(colors: Colors, versionName: String, onSource: () -> Unit): LinearLayout {
+    private fun aboutCard(
+        colors: Colors,
+        versionName: String,
+        pluginVersion: String?,
+        onSource: () -> Unit,
+    ): LinearLayout {
         val card = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             background = cardBackground(colors, radiusDp = 14)
@@ -1514,6 +1565,20 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         )
         card.addView(
             TextView(activity).apply {
+                text = pluginVersionLabel(pluginVersion)
+                textSize = 11f
+                setPadding(0, dp(2), 0, 0)
+                setTextColor(
+                    when {
+                        pluginVersion == null -> colors.warn
+                        isOlder(pluginVersion, BuildConfig.PLUGIN_VERSION) -> colors.warn
+                        else -> colors.secondary
+                    },
+                )
+            },
+        )
+        card.addView(
+            TextView(activity).apply {
                 text = activity.getString(R.string.shell_settings_about_github)
                 textSize = 11f
                 setPadding(0, dp(4), 0, 0)
@@ -1523,6 +1588,35 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             },
         )
         return card
+    }
+
+    /**
+     * Which half of the install is behind.
+     *
+     * The app and the host plugin are two artifacts updated separately, and running mismatched
+     * halves is the most common way this product looks broken. Naming the side that is stale is the
+     * difference between a five-second fix and an hour of guessing.
+     */
+    private fun pluginVersionLabel(pluginVersion: String?): String = when {
+        pluginVersion == null -> activity.getString(R.string.shell_plugin_version_missing)
+        isOlder(pluginVersion, BuildConfig.PLUGIN_VERSION) -> activity.getString(
+            R.string.shell_plugin_version_old,
+            pluginVersion,
+            BuildConfig.PLUGIN_VERSION,
+        )
+        else -> activity.getString(R.string.shell_plugin_version_ok, pluginVersion)
+    }
+
+    /** Numeric semver comparison; a missing or non-numeric segment counts as 0. */
+    private fun isOlder(candidate: String, expected: String): Boolean {
+        val left = candidate.split('.', '-', '+').mapNotNull { it.toIntOrNull() }
+        val right = expected.split('.', '-', '+').mapNotNull { it.toIntOrNull() }
+        for (index in 0 until maxOf(left.size, right.size)) {
+            val a = left.getOrElse(index) { 0 }
+            val b = right.getOrElse(index) { 0 }
+            if (a != b) return a < b
+        }
+        return false
     }
 
     private fun pageHeader(colors: Colors, title: String, onClose: () -> Unit): LinearLayout {

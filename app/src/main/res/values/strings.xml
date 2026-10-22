@@ -1041,6 +1041,32 @@
     <string name="shell_settings_update_failed">Could not check for updates</string>
     <string name="shell_settings_up_to_date">You are on the latest version</string>
     <string name="shell_settings_source_hint">github.com/daniei-chen/DeepSeek-Harness-APP</string>
+
+    <!-- 1.1.0: notification inline reply, settings transfer, plugin-version alignment,
+         network recovery and the share/custom-scheme entry points. -->
+    <string name="notif_reply_label">Reply</string>
+    <string name="notif_reply_hint">Queue a reply…</string>
+    <string name="notif_reply_sent">Sent</string>
+    <string name="shell_settings_export">Export settings</string>
+    <string name="shell_settings_export_hint">Devices, harnesses and switches as one JSON file. No credentials.</string>
+    <string name="shell_settings_export_done">Exported</string>
+    <string name="shell_settings_export_failed">Export failed</string>
+    <string name="shell_settings_import">Import settings</string>
+    <string name="shell_settings_import_hint">Restores devices and switches from a JSON file. Never imports credentials.</string>
+    <string name="shell_settings_import_done">Imported %1$d devices and %2$d harnesses</string>
+    <string name="shell_settings_import_empty">This file has nothing to import</string>
+    <string name="shell_settings_import_failed">Import failed: %1$s</string>
+    <string name="shell_link_handler">Open matching links in this app</string>
+    <string name="shell_link_handler_hint">Lets Android offer this app for http links. Links to an address you saved open here; everything else goes to the browser.</string>
+    <string name="shell_plugin_version">Host plugin %1$s</string>
+    <string name="shell_plugin_version_ok">Host plugin %1$s · in step with this app</string>
+    <string name="shell_plugin_version_old">Host plugin %1$s is older than %2$s — update it on the computer</string>
+    <string name="shell_plugin_version_missing">The harness is not serving the phone plugin</string>
+    <string name="shell_share_inserted">Pasted into the composer</string>
+    <string name="shell_share_waiting">Waiting for the page to finish loading</string>
+    <string name="shell_network_restored">Network is back — reconnecting</string>
+    <string name="shell_network_lost">Network lost</string>
+    <string name="shell_link_open_failed">Nothing on this phone can open that link</string>
 </resources>
 
 

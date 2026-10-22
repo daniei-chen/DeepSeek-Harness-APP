@@ -1,5 +1,6 @@
 package com.labteto.dshmobile.connection
 
+import com.labteto.dshmobile.BuildConfig
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -216,7 +217,18 @@ object ConnectionDoctor {
             info == null -> DoctorStep("主机插件", DoctorStatus.WARN, "状态接口没有响应")
             info.first == 200 && info.second.contains("\"ok\":true") -> {
                 val version = Regex("\"version\":\"([^\"]+)\"").find(info.second)?.groupValues?.get(1)
-                DoctorStep("主机插件", DoctorStatus.OK, "已安装${version?.let { " · $it" } ?: ""}")
+                // The app and the plugin are installed separately, so an old plugin on a new app (or
+                // the reverse) is the usual reason features look broken. Say which side is behind.
+                when {
+                    version == null -> DoctorStep("主机插件", DoctorStatus.OK, "已安装")
+                    isOlderVersion(version, BuildConfig.PLUGIN_VERSION) -> DoctorStep(
+                        "主机插件",
+                        DoctorStatus.WARN,
+                        "已安装 $version，低于本应用要求的 ${BuildConfig.PLUGIN_VERSION}",
+                        "在电脑上更新手机插件后重启 DSH",
+                    )
+                    else -> DoctorStep("主机插件", DoctorStatus.OK, "已安装 · $version")
+                }
             }
             info.first == 404 -> DoctorStep(
                 "主机插件",
@@ -290,4 +302,21 @@ object ConnectionDoctor {
         }
         return SSLContext.getInstance("TLS").apply { init(null, arrayOf(trust), SecureRandom()) }
     }
+}
+
+/**
+ * Numeric semver comparison, tolerant of pre-release suffixes.
+ *
+ * `0.1.9` vs `0.1.12` is the case that matters: string ordering says the opposite of the truth, and
+ * a missing or non-numeric segment is treated as 0 so `0.1.12-beta.1` still compares sensibly.
+ */
+internal fun isOlderVersion(candidate: String, expected: String): Boolean {
+    val left = candidate.split('.', '-', '+').mapNotNull { it.toIntOrNull() }
+    val right = expected.split('.', '-', '+').mapNotNull { it.toIntOrNull() }
+    for (index in 0 until maxOf(left.size, right.size)) {
+        val a = left.getOrElse(index) { 0 }
+        val b = right.getOrElse(index) { 0 }
+        if (a != b) return a < b
+    }
+    return false
 }

@@ -47,10 +47,9 @@
 
     <application
         android:name=".DshApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:largeHeap="true"
         android:localeConfig="@xml/locales_config"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
@@ -64,6 +63,14 @@
             the pieces a browser cannot provide (preload, gate-cookie hand-off, uploads, downloads,
             back-stack bridge, insets). `configChanges` keeps the WebView and its scroll state
             across rotation/locale/theme/font changes instead of tearing the activity down.
+
+            Three entry points besides the launcher, added in 1.1.0:
+
+            * SEND  — share text/links into a new composer message from any app.
+            * VIEW dshmobile:// — the scheme the app already puts on its own notification intents,
+              now also answerable from outside (`dshmobile://host/current/session/<id>`).
+            * The http/https link handler is a *disabled* <activity-alias> below, because taking
+              over every web link by default is hostile. The user turns it on in Settings.
         -->
         <activity
             android:name=".webshell.WebShellActivity"
@@ -76,11 +83,41 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dshmobile" />
+            </intent-filter>
             <!-- Long-press launcher shortcut: open the app. -->
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!--
+            The opt-in http/https handler. Declared disabled: Android shows this app in the "open
+            with" list for every web link only after the user switches it on in Settings, and the
+            activity bounces anything that is not a saved harness address to the real browser.
+        -->
+        <activity-alias
+            android:name=".webshell.LinkOpenAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".webshell.WebShellActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".connection.ConnectionService"
@@ -126,6 +163,13 @@
              receiver never needs to be exported or matched by an intent filter. -->
         <receiver
             android:name=".notify.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!-- Direct reply from a completion/question notification. The PendingIntent is explicit and
+             mutable (the system fills in the RemoteInput results), so the receiver never needs to be
+             exported or matched by an intent filter. -->
+        <receiver
+            android:name=".notify.ReplyReceiver"
             android:exported="false" />
 
         <!--
