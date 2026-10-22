@@ -889,6 +889,17 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(8), dp(2), dp(8), dp(6))
         }
+        // The QR on this page is an invitation *for another device*. Saying so here is the only
+        // thing that stops "why is the pairing code on my phone?" — it belongs to the host.
+        column.addView(
+            TextView(activity).apply {
+                text = activity.getString(R.string.shell_remote_scope_note)
+                textSize = 11.5f
+                setTextColor(colors.secondary)
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(4), dp(10), dp(8))
+            },
+        )
 
         if (qr != null) {
             val frame = FrameLayout(activity).apply {

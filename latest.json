@@ -1,10 +1,10 @@
 {
-  "version": "1.0.2",
-  "versionCode": 50002,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.2/DeepSeek-Harness-1.0.2-personal.3.apk",
-  "sha256": "638DBF61EFEFFE671943AEFD48CD32F388C0762E74ABD6EA12CE1BAA41C150E2",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.2",
+  "version": "1.0.3",
+  "versionCode": 50003,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.0.3/DeepSeek-Harness-1.0.3-personal.4.apk",
+  "sha256": "73CBF8732383632087A24AA00B5A38FD1ACEC641407E6A48828B41F04A5D92F6",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.0.3",
   "minPluginVersion": "0.1.11",
-  "notes": "Relay QR stores the stable origin; honest LAN hint",
-  "generatedAt": "2026-10-22T00:40:52.772Z"
+  "notes": "Clarify pairing direction; HTTP primary",
+  "generatedAt": "2026-10-22T00:54:33.743Z"
 }

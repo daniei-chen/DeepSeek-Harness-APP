@@ -819,8 +819,9 @@
     <string name="shell_diagnostics_repair">修复界面排版</string>
     <string name="shell_diagnostics_repaired">界面已重新排布</string>
     <string name="shell_remote">远控</string>
-    <string name="shell_remote_hint">配对二维码、已配对设备与中继地址</string>
+    <string name="shell_remote_hint">给另一台设备发邀请；本机配对用电脑上的码</string>
     <string name="shell_remote_title">远控</string>
+    <string name="shell_remote_scope_note">这个二维码是给另一台设备的邀请。要配对这台手机，请用电脑上显示的二维码或 8 位配对码。</string>
     <string name="shell_remote_qr_hint">用另一台设备扫描此二维码即可配对，配对码只能使用一次。</string>
     <string name="shell_remote_code">配对码 %1$s</string>
     <string name="shell_remote_expires">%1$s 内有效</string>
@@ -887,7 +888,7 @@
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
     <string name="shell_settings_scan_qr">扫码连接</string>
-    <string name="shell_settings_scan_qr_hint">扫描电脑上的配对二维码</string>
+    <string name="shell_settings_scan_qr_hint">扫描电脑上 https://电脑IP:3443/relay/pair 页面里的二维码</string>
     <string name="shell_scan_qr_prompt">对准电脑上的二维码</string>
     <string name="shell_scan_qr_invalid">不是 DSH 地址或配对二维码</string>
     <string name="shell_scan_qr_too_new">二维码版本过新，请升级 App</string>
@@ -951,7 +952,7 @@
     <string name="shell_pair_scan">改用扫码</string>
     <string name="shell_pair_invalid">地址或配对码格式不对</string>
     <string name="shell_pair_row">配对码连接</string>
-    <string name="shell_pair_row_hint">没有摄像头时，手动输入中继地址和配对码</string>
+    <string name="shell_pair_row_hint">把电脑上显示的 8 位码输到这里——不是手机上的二维码</string>
     <string name="shell_scan_all_added">找到 %1$d 个设备，均已添加</string>
     <string name="shell_notify_check">通知自检</string>
     <string name="shell_offline_title">离线快照</string>
