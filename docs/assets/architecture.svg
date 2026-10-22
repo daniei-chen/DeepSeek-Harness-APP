@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="470" viewBox="0 0 920 470" role="img" aria-label="Architecture">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+    <marker id="arrowBack" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M10,0 L0,5 L10,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect width="920" height="470" rx="16" fill="#f6f8fa"/>
+  <!-- phone card -->
+  <rect x="26" y="54" width="268" height="330" rx="14" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="26" y="54" width="268" height="44" rx="14" fill="#eaf5ef"/>
+  <rect x="26" y="84" width="268" height="14" fill="#eaf5ef"/>
+  <text x="46" y="82" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="16" font-weight="700" fill="#0b1f2a">Android App</text>
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12.5" fill="#24292f">
+    <text x="46" y="126">WebView 壳：直接跑 DSH 官方界面</text>
+    <text x="46" y="152">原生层：连接 / 通知 / 文件 / 体检</text>
+    <text x="46" y="178">收件箱 · 会话驾驶舱 · 离线快照</text>
+    <text x="46" y="204">多设备管理（地址可切换）</text>
+    <text x="46" y="230">更新检查（latest.json）</text>
+    <text x="46" y="256">主题兼容（磨砂层自动降级）</text>
+  </g>
+  <rect x="42" y="286" width="236" height="78" rx="10" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="56" y="308" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">安全边界</text>
+  <text x="56" y="328" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">自签名证书按 host:port 单独信任</text>
+  <text x="56" y="348" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">不保存中继密码；令牌只在本机</text>
+
+  <!-- host card -->
+  <rect x="626" y="54" width="268" height="330" rx="14" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="626" y="54" width="268" height="44" rx="14" fill="#e8efff"/>
+  <rect x="626" y="84" width="268" height="14" fill="#e8efff"/>
+  <text x="646" y="82" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="16" font-weight="700" fill="#0b1f2a">DSH Desktop（你的电脑）</text>
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12.5" fill="#24292f">
+    <text x="646" y="126">Web UI：真实聊天与工具界面</text>
+    <text x="646" y="152">APP 插件：/dsh-mobile · /dsh-file-ops</text>
+    <text x="646" y="178">dsh-relay 0.2.1（固定 3443）</text>
+    <text x="646" y="204">ntfy / UnifiedPush（可选）</text>
+    <text x="646" y="230">工作区文件、审计日志</text>
+  </g>
+  <rect x="642" y="286" width="236" height="78" rx="10" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="656" y="308" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">为什么指向中继</text>
+  <text x="656" y="328" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">DSH 端口每次重启都可能变，</text>
+  <text x="656" y="348" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">中继 3443 固定并在进程内转发</text>
+
+  <!-- middle transport -->
+  <line x1="300" y1="150" x2="618" y2="150" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="618" y1="180" x2="300" y2="180" stroke="#57606a" stroke-width="2" marker-end="url(#arrowBack)"/>
+  <text x="330" y="142" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12.5" font-weight="600" fill="#0b1f2a">HTTP / HTTPS</text>
+  <text x="330" y="172" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12.5" font-weight="600" fill="#0b1f2a">WebSocket（页面自带）</text>
+  <text x="330" y="200" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="11.5" fill="#57606a">同一 Wi-Fi 直连，或经隧道</text>
+
+  <rect x="300" y="228" width="320" height="122" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="318" y="252" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="13" font-weight="700" fill="#0b1f2a">隧道（任选其一）</text>
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12" fill="#24292f">
+    <text x="318" y="276">Tailscale · Cloudflare Tunnel</text>
+    <text x="318" y="298">frp · 公网 IP + 端口映射</text>
+    <text x="318" y="326" fill="#57606a" font-size="11.5">目标始终是 https://127.0.0.1:3443</text>
+  </g>
+
+  <text x="26" y="416" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12" fill="#57606a">所有组件都在你自己的机器上；本仓库不运营任何云、账号或推送服务。</text>
+</svg>

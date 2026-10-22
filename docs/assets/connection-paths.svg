@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="420" viewBox="0 0 920 420" role="img" aria-label="Connection paths">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/>
+    </marker>
+  </defs>
+  <rect width="920" height="420" rx="16" fill="#f6f8fa"/>
+
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12" font-weight="700" fill="#57606a">
+    <text x="24" y="34">手机</text>
+    <text x="170" y="34">路径</text>
+    <text x="520" y="34">中继（固定 3443）</text>
+    <text x="760" y="34">DSH（端口会变）</text>
+  </g>
+
+  <!-- lanes -->
+  <g font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif">
+    <!-- lane 1 -->
+    <rect x="20" y="56" width="104" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="40" y="92" font-size="13" fill="#24292f">手机</text>
+    <line x1="128" y1="87" x2="164" y2="87" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="168" y="56" width="300" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="184" y="82" font-size="13" font-weight="600" fill="#0b1f2a">同一 Wi-Fi</text>
+    <text x="184" y="102" font-size="12" fill="#57606a">https://192.168.x.x:3443</text>
+    <line x1="472" y1="87" x2="508" y2="87" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="512" y="56" width="196" height="62" rx="12" fill="#eaf5ef" stroke="#a7d3bd"/>
+    <text x="528" y="82" font-size="13" font-weight="600" fill="#0b1f2a">dsh-relay</text>
+    <text x="528" y="102" font-size="12" fill="#57606a">TLS · 0.0.0.0:3443</text>
+    <line x1="712" y1="87" x2="748" y2="87" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="752" y="56" width="148" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="768" y="82" font-size="13" fill="#24292f">DSH Web UI</text>
+    <text x="768" y="102" font-size="12" fill="#57606a">127.0.0.1:随机</text>
+
+    <!-- lane 2 -->
+    <rect x="20" y="136" width="104" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="40" y="172" font-size="13" fill="#24292f">手机</text>
+    <line x1="128" y1="167" x2="164" y2="167" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="168" y="136" width="300" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="184" y="162" font-size="13" font-weight="600" fill="#0b1f2a">Tailscale（推荐）</text>
+    <text x="184" y="182" font-size="12" fill="#57606a">https://100.x.y.z:3443</text>
+    <line x1="472" y1="167" x2="508" y2="167" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="512" y="136" width="196" height="62" rx="12" fill="#eaf5ef" stroke="#a7d3bd"/>
+    <text x="528" y="162" font-size="13" font-weight="600" fill="#0b1f2a">dsh-relay</text>
+    <text x="528" y="182" font-size="12" fill="#57606a">tailnet 内可达</text>
+    <line x1="712" y1="167" x2="748" y2="167" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="752" y="136" width="148" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="768" y="162" font-size="13" fill="#24292f">DSH Web UI</text>
+    <text x="768" y="182" font-size="12" fill="#57606a">进程内转发</text>
+
+    <!-- lane 3 -->
+    <rect x="20" y="216" width="104" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="40" y="252" font-size="13" fill="#24292f">手机</text>
+    <line x1="128" y1="247" x2="164" y2="247" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="168" y="216" width="300" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="184" y="242" font-size="13" font-weight="600" fill="#0b1f2a">Cloudflare Tunnel</text>
+    <text x="184" y="262" font-size="12" fill="#57606a">https://dsh.example.com</text>
+    <line x1="472" y1="247" x2="508" y2="247" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="512" y="216" width="196" height="62" rx="12" fill="#eaf5ef" stroke="#a7d3bd"/>
+    <text x="528" y="242" font-size="13" font-weight="600" fill="#0b1f2a">cloudflared</text>
+    <text x="528" y="262" font-size="12" fill="#57606a">noTLSVerify → 3443</text>
+    <line x1="712" y1="247" x2="748" y2="247" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="752" y="216" width="148" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="768" y="242" font-size="13" fill="#24292f">DSH Web UI</text>
+    <text x="768" y="262" font-size="12" fill="#57606a">进程内转发</text>
+
+    <!-- lane 4 -->
+    <rect x="20" y="296" width="104" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="40" y="332" font-size="13" fill="#24292f">手机</text>
+    <line x1="128" y1="327" x2="164" y2="327" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="168" y="296" width="300" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="184" y="322" font-size="13" font-weight="600" fill="#0b1f2a">frp（自己的 VPS）</text>
+    <text x="184" y="342" font-size="12" fill="#57606a">https://vps-ip:3443</text>
+    <line x1="472" y1="327" x2="508" y2="327" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="512" y="296" width="196" height="62" rx="12" fill="#eaf5ef" stroke="#a7d3bd"/>
+    <text x="528" y="322" font-size="13" font-weight="600" fill="#0b1f2a">frps → frpc</text>
+    <text x="528" y="342" font-size="12" fill="#57606a">TCP 3443 映射</text>
+    <line x1="712" y1="327" x2="748" y2="327" stroke="#8c959f" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="752" y="296" width="148" height="62" rx="12" fill="#ffffff" stroke="#d0d7de"/>
+    <text x="768" y="322" font-size="13" fill="#24292f">DSH Web UI</text>
+    <text x="768" y="342" font-size="12" fill="#57606a">进程内转发</text>
+  </g>
+
+  <text x="20" y="398" font-family="Segoe UI, PingFang SC, Noto Sans SC, sans-serif" font-size="12" fill="#57606a">不变的部分：手机永远连中继 3443；DSH 换端口只影响中继内部的转发目标。</text>
+</svg>
