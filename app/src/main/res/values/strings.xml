@@ -946,6 +946,9 @@
     <string name="shell_settings_copied">Copied</string>
     <string name="shell_settings_test_connection">Test current connection</string>
     <string name="shell_settings_test_connection_hint">Check URL reachability and latency</string>
+    <string name="shell_simple_mode_hint">Hide QR, pairing code and LAN scan</string>
+    <string name="shell_advanced_show">Show advanced connection options</string>
+    <string name="shell_advanced_hide">Hide advanced connection options</string>
     <string name="shell_pair_title">Pair with a code</string>
     <string name="shell_pair_description">Enter the relay address shown on the computer and its 8-digit code. The address is the relay itself, not the DSH port.</string>
     <string name="shell_pair_address_hint">https://192.168.2.13:3443</string>

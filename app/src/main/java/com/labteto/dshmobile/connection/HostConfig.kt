@@ -176,6 +176,14 @@ data class AppSettings(
      * string so a future mode does not need a schema change.
      */
     val glassCompat: String = "auto",
+    /**
+     * URL-only connection UI.
+     *
+     * The relay, QR and LAN scan are powerful when a user has no stable address, but for the
+     * common case — one HTTP/HTTPS URL, often a tunnel — they are noise. On by default; turning
+     * it off reveals the advanced rows.
+     */
+    val simpleMode: Boolean = true,
 )
 
 /** The three ways the app can reach a harness. Persisted as [AppSettings.connectMode]. */
