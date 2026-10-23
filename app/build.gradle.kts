@@ -14,7 +14,7 @@ plugins {
  * upgrade at all. The code is derived from the name so it rises with semver on its own; the
  * fallback is what a local `assembleRelease` builds.
  */
-val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.4"
+val dshVersionName: String = System.getenv("DSH_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "1.1.5"
 
 // Visible version restarts at 0.0.0 per the rebuild brief, but Android still needs a rising
 // versionCode to upgrade over the old build, so DSH_VERSION_CODE can override it independently.
