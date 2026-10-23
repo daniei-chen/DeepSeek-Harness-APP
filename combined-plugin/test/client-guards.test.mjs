@@ -425,6 +425,13 @@ test("the phone header and composer survive dsh-claude-style", () => {
         "the theme's model label must not be overprinted by our ::after");
     assert.match(claude, /body\[data-dsh-claude-style\] \.dsh-claude-model-seat \{\n  min-width: 0 !important;/,
         "the theme's seat still has to shrink inside the composer row");
+
+    // Vertical rhythm: the theme reserves a 65px title row for the 对话/轨迹 strip the phone hides, and
+    // its composer card sat 8px off the bottom edge, on the gesture pill.
+    assert.match(claude, /header\[data-dsh-claude-part~="conversation-header"\] \{[\s\S]{0,160}grid-template-rows: auto 0px !important;/,
+        "the desktop title row must not keep its reservation");
+    assert.match(claude, /\[data-dsh-claude-part~="composer-stack"\] \{\n  padding-bottom: 12px !important;/,
+        "the composer needs a gap over the navigation bar");
 });
 
 test("a drawer row that navigates also collapses the phone drawer", () => {

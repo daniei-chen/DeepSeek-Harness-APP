@@ -1,10 +1,10 @@
 {
-  "version": "1.1.16",
-  "versionCode": 50116,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.16/DeepSeek-Harness-1.1.16-personal.23.apk",
-  "sha256": "D15AFC1932DBB047914BA4BF718B857DBE1961B06374252CC646F156DBA7765E",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.16",
-  "minPluginVersion": "0.1.30",
-  "notes": "手机端适配 dsh-claude-style：会话头部不再重叠，模型名不再重影，抽屉选完会话自动收起",
-  "generatedAt": "2026-10-23T13:20:00.000Z"
+  "version": "1.1.17",
+  "versionCode": 50117,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.17/DeepSeek-Harness-1.1.17-personal.24.apk",
+  "sha256": "747D564F1CF8E39292AEE06C1E3C5FB9AB2EEA7FB841643E668EFFF19ABA4F2E",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.17",
+  "minPluginVersion": "0.1.31",
+  "notes": "顶栏收紧、输入框离底部手势条留出距离（dsh-claude-style 手机适配）",
+  "generatedAt": "2026-10-23T14:50:00.000Z"
 }

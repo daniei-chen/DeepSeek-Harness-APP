@@ -17,10 +17,16 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.16**, `versionCode` **50116**, `DeepSeek-Harness-1.1.16-personal.23.apk`
-- Host plugin **0.1.30**, `dsh-android-deepseek-harness-app-plugin-0.1.30.tgz`
+- APK **1.1.17**, `versionCode` **50117**, `DeepSeek-Harness-1.1.17-personal.24.apk`
+- Host plugin **0.1.31**, `dsh-android-deepseek-harness-app-plugin-0.1.31.tgz`
 - DSH tested against `0.2.1`
 
+1.1.17 fixes the theme's vertical rhythm on the phone. `dsh-claude-style` reserves a 65 px title row
+for the 对话/轨迹 strip the phone hides, so a 34 px row of icons floated in the middle of a 76 px band
+(37 px of empty header above the conversation), and its composer card sat 8 px off the bottom edge, on
+the gesture pill. The phone form pins the rows (`grid-template-rows: auto 0px`, `height: auto`, 2 px
+padding) and gives the composer stack a 12 px lift. Measured at 393×852 with the phone's insets
+(40 px status bar, 24 px navigation): header 76 → 39 px, composer card bottom 820 → 808 of 852.
 1.1.16 adapts the phone to **dsh-claude-style**, the Claude Code desktop theme (0.18.5). The theme lays
 the conversation header out for a desktop window: at 393 px the background-job chip ran from x=254 to
 x=432, straight across the "…" menu (298) and the panel toggle (343), the subagent chip took the rest,
@@ -121,7 +127,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.16 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.17 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
