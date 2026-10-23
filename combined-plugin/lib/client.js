@@ -251,7 +251,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.22";
+    const PLUGIN_VERSION = "0.1.23";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -495,6 +495,7 @@ html[data-dsh-glass="off"] body::after {
         compactStats();
       });
       installDeviceChip();
+      placeEffortChip();
       installResilientFetch();
       installFileActions();
       installImageUploadDefault();
@@ -743,6 +744,31 @@ html[data-dsh-glass="off"] body::after {
      * the same native manager in one tap. It is re-attached by the decorating pass, like the file
      * tools, so a header re-render cannot lose it.
      */
+    /**
+     * Put the reasoning-effort chip in the same row as the send button.
+     *
+     * dsh-codex-power-slider mounts that chip in the composer toolbar's left slot, and send lives in a
+     * different container, so on a phone they end up on separate lines with the model name stranded at
+     * the far left. CSS cannot fix that — only relocating the node can. The decorating pass calls this
+     * on every DOM change, so when React re-renders the chip back into its slot it is moved again on
+     * the next pass. Failures are swallowed: a move that lands mid-commit is retried by the next pass,
+     * and an exception here would take the page down with it.
+     */
+    const placeEffortChip = () => {
+      const chip = document.querySelector(".dshcps-chip");
+      if (chip === null) return;
+      const send = document.querySelector(
+        'button[aria-label*="发送"], button[aria-label*="Send"], button[type="submit"]',
+      );
+      if (send === null) return;
+      const row = send.parentElement;
+      if (row === null) return;
+      if (chip.parentElement === row && chip.nextElementSibling === send) return;
+      try {
+        row.insertBefore(chip, send);
+      } catch (e) {}
+    };
+
     const installDeviceChip = () => {
       const bridge = window.DshShellBridge;
       if (!bridge || typeof bridge.deviceSummary !== "function") return;
@@ -1120,6 +1146,7 @@ html[data-dsh-glass="off"] body::after {
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
         installDeviceChip();
+        placeEffortChip();
         const root = rootPath();
         if (root === "") {
           panelNudged = false;
