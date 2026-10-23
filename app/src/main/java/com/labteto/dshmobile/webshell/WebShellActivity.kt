@@ -1005,6 +1005,31 @@ class WebShellActivity : AppCompatActivity() {
         fun relayPairing(payload: String) {
             runOnUiThread { relayPairingResult?.complete(payload) }
         }
+
+        /**
+         * The saved devices, for the page's device chip.
+         *
+         * Only the name of the active device and the count are exposed: the addresses themselves are
+         * the user's, and the page has no use for them beyond a label. An empty list means the shell
+         * has never been configured, and the chip stays hidden.
+         */
+        @android.webkit.JavascriptInterface
+        fun deviceSummary(): String {
+            val devices = shellDevices.load()
+            val current = devices.firstOrNull { it.id == shellDevices.currentId() }
+            return runCatching {
+                org.json.JSONObject()
+                    .put("count", devices.size)
+                    .put("name", current?.name.orEmpty())
+                    .toString()
+            }.getOrDefault("""{"count":0,"name":""}""")
+        }
+
+        /** Open the shell's own device manager: switch, add, rename, delete. */
+        @android.webkit.JavascriptInterface
+        fun openDevices() {
+            runOnUiThread { if (!isFinishing && !isDestroyed) showDeviceManager() }
+        }
     }
 
     private inner class BackBridge {
