@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.14-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.15-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.15：手机端接住 Claude 主题（dsh-claude-style）
+
+| 问题 | 修法 |
+| --- | --- |
+| 装了 `dsh-claude-style` 后，手机顶栏的字全叠在一起：`1 个后台任务运行中` 从 254px 一直画到 432px，压住 `…`（298）和右侧栏按钮（343），会话标题被挤成 11px | 主题是按桌面窗口排的。手机形态下隐藏 `对话/轨迹` 切换（你要求的）、隐藏子智能体计数和团队图标，后台任务只留转圈图标，标题拿到整行剩余宽度并省略号。 |
+| 底栏模型名叠成双影：`DeepSeek-V4.1-Flash` 印在 `DeepSeek-V4.1-Flash` 上 | 主题自己画了一套模型控件并藏掉了核心触发器，而插件从 1.1.3 起用 `::after` 重写核心触发器的标签——两套叠在同一个坐标。现在这套重写在主题的按钮上直接取消，只保留主题自己的标签。 |
+| 抽屉里点会话，会话打开了、抽屉却还盖在上面 | 主题的侧栏不认识手机的抽屉。点 `会话行 / 新会话 / 面板行` 后 90ms 关闭抽屉（先让行自己的跳转跑完）。 |
 
 ---
 
@@ -288,7 +298,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.14-personal.21.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.15-personal.22.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -315,8 +325,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.14**（`versionCode 50114`） | `DeepSeek-Harness-1.1.14-personal.21.apk` | `CA2F96BA6C4BB6458DCF59AE12CCEB25C9EF0EE6BF0789E91CF9762FB5134E1B` |
-| 主机插件 | **0.1.28** | `dsh-android-deepseek-harness-app-plugin-0.1.28.tgz` | 见 Release 页面 |
+| App | **1.1.15**（`versionCode 50115`） | `DeepSeek-Harness-1.1.15-personal.22.apk` | `43A2D707DBAD6188EAFCD112B5FD6238CB51B70C514796704EC8A01D394461AB` |
+| 主机插件 | **0.1.29** | `dsh-android-deepseek-harness-app-plugin-0.1.29.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -328,7 +338,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.14 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.15 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
