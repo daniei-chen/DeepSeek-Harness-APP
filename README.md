@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.16-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.17-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -37,6 +37,13 @@
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
 
 ---
+
+## 1.1.17：顶栏收紧，输入框离底部留出一点距离
+
+| 问题 | 修法 |
+| --- | --- |
+| 顶部空太多：标题在状态栏下面 58px 处，下面到第一条消息还有一段空白 | 主题给手机已隐藏的 `对话/轨迹` 预留了 65px 标题行，34px 的图标行被垂直居中在一个 76px 的带子里。现在把行高钉成 34px、`grid-template-rows: auto 0px`、上下 2px 内边距——头部 76px → 39px，标题回到状态栏下方 19px。 |
+| 输入框贴着底部手势条 | 主题的 composer 只留 8px 就到底了。手机形态给 `composer-stack` 加 12px，输入卡片底部从 820 升到 808（视口 852），手势条上方留出干净的一条。 |
 
 ## 1.1.16：手机端接住 Claude 主题（dsh-claude-style）
 
@@ -298,7 +305,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.16-personal.23.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.17-personal.24.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -325,8 +332,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.16**（`versionCode 50116`） | `DeepSeek-Harness-1.1.16-personal.23.apk` | `D15AFC1932DBB047914BA4BF718B857DBE1961B06374252CC646F156DBA7765E` |
-| 主机插件 | **0.1.30** | `dsh-android-deepseek-harness-app-plugin-0.1.30.tgz` | 见 Release 页面 |
+| App | **1.1.17**（`versionCode 50117`） | `DeepSeek-Harness-1.1.17-personal.24.apk` | `747D564F1CF8E39292AEE06C1E3C5FB9AB2EEA7FB841643E668EFFF19ABA4F2E` |
+| 主机插件 | **0.1.31** | `dsh-android-deepseek-harness-app-plugin-0.1.31.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -338,7 +345,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.16 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.17 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
