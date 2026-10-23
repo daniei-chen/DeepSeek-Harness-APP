@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.7-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.8-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.8：连接异常自动重连
+
+| 问题 | 修法 |
+| --- | --- |
+| 断线后只给一个「连接异常，刷新重试」，要自己点 | 检测到这个橙色状态条**持续 2.6 秒**就替你点下去，点之前先弹一行「连接异常，正在自动重连…」。 |
+| 会不会又变成「乱刷新」 | 只在三件事同时成立时动作：状态条真的稳定存在（短暂抖动会自己恢复）、输入框里没有未发送的草稿（重载会吞掉文字）、页面在前台。**2 分钟内最多 3 次**，计数存在 sessionStorage 里，刷页面也重置不了。 |
+| 想知道它替我点了几次 | 设置 → 诊断 → 页面健康那一行多了 `autoRetry=N`。 |
 
 ---
 
@@ -220,7 +230,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.7-personal.14.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.8-personal.15.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -247,8 +257,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.7**（`versionCode 50107`） | `DeepSeek-Harness-1.1.7-personal.14.apk` | `304FE820C257DB5A01274629D9B7A777122F4535944408D7B7AD01F2B3A662A1` |
-| 主机插件 | **0.1.24** | `dsh-android-deepseek-harness-app-plugin-0.1.24.tgz` | 见 Release 页面 |
+| App | **1.1.8**（`versionCode 50108`） | `DeepSeek-Harness-1.1.8-personal.15.apk` | `5C9EF3E4DC5213CACBA0B9C986D1E8370B62BEC37598F95DFC4463FEDEFE6949` |
+| 主机插件 | **0.1.25** | `dsh-android-deepseek-harness-app-plugin-0.1.25.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -260,7 +270,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.7 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.8 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

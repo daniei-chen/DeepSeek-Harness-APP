@@ -212,7 +212,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.24";
+    const PLUGIN_VERSION = "0.1.25";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -457,11 +457,172 @@ html[data-dsh-glass="off"] body::after {
       });
       placeEffortChip();
       installResilientFetch();
+      installAutoReconnect();
+      checkAutoReconnect();
       installFileActions();
       installImageUploadDefault();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
+
+    /**
+     * 「连接异常，刷新重试」is the one failure the page never fixes for itself: the event stream dies,
+     * the client paints a status pill and then waits for a tap. Tap it for the user — but only when
+     * that is clearly the right thing to do:
+     *
+     *  - the pill has stood there for 2.6 s, because a momentary drop clears on its own and clicking
+     *    through a blip is exactly the "it refreshes by itself" behaviour this plugin must not add;
+     *  - the composer holds no draft, because a click that reloads the page would throw it away;
+     *  - the page is visible, and at most 3 attempts land in any 2-minute window, so a host that is
+     *    genuinely down is not reloaded in a loop. The counter lives in sessionStorage so reloading
+     *    the page cannot reset it.
+     *
+     * No repeating timer: the first sighting schedules one setTimeout, and that timer re-checks that
+     * the pill is still there before clicking. The attempt count is exposed for the shell's
+     * page-health line.
+     */
+    const installAutoReconnect = () => {
+      if (window.__dshAutoReconnect) return;
+      window.__dshAutoReconnect = { attempts: 0, lastAt: 0, windowStart: 0, scanAt: 0, pending: false };
+    };
+
+    const AUTO_RECONNECT_KEY = "dsh-auto-reconnect";
+
+    const readAutoReconnect = () => {
+      try {
+        const raw = window.sessionStorage.getItem(AUTO_RECONNECT_KEY);
+        if (raw === null) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const writeAutoReconnect = (attempts, windowStart, lastAt) => {
+      try {
+        window.sessionStorage.setItem(
+          AUTO_RECONNECT_KEY,
+          JSON.stringify({ attempts: attempts, windowStart: windowStart, lastAt: lastAt }),
+        );
+      } catch (e) {}
+    };
+
+    const findReconnectControl = () => {
+      const candidates = document.querySelectorAll(
+        'button, [role="button"], [class*="status"], [class*="Status"], [class*="onnect"]',
+      );
+      const limit = Math.min(candidates.length, 160);
+      for (let i = 0; i < limit; i++) {
+        const node = candidates[i];
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.offsetWidth === 0 || node.offsetHeight === 0) continue;
+        const text = (node.textContent || "").replace(/\s+/g, " ").trim();
+        if (text.length === 0 || text.length > 32) continue;
+        if (!/(连接异常|刷新重试|连接已断开|重新连接|Connection lost|Reconnect|Retry)/i.test(text)) continue;
+        const clickable = node.closest('button, [role="button"], a');
+        return clickable === null ? node : clickable;
+      }
+      // The status pill is a plain element in some builds (random hashed class, no role), so fall
+      // back to the text itself: it is the only reliable handle on "the connection is broken".
+      let seen = 0;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      let textNode = null;
+      while ((textNode = walker.nextNode()) !== null) {
+        seen += 1;
+        if (seen > 4000) break;
+        const value = (textNode.nodeValue || "").trim();
+        if (value.length === 0 || value.length > 24) continue;
+        if (!/(连接异常|刷新重试|连接已断开|重新连接|Reconnect|Retry)/i.test(value)) continue;
+        let host = textNode.parentElement;
+        for (let depth = 0; host !== null && depth < 4; depth += 1) {
+          if (host.offsetWidth > 0 && host.offsetHeight > 0) {
+            const clickable = host.closest('button, [role="button"], a');
+            return clickable === null ? host : clickable;
+          }
+          host = host.parentElement;
+        }
+      }
+      return null;
+    };
+
+    const composerHasDraft = () => {
+      const fields = document.querySelectorAll(
+        '[data-composer-card] textarea, [data-composer-card] [contenteditable="true"]',
+      );
+      for (let i = 0; i < fields.length; i++) {
+        const field = fields[i];
+        const value = field.value !== undefined ? field.value : field.textContent;
+        if (value && value.trim().length > 0) return true;
+      }
+      return false;
+    };
+
+    const announceReconnect = () => {
+      try {
+        const old = document.getElementById("dsh-auto-reconnect");
+        if (old !== null) old.remove();
+        const tip = document.createElement("div");
+        tip.id = "dsh-auto-reconnect";
+        tip.textContent = "连接异常，正在自动重连…";
+        tip.setAttribute(
+          "style",
+          "position:fixed;left:50%;bottom:104px;transform:translateX(-50%);" +
+            "z-index:2147483000;padding:8px 14px;border-radius:999px;" +
+            "background:rgba(28,28,30,.92);color:#fff;font:13px/1.4 sans-serif;" +
+            "box-shadow:0 6px 24px rgba(0,0,0,.35);pointer-events:none",
+        );
+        document.body.appendChild(tip);
+        window.setTimeout(() => {
+          try {
+            tip.remove();
+          } catch (e) {}
+        }, 5000);
+      } catch (e) {}
+    };
+
+    const checkAutoReconnect = () => {
+      const state = window.__dshAutoReconnect;
+      if (!state) return;
+      if (document.visibilityState === "hidden") return;
+      if (state.pending) return;
+      const now = Date.now();
+      if (now - state.scanAt < 1200) return;
+      state.scanAt = now;
+      const saved = readAutoReconnect();
+      if (saved !== null) {
+        state.attempts = saved.attempts || 0;
+        state.windowStart = saved.windowStart || 0;
+        state.lastAt = saved.lastAt || 0;
+      }
+      if (now - state.lastAt < 20000) return;
+      if (findReconnectControl() === null) return;
+      state.pending = true;
+      window.setTimeout(() => {
+        state.pending = false;
+        const at = Date.now();
+        if (document.visibilityState === "hidden") return;
+        if (findReconnectControl() === null) return;
+        if (at - state.lastAt < 20000) return;
+        if (composerHasDraft()) return;
+        if (state.windowStart === 0 || at - state.windowStart > 120000) {
+          state.windowStart = at;
+          state.attempts = 0;
+        }
+        if (state.attempts >= 3) return;
+        state.attempts += 1;
+        state.lastAt = at;
+        writeAutoReconnect(state.attempts, state.windowStart, at);
+        const target = findReconnectControl();
+        if (target === null) return;
+        announceReconnect();
+        window.setTimeout(() => {
+          try {
+            target.click();
+          } catch (e) {}
+        }, 700);
+      }, 2600);
+    };
 
     /**
      * Retry the transient API failures that make the web client say "服务异常，请重试".
@@ -1055,6 +1216,7 @@ html[data-dsh-glass="off"] body::after {
       let panelSeenAt = 0;
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
+        checkAutoReconnect();
         placeEffortChip();
         const root = rootPath();
         if (root === "") {
