@@ -17,10 +17,14 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.11**, `versionCode` **50111**, `DeepSeek-Harness-1.1.11-personal.18.apk`
+- APK **1.1.12**, `versionCode` **50112**, `DeepSeek-Harness-1.1.12-personal.19.apk`
 - Host plugin **0.1.27**, `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz`
 - DSH tested against `0.2.1`
 
+1.1.12 names the slow calls. The fetch hook around the page now records each call's duration, and
+`__dshShellNetwork` reports the three slowest above 150 ms (`| slow=api/…/messages 1240ms!`, `!` for
+a failure). Session switching is either a slow fetch or slow rendering, and until this line existed
+there was no way to tell which — a count of calls says nothing about a single slow one.
 1.1.11 measures start-up instead of guessing at it. Diagnostics gains `first=` (native navigation →
 first committed frame), `ready=` (→ `onPageFinished`) and the page's own `ttfb` / `fcp` / `dcl`
 from `PerformanceNavigationTiming`. Read that line before touching the launch path: it separates a
@@ -96,7 +100,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.11 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.12 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

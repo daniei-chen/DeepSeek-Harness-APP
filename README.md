@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.11-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.12-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,14 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.12：会话切换慢，先分清是"拉"还是"画"
+
+| 问题 | 修法 |
+| --- | --- |
+| 切会话、翻历史时卡，但不知道是网络还是渲染 | 页面健康里的 API 统计多了**最慢的三个请求**：`\| slow=api/sessions/xxx/messages 1240ms!`。之前只统计"调了几次"，现在每个请求都记耗时（失败带 `!`）。切一次会话再看这一行：如果消息接口自己就 1 秒多，问题在拉取；如果接口 120ms 而界面还是卡，问题在渲染。 |
 
 ---
 
@@ -262,7 +270,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.11-personal.18.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.12-personal.19.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -289,7 +297,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.11**（`versionCode 50111`） | `DeepSeek-Harness-1.1.11-personal.18.apk` | `7F827FFCD4973A6A3BC8A2A124FF86E384A020B55C0D6B0AF2212F4576E6DC3A` |
+| App | **1.1.12**（`versionCode 50112`） | `DeepSeek-Harness-1.1.12-personal.19.apk` | `DA8637871C09E9E0757D6CECD2E4F78D03AD024208D2261AE743560AF51E4C4B` |
 | 主机插件 | **0.1.27** | `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
@@ -302,7 +310,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.11 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.12 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

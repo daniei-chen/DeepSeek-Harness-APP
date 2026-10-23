@@ -356,13 +356,26 @@ internal object WebShellScripts {
             var originalFetch = window.fetch;
             if (typeof originalFetch === 'function') {
               window.fetch = function (input) {
+                var entry = null;
                 try {
                   var url = typeof input === 'string' ? input : (input && input.url) || '';
                   var path = String(url).split('?')[0].slice(-72);
-                  calls.push({ at: Date.now(), path: path });
+                  entry = { at: Date.now(), path: path, ms: -1 };
+                  calls.push(entry);
                   while (calls.length > 80) { calls.shift(); }
                 } catch (e) {}
-                return originalFetch.apply(window, arguments);
+                var promise = originalFetch.apply(window, arguments);
+                // Time the call without changing it: the entry is filled in when the promise
+                // settles, so "the history took 1.2 s" is a measurement instead of a feeling.
+                try {
+                  if (entry !== null && promise && typeof promise.then === 'function') {
+                    promise.then(
+                      function () { entry.ms = Date.now() - entry.at; },
+                      function () { entry.ms = Date.now() - entry.at; entry.failed = true; }
+                    );
+                  }
+                } catch (e) {}
+                return promise;
               };
             }
           } catch (e) {}
@@ -393,18 +406,29 @@ internal object WebShellScripts {
             var counts = {};
             var order = [];
             var total = 0;
+            var slow = [];
             for (var i = 0; i < calls.length; i++) {
               if (calls[i].at < since) { continue; }
               total++;
               var key = calls[i].path;
               if (counts[key] === undefined) { counts[key] = 0; order.push(key); }
               counts[key]++;
+              if (calls[i].ms >= 0) { slow.push(calls[i]); }
             }
             var parts = [];
             for (var k = 0; k < order.length && k < 5; k++) {
               parts.push(order[k] + ' x' + counts[order[k]]);
             }
-            return 'api=' + total + (parts.length ? ' ' + parts.join(' , ') : '');
+            // The three slowest calls, not the most frequent: opening a long conversation is one
+            // request that takes a second, and a count of it says nothing about why it felt slow.
+            slow.sort(function (a, b) { return b.ms - a.ms; });
+            var worst = [];
+            for (var w = 0; w < slow.length && w < 3; w++) {
+              if (slow[w].ms < 150) { break; }
+              worst.push(slow[w].path + ' ' + slow[w].ms + 'ms' + (slow[w].failed ? '!' : ''));
+            }
+            return 'api=' + total + (parts.length ? ' ' + parts.join(' , ') : '') +
+              (worst.length ? ' | slow=' + worst.join(' , ') : '');
           };
         })();
     """.trimIndent()
