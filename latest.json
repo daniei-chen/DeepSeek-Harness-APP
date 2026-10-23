@@ -1,10 +1,10 @@
 {
-  "version": "1.1.12",
-  "versionCode": 50112,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.12/DeepSeek-Harness-1.1.12-personal.19.apk",
-  "sha256": "DA8637871C09E9E0757D6CECD2E4F78D03AD024208D2261AE743560AF51E4C4B",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.12",
+  "version": "1.1.13",
+  "versionCode": 50113,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.13/DeepSeek-Harness-1.1.13-personal.20.apk",
+  "sha256": "7AA5CE607B9920FCA486FE52F49BA560047362DDC6AD1530356265D74C599901",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.13",
   "minPluginVersion": "0.1.27",
-  "notes": "The three slowest API calls are named in Diagnostics, so a slow session switch can be blamed on fetch or on render",
-  "generatedAt": "2026-10-23T08:35:00.000Z"
+  "notes": "Diagnostics now samples when it opens, and the update progress uses the app's own card style",
+  "generatedAt": "2026-10-23T08:45:00.000Z"
 }

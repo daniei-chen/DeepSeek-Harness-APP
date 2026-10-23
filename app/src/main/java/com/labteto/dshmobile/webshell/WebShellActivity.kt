@@ -1210,8 +1210,11 @@ class WebShellActivity : AppCompatActivity() {
      * a measurement: if `composerRemount` climbs while `resize` stays flat, the harness is rebuilding
      * its own composer and no shell-side change will fix it.
      */
-    private fun readPageHealth() {
-        if (!::webView.isInitialized || isFinishing || isDestroyed) return
+    private fun readPageHealth(onDone: (() -> Unit)? = null) {
+        if (!::webView.isInitialized || isFinishing || isDestroyed) {
+            onDone?.invoke()
+            return
+        }
         webView.evaluateJavascript(
             "String((function(){try{" +
                 "var a=(window.__dshShellReport&&window.__dshShellReport())||'';" +
@@ -1224,6 +1227,7 @@ class WebShellActivity : AppCompatActivity() {
                 healthText = sample
                 healthAt = SystemClock.elapsedRealtime()
             }
+            onDone?.invoke()
         }
     }
 
@@ -1795,7 +1799,18 @@ class WebShellActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Open the diagnostics page, sampling the page first.
+     *
+     * The cached sample is taken 900 ms after a document loads, so the report used to describe the
+     * page as it was at start-up — even when it was opened after switching conversations, which is
+     * exactly the moment the numbers are wanted. Sampling on open costs one `evaluateJavascript`.
+     */
     private fun showDiagnosticsDialog() {
+        readPageHealth { showDiagnosticsPage() }
+    }
+
+    private fun showDiagnosticsPage() {
         val loads = synchronized(pageLoadTimes) { pageLoadTimes.size }
         val crashes = synchronized(rendererCrashTimes) { rendererCrashTimes.size }
         val webViewVersion = runCatching {
@@ -2723,63 +2738,25 @@ class WebShellActivity : AppCompatActivity() {
             "https://ghproxy.net/$direct",
             direct,
         ).distinct()
-        val progressCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(10), dp(22), dp(4))
-        }
-        val accent = Color.parseColor("#3964FE")
-        val progressLabel = TextView(this).apply {
-            text = getString(R.string.shell_update_downloading)
-            textSize = 13f
-            setTextColor(if (pageDark) Color.WHITE else Color.parseColor("#20242C"))
-        }
-        val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            progress = 0
-            isIndeterminate = true
-            progressTintList = android.content.res.ColorStateList.valueOf(accent)
-            indeterminateTintList = android.content.res.ColorStateList.valueOf(accent)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
-        }
-        progressCard.addView(progressLabel)
-        progressCard.addView(progressBar)
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.shell_update_downloading_title)
-            .setView(progressCard)
-            .setCancelable(false)
-            .create()
-        dialog.show()
-        dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.86f).toInt(),
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+        val progress = chrome.showProgressDialog(
+            dark = pageDark,
+            title = getString(R.string.shell_update_downloading_title),
+            initialMessage = getString(R.string.shell_update_downloading),
+            percentMessage = { percent -> getString(R.string.shell_update_downloading_percent, percent) },
         )
         lifecycleScope.launch {
             val file = withContext(Dispatchers.IO) {
                 for (candidate in candidates) {
                     val downloaded = runCatching {
                         downloadApk(candidate) { percent ->
-                            mainHandler.post {
-                                if (dialog.isShowing) {
-                                    if (percent < 0) {
-                                        progressBar.isIndeterminate = true
-                                        progressLabel.text = getString(R.string.shell_update_downloading)
-                                    } else {
-                                        progressBar.isIndeterminate = false
-                                        progressBar.progress = percent
-                                        progressLabel.text = getString(R.string.shell_update_downloading_percent, percent)
-                                    }
-                                }
-                            }
+                            mainHandler.post { progress.setPercent(percent) }
                         }
                     }.getOrNull()
                     if (downloaded != null) return@withContext downloaded
                 }
                 null
             }
-            if (dialog.isShowing) dialog.dismiss()
+            progress.dismiss()
             if (file == null) {
                 showUpdateFailureDialog()
                 return@launch
