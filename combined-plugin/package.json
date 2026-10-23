@@ -1,6 +1,6 @@
 {
   "name": "@dsh-android/deepseek-harness-app-plugin",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "private": true,
   "description": "DeepSeek Harness APP 插件：Android WebView 适配 + 文件操作 + BrowserSkill 浏览器工具，单插件安装",
   "license": "MIT",
