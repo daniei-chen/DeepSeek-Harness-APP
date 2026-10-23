@@ -423,7 +423,8 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onInbox()
             },
         )
-        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_phone)))
+        if (!simpleMode) {
+            card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_phone)))
         if (!simpleMode) {
             card.addView(
                 settingsRow(
@@ -448,6 +449,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onMobileSetup()
             },
         )
+        }
         card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_alerts)))
         card.addView(
             settingsRow(
@@ -479,7 +481,8 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onBackground()
             },
         )
-        card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_data)))
+        if (!simpleMode) {
+            card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_data)))
         card.addView(
             settingsRow(
                 colors = colors,
@@ -520,6 +523,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 onImport()
             },
         )
+        }
         card.addView(sectionLabel(colors, activity.getString(R.string.shell_group_support)))
         card.addView(
             settingsRow(
