@@ -970,6 +970,9 @@
     <string name="shell_offline_pending">Waiting for you</string>
     <string name="shell_offline_updated">updated %1$s</string>
     <string name="webshell_offline_snapshot">View recent sessions offline</string>
+    <string name="webshell_offline_snapshot_recent">Last sync: %1$d sessions</string>
+    <string name="webshell_snapshot_running">running</string>
+    <string name="webshell_snapshot_pending">needs you</string>
     <string name="shell_notify_perm">Notification permission</string>
     <string name="shell_notify_system">System notification switch</string>
     <string name="shell_notify_channel_action">Approval / question channel</string>

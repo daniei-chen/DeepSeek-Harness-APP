@@ -968,6 +968,9 @@
     <string name="shell_offline_pending">等待处理</string>
     <string name="shell_offline_updated">更新于 %1$s</string>
     <string name="webshell_offline_snapshot">离线查看最近会话</string>
+    <string name="webshell_offline_snapshot_recent">上次同步：%1$d 个会话</string>
+    <string name="webshell_snapshot_running">进行中</string>
+    <string name="webshell_snapshot_pending">待处理</string>
     <string name="shell_notify_perm">通知权限</string>
     <string name="shell_notify_system">系统通知开关</string>
     <string name="shell_notify_channel_action">审批 / 提问通道</string>

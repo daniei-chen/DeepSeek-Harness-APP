@@ -185,6 +185,9 @@ class WebShellActivity : AppCompatActivity() {
     private lateinit var errorTitle: TextView
     private lateinit var errorMessage: TextView
 
+    /** What the phone last saw on this host, listed on the error page itself. */
+    private lateinit var errorSnapshot: LinearLayout
+
     @Volatile private var prefetchDeferred: Deferred<PrefetchedDocument?>? = null
     @Volatile private var interceptPrefetch = true
     private var targetHost: HostConfig? = null
@@ -517,6 +520,14 @@ class WebShellActivity : AppCompatActivity() {
         }
         column.addView(errorTitle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(errorMessage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // The offline list used to sit behind a button. A phone that opens without a network shows
+        // this page, and the one useful thing on it is what was running last time — so it is on the
+        // page, not behind a tap the reader has no reason to expect.
+        errorSnapshot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, dp(18))
+        }
+        column.addView(errorSnapshot, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         column.addView(errorButton(R.string.webshell_reload) { reloadPage() })
         column.addView(errorButton(R.string.webshell_offline_snapshot) { showOfflineSnapshot() })
         column.addView(errorButton(R.string.webshell_clear_cache) { clearCacheAndReload() })
@@ -1007,28 +1018,24 @@ class WebShellActivity : AppCompatActivity() {
         }
 
         /**
-         * The saved devices, for the page's device chip.
+         * Hand a plain http(s) file to Android's download manager.
          *
-         * Only the name of the active device and the count are exposed: the addresses themselves are
-         * the user's, and the page has no use for them beyond a label. An empty list means the shell
-         * has never been configured, and the chip stays hidden.
+         * This is the path the workspace file panel uses: the system notification carries the
+         * progress bar and the completion, which a `fetch()` inside the page could never show. The
+         * gateway cookie is attached by [WebShellDownloads.enqueue]; the toast says whether the
+         * handoff worked, so a failure is never silent.
          */
         @android.webkit.JavascriptInterface
-        fun deviceSummary(): String {
-            val devices = shellDevices.load()
-            val current = devices.firstOrNull { it.id == shellDevices.currentId() }
-            return runCatching {
-                org.json.JSONObject()
-                    .put("count", devices.size)
-                    .put("name", current?.name.orEmpty())
-                    .toString()
-            }.getOrDefault("""{"count":0,"name":""}""")
-        }
-
-        /** Open the shell's own device manager: switch, add, rename, delete. */
-        @android.webkit.JavascriptInterface
-        fun openDevices() {
-            runOnUiThread { if (!isFinishing && !isDestroyed) showDeviceManager() }
+        fun download(url: String, name: String) {
+            val saved = runCatching {
+                WebShellDownloads.enqueue(this@WebShellActivity, url, null, null, null, name)
+            }.getOrNull()
+            val message = if (saved != null) {
+                getString(R.string.webshell_download_started, saved)
+            } else {
+                getString(R.string.webshell_download_failed)
+            }
+            Toast.makeText(this@WebShellActivity, message, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1222,6 +1229,51 @@ class WebShellActivity : AppCompatActivity() {
         errorTitle.text = title
         errorMessage.text = message
         errorScroll.visibility = View.VISIBLE
+        fillErrorSnapshot()
+    }
+
+    /**
+     * Put the last known session list on the error page.
+     *
+     * The rows come from the snapshot written after the last successful sync, so this never touches
+     * the network and cannot make the error worse. Nothing here is clickable: with no connection
+     * there is nowhere to go. The full list is still one button away.
+     */
+    private fun fillErrorSnapshot() {
+        if (!::errorSnapshot.isInitialized) return
+        val host = targetHost ?: return
+        lifecycleScope.launch {
+            val rows = runCatching { hostsStore.sessionSnapshot(host.id) }.getOrDefault(emptyList())
+            if (isFinishing || isDestroyed || !::errorSnapshot.isInitialized) return@launch
+            errorSnapshot.removeAllViews()
+            if (rows.isEmpty()) return@launch
+            val secondary = if (pageDark) DARK_SECONDARY else LIGHT_SECONDARY
+            errorSnapshot.addView(
+                TextView(this@WebShellActivity).apply {
+                    text = getString(R.string.webshell_offline_snapshot_recent, rows.size)
+                    textSize = 12f
+                    setTextColor(secondary)
+                    setPadding(0, 0, 0, dp(6))
+                },
+            )
+            rows.sortedByDescending { it.updatedAt }.take(3).forEach { row ->
+                val state = when {
+                    row.pending != null -> " · " + getString(R.string.webshell_snapshot_pending)
+                    row.running -> " · " + getString(R.string.webshell_snapshot_running)
+                    else -> ""
+                }
+                errorSnapshot.addView(
+                    TextView(this@WebShellActivity).apply {
+                        text = "· " + row.title + state
+                        textSize = 13f
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setTextColor(secondary)
+                        setPadding(0, dp(2), 0, dp(2))
+                    },
+                )
+            }
+        }
     }
 
     /** Show the cached session list for the current host, without touching the network. */

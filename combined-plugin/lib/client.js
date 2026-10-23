@@ -212,7 +212,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.26";
+    const PLUGIN_VERSION = "0.1.27";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -974,6 +974,24 @@ html[data-dsh-glass="off"] body::after {
           font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
         }
         .dsh-file-preview-body img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
+        /* One transfer at a time, above the composer: the only place a page-side upload can show
+           progress. Dismisses itself on success, stays with the reason on failure. */
+        .dsh-transfer {
+          position: fixed; left: 12px; right: 12px; bottom: 88px; z-index: 2147483002;
+          padding: 10px 12px; border-radius: 12px;
+          background: rgba(28,28,30,.94); color: #fff; font: 12px/1.4 sans-serif;
+          box-shadow: 0 10px 30px rgba(0,0,0,.4);
+        }
+        .dsh-transfer[data-state="failed"] { background: rgba(150,32,36,.96); }
+        .dsh-transfer-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dsh-transfer-bar {
+          margin-top: 8px; height: 4px; border-radius: 2px; overflow: hidden;
+          background: rgba(255,255,255,.22);
+        }
+        .dsh-transfer-bar span {
+          display: block; height: 100%; width: 0%; border-radius: 2px;
+          background: #6aa2ff; transition: width .12s linear;
+        }
       `;
       // Same id guard as the shell's #dsh-shell-glass: a plugin hot-remount must not stack copies.
       style.dataset.plugin = "@dsh-android/dsh-file-actions";
@@ -1036,6 +1054,109 @@ html[data-dsh-glass="off"] body::after {
         if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
       };
 
+      /**
+       * A page-side transfer, drawn above the composer.
+       *
+       * A `fetch()` gives no progress and no reason for a failure, which is why a large upload on a
+       * phone looked like a freeze. This is the only surface the page can show for bytes that are
+       * leaving through it; downloads do not use it — those go to Android's download manager.
+       */
+      const transferOverlay = (label) => {
+        const box = document.createElement("div");
+        box.className = "dsh-transfer";
+        const text = document.createElement("div");
+        text.className = "dsh-transfer-text";
+        text.textContent = label;
+        const bar = document.createElement("div");
+        bar.className = "dsh-transfer-bar";
+        const fill = document.createElement("span");
+        bar.appendChild(fill);
+        box.append(text, bar);
+        document.body.appendChild(box);
+        let hideTimer = 0;
+        const schedule = (delay) => {
+          window.clearTimeout(hideTimer);
+          hideTimer = window.setTimeout(() => {
+            try {
+              box.remove();
+            } catch (e) {}
+          }, delay);
+        };
+        return {
+          progress(done, total, note) {
+            if (total > 0) fill.style.width = Math.min(100, Math.round((done / total) * 100)) + "%";
+            text.textContent = note || label;
+          },
+          done(note) {
+            box.dataset.state = "done";
+            fill.style.width = "100%";
+            text.textContent = note;
+            schedule(900);
+          },
+          fail(note) {
+            box.dataset.state = "failed";
+            fill.style.width = "100%";
+            text.textContent = note;
+            schedule(5000);
+          },
+        };
+      };
+
+      /**
+       * POST one file with progress, then say exactly what went wrong if it fails.
+       *
+       * `XMLHttpRequest` is the only API a page has for upload progress; `fetch` cannot report it.
+       * The rejection carries the HTTP status and the host route's own `error` string, so the toast
+       * names the cause instead of saying "上传失败" and leaving it there.
+       */
+      const putFileWithProgress = (url, file, onProgress) =>
+        new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", url, true);
+          xhr.withCredentials = true;
+          xhr.setRequestHeader("content-type", "application/octet-stream");
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) onProgress(event.loaded, event.total);
+          });
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+              return;
+            }
+            let detail = "";
+            try {
+              detail = (JSON.parse(xhr.responseText) || {}).error || "";
+            } catch (e) {}
+            reject(new Error("HTTP " + xhr.status + (detail ? " · " + detail : "")));
+          });
+          xhr.addEventListener("error", () => reject(new Error("网络中断")));
+          xhr.addEventListener("timeout", () => reject(new Error("超时")));
+          xhr.addEventListener("abort", () => reject(new Error("已取消")));
+          xhr.send(file);
+        });
+
+      /**
+       * Hand a file to Android's download manager.
+       *
+       * A `blob:` URL plus `a.download` is silently ignored by a WebView — that is why 下载 used to
+       * do nothing at all on the phone. The shell bridge enqueues the real http(s) URL, so the
+       * system notification owns the progress bar and the completion. The absolute URL matters:
+       * the bridge parses it with `Uri.parse`, and a bare path has no host to hand to
+       * `DownloadManager`.
+       */
+      const downloadToDisk = (filePath) => {
+        const name = filePath.split(/[\\/]/).pop() || "download";
+        const url = window.location.origin + "/dsh-file-ops?action=download&path=" + encodeURIComponent(filePath);
+        const bridge = window.DshShellBridge;
+        if (bridge && typeof bridge.download === "function") {
+          try {
+            bridge.download(url, name);
+            return;
+          } catch (e) {}
+        }
+        window.location.href = url;
+      };
+
       const newFolder = async () => {
         const name = window.prompt("新建文件夹名称");
         if (name === null || name.trim() === "") return;
@@ -1059,21 +1180,24 @@ html[data-dsh-glass="off"] body::after {
             input.remove();
             return;
           }
+          const overlay = transferOverlay("准备上传…");
           try {
+            let index = 0;
             for (const file of files) {
+              index += 1;
+              const prefix = files.length > 1 ? index + "/" + files.length + " " : "";
+              const label = prefix + "上传 " + file.name;
+              overlay.progress(0, file.size || 1, label + " · 0%");
               const url = "/dsh-file-ops?action=upload&path=" + encodeURIComponent(rootPath()) +
                 "&name=" + encodeURIComponent(file.name);
-              const response = await fetch(url, {
-                method: "POST",
-                credentials: "include",
-                headers: { "content-type": "application/octet-stream" },
-                body: file,
+              await putFileWithProgress(url, file, (done, total) => {
+                overlay.progress(done, total, label + " · " + Math.round((done / total) * 100) + "%");
               });
-              if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.status);
             }
+            overlay.done(files.length > 1 ? "上传完成 · " + files.length + " 个文件" : "上传完成");
             refreshFiles();
           } catch (error) {
-            window.alert("上传失败：" + (error instanceof Error ? error.message : String(error)));
+            overlay.fail("上传失败：" + (error instanceof Error ? error.message : String(error)));
           } finally {
             input.remove();
           }
@@ -1176,23 +1300,7 @@ html[data-dsh-glass="off"] body::after {
           event.preventDefault();
           event.stopPropagation();
           closeMenu();
-          const url = "/dsh-file-ops?action=download&path=" + encodeURIComponent(filePath);
-          fetch(url, { credentials: "include" })
-            .then((response) => {
-              if (!response.ok) throw new Error("HTTP " + response.status);
-              return response.blob();
-            })
-            .then((blob) => {
-              const objectUrl = URL.createObjectURL(blob);
-              const anchor = document.createElement("a");
-              anchor.href = objectUrl;
-              anchor.download = filePath.split(/[\\/]/).pop() || "download";
-              document.body.appendChild(anchor);
-              anchor.click();
-              anchor.remove();
-              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
-            })
-            .catch((error) => window.alert("下载失败：" + (error instanceof Error ? error.message : String(error))));
+          downloadToDisk(filePath);
         });
         const rename = document.createElement("button");
         rename.textContent = "重命名";

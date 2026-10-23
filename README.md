@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.9-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.10-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,18 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.10：上传有进度、下载真的能存、断网也有东西看
+
+| 问题 | 修法 |
+| --- | --- |
+| 传大文件像卡住 | 上传改用 `XMLHttpRequest` 带进度：底部出现「1/2 上传 report.zip · 47%」，完成自动消失；失败**留下原因**（`HTTP 413 · 文件过大` 这种），不再只弹一句"上传失败"。 |
+| 文件面板的「下载」点了没反应 | 之前用 `blob:` URL + `a.download`，WebView 会**静默忽略**——手机上等于没实现。现在整条走系统下载管理器：通知栏有进度、完成后可点开，文件名取真实路径（不再是 `dsh-file-ops.bin`）。 |
+| 长会话滚动卡不卡没人知道 | 诊断的页面健康多了 `scrollMin=54@7`：只在滚动期间用 `requestAnimationFrame` 采样帧率，记录最低值与样本数，滚动停止 250 ms 就结束，不驻留定时器。先有数据，再决定要不要做"只保留最近 N 条"。 |
+| 断网打开只有一页错误 | 错误页**直接列出**上次同步的最近 3 个会话（带「进行中 / 待处理」标记），不用先点"离线查看最近会话"。 |
+| 两套设置页、两个没人调用的桥方法 | 删掉 1.1.6 之后就没有调用者的旧设置页（约 260 行）和 `deviceSummary`/`openDevices`。留着它们的代价是下次改设置页容易改到没在跑的那一份。 |
 
 ---
 
@@ -240,7 +252,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.9-personal.16.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.10-personal.17.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -267,8 +279,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.9**（`versionCode 50109`） | `DeepSeek-Harness-1.1.9-personal.16.apk` | `E2CD67F6F487B5C595D571683FF8D4AA096BB619B70774001D59A9B56FB56EB3` |
-| 主机插件 | **0.1.26** | `dsh-android-deepseek-harness-app-plugin-0.1.26.tgz` | 见 Release 页面 |
+| App | **1.1.10**（`versionCode 50110`） | `DeepSeek-Harness-1.1.10-personal.17.apk` | `7049B4D476EE0EB21B61EF2C53D507125DA3795B243EA7A40D370D14EA3FB439` |
+| 主机插件 | **0.1.27** | `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -280,7 +292,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.9 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.10 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

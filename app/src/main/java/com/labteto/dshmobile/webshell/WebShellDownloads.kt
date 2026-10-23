@@ -79,9 +79,16 @@ internal object WebShellDownloads {
         userAgent: String?,
         mimeType: String?,
         contentDisposition: String?,
+        preferredName: String? = null,
     ): String? {
+        // The shell's own routes put the file name in the query (`/dsh-file-ops?action=download&path=…`),
+        // so `url.lastPathSegment` would save everything as `dsh-file-ops.bin`. The page passes the
+        // real name; the header and the URL stay as the fallbacks for ordinary links.
         val fileName = safeFileName(
-            dispositionFileName(contentDisposition) ?: urlFileName(url) ?: "download",
+            preferredName?.takeIf { it.isNotBlank() }
+                ?: dispositionFileName(contentDisposition)
+                ?: urlFileName(url)
+                ?: "download",
             extensionFor(mimeType.orEmpty()),
         )
         val request = DownloadManager.Request(Uri.parse(url)).apply {
