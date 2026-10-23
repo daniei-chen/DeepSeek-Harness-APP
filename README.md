@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.17-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.18-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -305,7 +305,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.17-personal.24.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.18-personal.25.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -332,8 +332,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.17**（`versionCode 50117`） | `DeepSeek-Harness-1.1.17-personal.24.apk` | `747D564F1CF8E39292AEE06C1E3C5FB9AB2EEA7FB841643E668EFFF19ABA4F2E` |
-| 主机插件 | **0.1.31** | `dsh-android-deepseek-harness-app-plugin-0.1.31.tgz` | 见 Release 页面 |
+| App | **1.1.18**（`versionCode 50118`） | `DeepSeek-Harness-1.1.18-personal.25.apk` | `11C4B39C4F9AFBE09B16E247656C90A22091C76F6597E39646337BF96C4BE59C` |
+| 主机插件 | **0.1.32** | `dsh-android-deepseek-harness-app-plugin-0.1.32.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -345,7 +345,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.17 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.18 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
