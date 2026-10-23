@@ -812,6 +812,7 @@
     <string name="shell_diagnostics_copy">Copy diagnostics</string>
     <string name="shell_diagnostics_copied">Diagnostics copied</string>
     <string name="shell_diagnostics_clear_cache">Clear cache and reload</string>
+    <string name="shell_diagnostics_startup">Startup: %1$s</string>
     <string name="shell_diagnostics_layout">Layout: %1$s</string>
     <string name="shell_diagnostics_events">Recent page events</string>
     <string name="shell_glass_compat">Glass theme compatibility</string>

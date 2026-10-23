@@ -17,10 +17,17 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.10**, `versionCode` **50110**, `DeepSeek-Harness-1.1.10-personal.17.apk`
+- APK **1.1.11**, `versionCode` **50111**, `DeepSeek-Harness-1.1.11-personal.18.apk`
 - Host plugin **0.1.27**, `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz`
 - DSH tested against `0.2.1`
 
+1.1.11 measures start-up instead of guessing at it. Diagnostics gains `first=` (native navigation →
+first committed frame), `ready=` (→ `onPageFinished`) and the page's own `ttfb` / `fcp` / `dcl`
+from `PerformanceNavigationTiming`. Read that line before touching the launch path: it separates a
+slow request from slow script, which is the difference between prefetching more and rendering less.
+A "skeleton first, then replace it" design was considered and rejected — in a WebView SPA it is two
+renders, it tears down the page, and replacing the tree interrupts React's own mount (the source of
+the "it refreshes by itself" reports). Warm start already prefetches the main document with OkHttp.
 1.1.10 makes transfers honest. Uploads go through `XMLHttpRequest` so the page can show a percentage
 and a failure carries the HTTP status (fetch reports neither); the file panel's 下载 hands the real
 http(s) URL to Android's download manager instead of building a `blob:` URL, which a WebView silently
@@ -89,7 +96,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.10 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.11 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
