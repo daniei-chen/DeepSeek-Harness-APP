@@ -240,7 +240,7 @@ test("file-panel decoration keeps its semantics on a debounced observer", () => 
 
 test("share-text bridge inserts like typing and never throws without a composer", () => {
     assert.match(source, /installComposerTextBridge\(\);/, "the bridge must be installed from apply()");
-    const bridge = sliceBetween("function installComposerTextBridge()", "function installImageUploadDefault()");
+    const bridge = sliceBetween("function installComposerTextBridge()", "function installAttachmentMenuDefault()");
 
     // React-owned textarea: prototype setter, then a bubbling input event.
     assert.match(bridge, /Object\.getOwnPropertyDescriptor\(HTMLTextAreaElement\.prototype, "value"\)\?\.set/);
@@ -261,7 +261,7 @@ test("share-text bridge behaves like typing on a fake composer", () => {
     // the one thing a text-only guard cannot prove.
     const factorySource = sliceBetween(
         "function installComposerTextBridge()",
-        "    /**\n     * On the phone the attachment trigger",
+        "    /**\n     * Skip the attachment menu",
     ).trimEnd();
 
     class FakeTextarea {
@@ -369,6 +369,22 @@ test("share-text bridge behaves like typing on a fake composer", () => {
     assert.equal(bridge.__dshInsertComposerText(""), false);
     assert.equal(bridge.__dshInsertComposerText(null), false);
     assert.equal(empty.value, "");
+});
+
+test("the attachment menu is skipped by text, and it picks the file row", () => {
+    assert.match(source, /installAttachmentMenuDefault\(\);/, "the skip must be installed from apply()");
+    const region = sliceBetween("function installAttachmentMenuDefault()", "function installFileActions()");
+
+    // The trigger is never identified: only the mounted menu is watched, because its markup and
+    // its trigger's markup both change between builds while the row labels do not.
+    assert.match(region, /new MutationObserver\(/, "the menu mount is the trigger");
+    assert.doesNotMatch(region, /dsh-attachment-picker-trigger/, "no dependency on the trigger class");
+    assert.match(region, /createTreeWalker\(root, NodeFilter\.SHOW_TEXT/, "rows are found by their text");
+    // The file row wins: a file picker can reach photos, an image picker cannot reach documents.
+    assert.match(region, /上传附件\|上传文件\|Upload \(file\|attachment\)/);
+    assert.match(region, /IMAGE_ROW/, "only a subtree that already holds the image row is walked");
+    assert.match(region, /element\.click\(\)/, "the row itself is clicked");
+    assert.match(region, /now - lastClickAt < \d+/, "a second mount must not be clicked twice");
 });
 
 test("the reported bundle version matches package.json and is new enough for the bridge", () => {

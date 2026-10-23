@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.8-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.9-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.9：附件按钮直通文件选择器
+
+| 问题 | 修法 |
+| --- | --- |
+| 点回形针先弹「上传附件 / 上传图片」，还得再点一次 | 插件现在监听这个菜单**出现**就自动点「上传附件」，直接进 Android 文件选择器。 |
+| 为什么选「附件」而不是「图片」 | 文件选择器里照样能选相册照片，反之不行。要传文档、压缩包、PDF 时不用再换一条路。 |
+| 以前那版为什么失效了 | 旧实现靠触发器的 class/aria-label，再找 `button`/`menuitem` 行；菜单改版后这两条假设都不成立，于是菜单就干停在那儿。新实现完全不碰触发器，只按行的文字找人。 |
 
 ---
 
@@ -230,7 +240,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.8-personal.15.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.9-personal.16.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -257,8 +267,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.8**（`versionCode 50108`） | `DeepSeek-Harness-1.1.8-personal.15.apk` | `5C9EF3E4DC5213CACBA0B9C986D1E8370B62BEC37598F95DFC4463FEDEFE6949` |
-| 主机插件 | **0.1.25** | `dsh-android-deepseek-harness-app-plugin-0.1.25.tgz` | 见 Release 页面 |
+| App | **1.1.9**（`versionCode 50109`） | `DeepSeek-Harness-1.1.9-personal.16.apk` | `E2CD67F6F487B5C595D571683FF8D4AA096BB619B70774001D59A9B56FB56EB3` |
+| 主机插件 | **0.1.26** | `dsh-android-deepseek-harness-app-plugin-0.1.26.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -270,7 +280,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.8 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.9 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

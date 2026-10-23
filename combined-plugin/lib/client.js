@@ -212,7 +212,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.25";
+    const PLUGIN_VERSION = "0.1.26";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -460,7 +460,7 @@ html[data-dsh-glass="off"] body::after {
       installAutoReconnect();
       checkAutoReconnect();
       installFileActions();
-      installImageUploadDefault();
+      installAttachmentMenuDefault();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
@@ -818,34 +818,65 @@ html[data-dsh-glass="off"] body::after {
     }
 
     /**
-     * On the phone the attachment trigger opens a two-row menu whose entries both end in the same
-     * Android file chooser. Choose the image entry immediately so the phone gets the image picker
-     * without an extra menu tap. The menu is React-owned; a MutationObserver clicks its image row
-     * as soon as it mounts.
+     * Skip the attachment menu: the paperclip's little two-row menu (上传附件 / 上传图片) costs a tap
+     * on a phone, and both rows end in the same Android picker anyway.
+     *
+     * The previous version of this hooked the trigger by class or aria-label and then looked for a
+     * `button`/`menuitem` row. Both assumptions broke as soon as the menu was re-rendered as plain
+     * elements, and the menu simply sat there. This one never touches the trigger: it watches the
+     * menu mount and clicks the 文件 row by its own text, which is the only part of that markup that
+     * is stable. It also chooses 上传附件 rather than 上传图片 — a file picker can still reach
+     * photos, while an image picker cannot reach documents.
+     *
+     * The gate keeps it cheap: only a newly added subtree that already contains the image row is
+     * walked, so ordinary streaming renders cost one `includes()` per mutation.
      */
-    function installImageUploadDefault() {
-      if (window.__dshImageUploadDefault) return;
-      window.__dshImageUploadDefault = true;
-      let pending = false;
-      const isImageItem = (node) => {
-        const text = ((node.innerText || "") + " " + (node.getAttribute("aria-label") || "")).trim();
-        return /上传图片|上传照片|upload image|upload photo/i.test(text);
-      };
-      document.addEventListener("click", (event) => {
-        const target = event.target instanceof Element ? event.target : null;
-        if (target === null) return;
-        if (target.closest(".dsh-attachment-picker-trigger, [aria-label*='上传附件'], [aria-label*='Upload attachment']")) {
-          pending = true;
+    function installAttachmentMenuDefault() {
+      if (window.__dshAttachmentDefault) return;
+      window.__dshAttachmentDefault = true;
+      const FILE_ROW = /^(上传附件|上传文件|Upload (file|attachment))$/i;
+      const IMAGE_ROW = /上传图片|上传照片|Upload (image|photo)/i;
+      let lastClickAt = 0;
+
+      const clickRow = (root, pattern) => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        let node = null;
+        while ((node = walker.nextNode()) !== null) {
+          if (!pattern.test((node.nodeValue || "").trim())) continue;
+          let element = node.parentElement;
+          for (let depth = 0; element !== null && depth < 4; depth += 1) {
+            if (element.offsetWidth > 0 && element.offsetHeight > 0) {
+              try {
+                element.click();
+                return true;
+              } catch (e) {
+                return false;
+              }
+            }
+            element = element.parentElement;
+          }
         }
-      }, true);
+        return false;
+      };
+
       try {
-        new MutationObserver(() => {
-          if (!pending) return;
-          const item = [...document.querySelectorAll("button, [role='menuitem']")]
-            .find((node) => node.offsetWidth > 0 && isImageItem(node));
-          if (item === undefined) return;
-          pending = false;
-          item.click();
+        new MutationObserver((records) => {
+          const now = Date.now();
+          if (now - lastClickAt < 1200) return;
+          for (let i = 0; i < records.length; i += 1) {
+            const added = records[i].addedNodes;
+            for (let j = 0; j < added.length; j += 1) {
+              const node = added[j];
+              if (node === null || node.nodeType !== 1) continue;
+              const text = node.textContent || "";
+              if (text.length > 200 || !IMAGE_ROW.test(text)) continue;
+              if (!/(上传附件|上传文件|Upload (file|attachment))/i.test(text)) continue;
+              if (clickRow(node, FILE_ROW)) {
+                lastClickAt = now;
+                return;
+              }
+            }
+          }
         }).observe(document.body, { subtree: true, childList: true });
       } catch (e) {}
     }
