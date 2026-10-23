@@ -1,5 +1,6 @@
 package com.labteto.dshmobile.update
 
+import com.labteto.dshmobile.connection.isOlderVersion
 import com.labteto.dshmobile.connection.HostsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -188,7 +189,7 @@ class UpdateChecker @Inject constructor(
     suspend fun checkNow(currentVersion: String): CheckOutcome = check(currentVersion, ignoreDismissed = true)
 
     private suspend fun check(currentVersion: String, ignoreDismissed: Boolean): CheckOutcome {
-        val release = fetchLatest() ?: return CheckOutcome.Unreachable
+        val release = fetchLatest(currentVersion) ?: return CheckOutcome.Unreachable
         val version = release.tagName.trim().removePrefix("v")
         if (version.isEmpty() || !isNewerVersion(version, currentVersion)) {
             _available.value = null
@@ -218,11 +219,11 @@ class UpdateChecker @Inject constructor(
      * endpoint, and comparing `app-plugin-v0.1.8` against `0.9.35` reads as "up to date". Reading
      * the list and keeping only app-shaped tags removes the ordering dependency entirely.
      */
-    private suspend fun fetchLatest(): GithubRelease? = withContext(Dispatchers.IO) {
+    private suspend fun fetchLatest(currentVersion: String): GithubRelease? = withContext(Dispatchers.IO) {
         // The repository's own manifest wins when it is readable: it is a static file, so it has
         // no ordering rules and no API quota. The release API stays as a fallback for a clone or
         // a fork that has not published one yet.
-        fetchManifest()?.let { manifest ->
+        fetchManifest(currentVersion)?.let { manifest ->
             if (manifest.version.isNotBlank() && manifest.apk.startsWith("https://")) {
                 return@withContext GithubRelease(
                     tagName = "v${manifest.version.trim().removePrefix("v")}",
@@ -267,12 +268,24 @@ class UpdateChecker @Inject constructor(
         null
     }
 
-    /** Read `latest.json` from the repository (or a mirror of it). */
-    private fun fetchManifest(): UpdateManifest? {
-        for (url in MANIFEST_URLS) {
+    /**
+     * Read `latest.json` from the repository (or a mirror of it).
+     *
+     * Two things make this more than a GET. Every request carries a cache-busting query, because the
+     * CDNs in front of this file keep serving the previous copy for a while after a push — that lag is
+     * exactly how a phone on 1.1.3 was told 1.1.3 was the newest version while 1.1.4 was already
+     * published. And a manifest **older** than the running build is thrown away instead of believed:
+     * this repository never walks its published version backwards, so an older answer is a cache
+     * artifact and the next mirror (or the API fallback) is worth asking.
+     */
+    private fun fetchManifest(currentVersion: String): UpdateManifest? {
+        val bust = System.currentTimeMillis().toString()
+        for (base in MANIFEST_URLS) {
+            val url = base + (if (base.contains("?")) "&" else "?") + "t=" + bust
             val request = Request.Builder()
                 .url(url)
                 .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
                 .get()
                 .build()
             val manifest = runCatching {
@@ -282,7 +295,10 @@ class UpdateChecker @Inject constructor(
                     json.decodeFromString(UpdateManifest.serializer(), body)
                 }
             }.getOrNull()
-            if (manifest != null && manifest.version.isNotBlank()) return manifest
+            if (manifest == null || manifest.version.isBlank()) continue
+            // Older than what is installed means a cached copy, not an answer.
+            if (isOlderVersion(manifest.version, currentVersion)) continue
+            return manifest
         }
         return null
     }

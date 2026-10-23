@@ -1,10 +1,10 @@
 {
-  "version": "1.1.4",
-  "versionCode": 50104,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.4/DeepSeek-Harness-1.1.4-personal.11.apk",
-  "sha256": "BDDF639C5FCBDB24D368A7B1314FC5BB5B0A03A88E82416C7AF2B71ADD052F51",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.4",
+  "version": "1.1.5",
+  "versionCode": 50105,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.5/DeepSeek-Harness-1.1.5-personal.12.apk",
+  "sha256": "67D1F65B09B43BEC43F9D28D9B314D7FAAEF960EBC75DC77ADA74472D54CB76A",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.5",
   "minPluginVersion": "0.1.18",
-  "notes": "Background service survives Android's foreground-start restriction; transient API failures retry automatically",
-  "generatedAt": "2026-10-23T00:05:52.482Z"
+  "notes": "Update check no longer trusts a cached manifest; background service survives Android's start restriction",
+  "generatedAt": "2026-10-23T00:12:48.686Z"
 }
