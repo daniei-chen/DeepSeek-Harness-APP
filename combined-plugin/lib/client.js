@@ -212,7 +212,6 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
 html[data-dsh-mobile-form] header [data-dsh-claude-part~="view-tabs"] {
   display: none !important;
 }
-html[data-dsh-mobile-form] header [data-team-action],
 html[data-dsh-mobile-form] header button[aria-label*="子智能体"],
 html[data-dsh-mobile-form] header button[aria-label*="subagent"] {
   display: none !important;
@@ -293,7 +292,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.29";
+    const PLUGIN_VERSION = "0.1.30";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
