@@ -387,6 +387,23 @@ test("the attachment menu is skipped by text, and it picks the file row", () => 
     assert.match(region, /now - lastClickAt < \d+/, "a second mount must not be clicked twice");
 });
 
+test("the file panel hands downloads to the shell and uploads with progress", () => {
+    // A blob URL plus `a.download` is silently ignored by a WebView: that was the download button
+    // doing nothing at all on the phone. The shell bridge enqueues the real URL instead.
+    const downloadHook = sliceBetween("const downloadToDisk =", "const newFolder =");
+    assert.match(downloadHook, /bridge\.download\(url, name\);/, "downloads go through the shell bridge");
+    assert.doesNotMatch(downloadHook, /createObjectURL/, "a blob URL cannot be saved by the WebView");
+    assert.match(downloadHook, /window\.location\.origin \+ "\/dsh-file-ops\?action=download/,
+        "DownloadManager needs an absolute URL, not a bare path");
+
+    // fetch cannot report upload progress; XMLHttpRequest is the only API a page has for it, and
+    // the failure has to carry the HTTP status instead of a generic message.
+    assert.match(source, /new XMLHttpRequest\(\)/);
+    assert.match(source, /xhr\.upload\.addEventListener\("progress"/);
+    assert.match(source, /"HTTP " \+ xhr\.status/);
+    assert.match(source, /dsh-transfer-bar/, "progress must be visible, not just logged");
+});
+
 test("the reported bundle version matches package.json and is new enough for the bridge", () => {
     const declared = source.match(/const PLUGIN_VERSION = "([^"]+)";/);
     assert.ok(declared, "PLUGIN_VERSION must be declared in client.js");

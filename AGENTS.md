@@ -17,10 +17,17 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.9**, `versionCode` **50109**, `DeepSeek-Harness-1.1.9-personal.16.apk`
-- Host plugin **0.1.26**, `dsh-android-deepseek-harness-app-plugin-0.1.26.tgz`
+- APK **1.1.10**, `versionCode` **50110**, `DeepSeek-Harness-1.1.10-personal.17.apk`
+- Host plugin **0.1.27**, `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz`
 - DSH tested against `0.2.1`
 
+1.1.10 makes transfers honest. Uploads go through `XMLHttpRequest` so the page can show a percentage
+and a failure carries the HTTP status (fetch reports neither); the file panel's 下载 hands the real
+http(s) URL to Android's download manager instead of building a `blob:` URL, which a WebView silently
+drops — on the phone that button did nothing at all. Page health gains `scrollMin=N@k`, sampled with
+`requestAnimationFrame` only while a scroll is in flight (no timer idles between scrolls). The error
+page lists the last three sessions from the on-disk snapshot instead of hiding them behind a button,
+and the dead settings page plus the two bridge methods nobody calls are gone.
 1.1.9 makes the paperclip a one-tap control: the client's own two-row menu (上传附件 / 上传图片) is
 clicked through by text as soon as it mounts, and 上传附件 wins because a file picker can still reach
 photos while an image picker cannot reach documents. The old hook keyed on the trigger's class and on
@@ -82,7 +89,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.9 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.10 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

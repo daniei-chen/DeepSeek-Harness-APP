@@ -268,6 +268,49 @@ internal object WebShellScripts {
           stats.remounts = 0;
           stats.longTasks = 0;
           stats.longMs = 0;
+          stats.scrollMin = 0;
+          stats.scrollSamples = 0;
+          // Scroll sampling: a long session keeps every message in the DOM, so the honest question
+          // is not "how many nodes are there" but "what did the last scroll actually render at".
+          // Frames are counted only while a scroll is in flight, and the sample closes 250 ms after
+          // it ends — there is no timer idling between scrolls. The `scroll` event is heard in the
+          // capture phase so a scrolling inner container counts too, not just the document.
+          (function () {
+            var frames = 0;
+            var sampleStart = 0;
+            var stopTimer = 0;
+            var running = false;
+            var tick = function () {
+              if (!running) { return; }
+              frames++;
+              window.requestAnimationFrame(tick);
+            };
+            var finish = function () {
+              running = false;
+              var ms = performance.now() - sampleStart;
+              if (ms >= 120 && frames >= 2) {
+                var fps = Math.round((frames * 1000) / ms);
+                // A tab restored from the background reports a huge first frame; ignore anything
+                // outside a plausible rendering rate instead of poisoning the minimum with it.
+                if (fps > 0 && fps < 240) {
+                  var live = window.__dshShellStats;
+                  live.scrollSamples++;
+                  live.scrollMin = live.scrollMin === 0 ? fps : Math.min(live.scrollMin, fps);
+                }
+              }
+              frames = 0;
+            };
+            window.addEventListener('scroll', function () {
+              if (!running) {
+                running = true;
+                sampleStart = performance.now();
+                frames = 0;
+                window.requestAnimationFrame(tick);
+              }
+              window.clearTimeout(stopTimer);
+              stopTimer = window.setTimeout(finish, 250);
+            }, { passive: true, capture: true });
+          })();
           // Long tasks are the browser's own measure of main-thread stalls over 50 ms: the honest
           // answer to "is the reply late because the phone is busy". A reply that feels chunky shows
           // up here; one that arrives late but paints instantly does not — that one is the network.
@@ -315,6 +358,7 @@ internal object WebShellScripts {
               ' sync=' + s.syncs + ' layoutWrite=' + (s.layoutWrites || 0) +
               ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts +
               ' autoRetry=' + (window.__dshAutoReconnect && window.__dshAutoReconnect.attempts || 0) +
+              ' scrollMin=' + (s.scrollMin || 0) + '@' + (s.scrollSamples || 0) +
               ' longTask=' + (s.longTasks || 0) + '/' + (s.longMs || 0) + 'ms';
           };
           window.__dshShellNetwork = function (seconds) {
