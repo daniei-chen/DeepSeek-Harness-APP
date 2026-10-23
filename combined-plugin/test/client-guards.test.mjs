@@ -404,6 +404,45 @@ test("the file panel hands downloads to the shell and uploads with progress", ()
     assert.match(source, /dsh-transfer-bar/, "progress must be visible, not just logged");
 });
 
+test("the phone header and composer survive dsh-claude-style", () => {
+    // The theme draws the web GUI for a desktop window. At 393 px its session header held the
+    // subagent chip, the background-job chip and both utility buttons on one row: the job chip ran
+    // from x=254 to x=432, across the "…" menu (298) and the panel toggle (343), and the title was
+    // squeezed to 11 px. Both halves of the fix are CSS scoped to the phone form.
+    const claude = sliceBetween("/* dsh-claude-style on a phone.", "/* Frosted/glass themes");
+    assert.match(claude, /header \[data-dsh-claude-part~="view-tabs"\] \{\n  display: none !important;/,
+        "the 对话/轨迹 view switch is a desktop control the phone does not need");
+    assert.match(claude, /header button\[aria-label\*="后台任务"\][\s\S]{0,240}width: 35px !important;/,
+        "the job chip must collapse to its spinner instead of running across the header");
+    assert.match(claude, /header nav\[aria-label="会话层级"\] \{\n  flex: 1 1 0% !important;/,
+        "the title must take the row's free width");
+    assert.doesNotMatch(claude, /header nav\[aria-label="会话层级"\] \{\n  display: none/,
+        "hiding the title was one of the two options; the width fix is the one that shipped");
+
+    // The theme renders its own model control and hides the core trigger. Our ::after rewrite is for
+    // the core trigger only; on the theme's button it printed a second model name over the first.
+    assert.match(claude, /button\[aria-label\*="选择模型"\]\.dsh-claude-model-btn::after,[\s\S]{0,200}content: none !important;/,
+        "the theme's model label must not be overprinted by our ::after");
+    assert.match(claude, /body\[data-dsh-claude-style\] \.dsh-claude-model-seat \{\n  min-width: 0 !important;/,
+        "the theme's seat still has to shrink inside the composer row");
+});
+
+test("a drawer row that navigates also collapses the phone drawer", () => {
+    // The theme paints its own sidebar and never closed the phone drawer: the panel stayed over the
+    // conversation it had just opened, until the user tapped beside it.
+    assert.match(source, /installDrawerAutoClose\(\);/, "the drawer close must be installed from apply()");
+    const region = sliceBetween("function installDrawerAutoClose() {", "Use the Android speech recognizer");
+    assert.match(region, /data-dsh-claude-part~="session-row"/);
+    assert.match(region, /data-dsh-claude-part~="new-session"/);
+    assert.match(region, /data-dsh-claude-part~="panel-row"/);
+    assert.match(region, /document\.documentElement\.hasAttribute\("data-dsh-mobile-form"\)/,
+        "the close is a phone behaviour, never a desktop one");
+    assert.match(region, /aria-expanded"\) !== "true"\) return;/, "only an open drawer is closed");
+    assert.match(region, /document\.querySelector\("\[data-dsh-sidebar-toggle\]"\)[\s\S]{0,300}current\.click\(\)/,
+        "the drawer closes through the shell's own toggle, re-queried after the header re-render");
+    assert.match(region, /\}, 90\);/, "the row's own handler runs first, then the drawer closes");
+});
+
 test("the reported bundle version matches package.json and is new enough for the bridge", () => {
     const declared = source.match(/const PLUGIN_VERSION = "([^"]+)";/);
     assert.ok(declared, "PLUGIN_VERSION must be declared in client.js");

@@ -1,10 +1,10 @@
 {
-  "version": "1.1.14",
-  "versionCode": 50114,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.14/DeepSeek-Harness-1.1.14-personal.21.apk",
-  "sha256": "CA2F96BA6C4BB6458DCF59AE12CCEB25C9EF0EE6BF0789E91CF9762FB5134E1B",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.14",
-  "minPluginVersion": "0.1.28",
-  "notes": "The composer stats sit together again, and diagnostics names the slowest sub-resource",
-  "generatedAt": "2026-10-23T09:05:00.000Z"
+  "version": "1.1.15",
+  "versionCode": 50115,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.15/DeepSeek-Harness-1.1.15-personal.22.apk",
+  "sha256": "43A2D707DBAD6188EAFCD112B5FD6238CB51B70C514796704EC8A01D394461AB",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.15",
+  "minPluginVersion": "0.1.29",
+  "notes": "手机端适配 dsh-claude-style：会话头部不再重叠，模型名不再重影，抽屉选完会话自动收起",
+  "generatedAt": "2026-10-23T12:56:00.000Z"
 }

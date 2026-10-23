@@ -17,10 +17,21 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.14**, `versionCode` **50114**, `DeepSeek-Harness-1.1.14-personal.21.apk`
-- Host plugin **0.1.28**, `dsh-android-deepseek-harness-app-plugin-0.1.28.tgz`
+- APK **1.1.15**, `versionCode` **50115**, `DeepSeek-Harness-1.1.15-personal.22.apk`
+- Host plugin **0.1.29**, `dsh-android-deepseek-harness-app-plugin-0.1.29.tgz`
 - DSH tested against `0.2.1`
 
+1.1.15 adapts the phone to **dsh-claude-style**, the Claude Code desktop theme (0.18.5). The theme lays
+the conversation header out for a desktop window: at 393 px the background-job chip ran from x=254 to
+x=432, straight across the "…" menu (298) and the panel toggle (343), the subagent chip took the rest,
+and the session title was squeezed to 11 px. The phone form now hides the 对话/轨迹 view switch (the
+user asked for it), hides the subagent count chip and the team icon, collapses the job chip to its
+spinner, and gives the title the row's free width with an ellipsis. The theme also draws its own model
+control and hides the core trigger; the plugin's `::after` model-name rewrite (1.1.3) then stamped a
+second name on the same spot — "DeepSeek-V4.1-Flash" printed through "DeepSeek-V4.1-Flash". That
+rewrite is cancelled on the theme's button. And the theme's sidebar never closed the phone drawer, so
+picking a session left the drawer over the conversation it had just opened: a capture-phase click
+watcher closes the drawer 90 ms after a `session-row` / `new-session` / `panel-row` tap.
 1.1.14 packs the composer's stats dock and names slow sub-resources. The dock lays its children out
 as equal grid columns in some builds, so `flex-start` alone left the three readings a thumb apart; it
 is forced to flex with `width: auto` children now. Page health also gains `slowRes=`, the three
@@ -110,7 +121,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.14 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.15 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

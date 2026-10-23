@@ -201,6 +201,74 @@ html[data-dsh-mobile-form] header button[aria-label*="background job"] {
   max-width: 40vw !important;
   overflow: hidden !important;
 }
+
+/* dsh-claude-style on a phone. The theme lays the conversation header out for a desktop window: the
+   subagent chip, the background-job chip and the two utility buttons share one row, which only fits
+   from about 640 px up. At 393 px the job chip ran from x=254 to x=432 — straight across the "…"
+   menu and the panel toggle, which sat at 298 and 343 — and the session title was squeezed to 11 px.
+   The 对话/轨迹 switch is a desktop view control the phone asked to lose (2026-10-23), and the
+   subagent count is a reading, not something a person needs while writing; the agent entry stays on
+   the team button. What is left is the row a phone header should have: menu, session title, controls. */
+html[data-dsh-mobile-form] header [data-dsh-claude-part~="view-tabs"] {
+  display: none !important;
+}
+html[data-dsh-mobile-form] header [data-team-action],
+html[data-dsh-mobile-form] header button[aria-label*="子智能体"],
+html[data-dsh-mobile-form] header button[aria-label*="subagent"] {
+  display: none !important;
+}
+html[data-dsh-mobile-form] header button[aria-label*="后台任务"],
+html[data-dsh-mobile-form] header button[aria-label*="background job"] {
+  width: 35px !important;
+  min-width: 35px !important;
+  max-width: 35px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+}
+/* The spinner is the reading; the sentence next to it is what made the row too wide. */
+html[data-dsh-mobile-form] header button[aria-label*="后台任务"] span,
+html[data-dsh-mobile-form] header button[aria-label*="background job"] span,
+html[data-dsh-mobile-form] header button[aria-label*="后台任务"] > svg:last-child,
+html[data-dsh-mobile-form] header button[aria-label*="background job"] > svg:last-child {
+  display: none !important;
+}
+html[data-dsh-mobile-form] header nav[aria-label="会话层级"] {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  align-items: center !important;
+}
+html[data-dsh-mobile-form] header nav[aria-label="会话层级"] [class*="_crumb"] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+html[data-dsh-mobile-form] header [data-dsh-claude-part~="title-row"],
+html[data-dsh-mobile-form] header [data-dsh-claude-part~="header-actions"] {
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+/* The theme draws its own model control — a "seat" holding the name and the effort chip — and hides
+   the core trigger behind it. The rules at the top of this sheet rewrite the core trigger's label
+   through ::after; run against the theme's button they stamped that name on top of the theme's own,
+   so the phone read "DeepSeek-V4.1-Flash" printed through "DeepSeek-V4.1-Flash". The theme's label is
+   already the right one: leave its width and its ellipsis alone, cancel only the two overrides that
+   would move it (the -18px nudge and the 11.5px type), and keep the whole seat inside the row. */
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"].dsh-claude-model-btn,
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"].dsh-claude-model-btn {
+  margin-left: 0 !important;
+  font-size: 13px !important;
+}
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="选择模型"].dsh-claude-model-btn::after,
+html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model"].dsh-claude-model-btn::after {
+  content: none !important;
+}
+html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
+  min-width: 0 !important;
+  max-width: 54vw !important;
+}
 /* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
    like filter/contain/perspective, makes the element the containing block of its fixed
    descendants, so the mobile drawer and dialogs get positioned against the shell instead of the
@@ -225,7 +293,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.28";
+    const PLUGIN_VERSION = "0.1.29";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -474,6 +542,7 @@ html[data-dsh-glass="off"] body::after {
       checkAutoReconnect();
       installFileActions();
       installAttachmentMenuDefault();
+      installDrawerAutoClose();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
@@ -696,6 +765,38 @@ html[data-dsh-glass="off"] body::after {
         return attempt(0);
       };
     };
+    /**
+     * Collapse the phone drawer once the tap inside it has done its job.
+     *
+     * Before dsh-claude-style the sidebar was the shell's own layer, and the tap that opened a
+     * session also collapsed the drawer. The theme paints its own sidebar — its rows carry
+     * `data-dsh-claude-part="session-row"` / "new-session" / "panel-row" — and knows nothing about the
+     * phone drawer, so the panel stayed on top of the conversation it had just opened: the phone
+     * showed the new session's header underneath while the drawer waited for a tap beside it.
+     *
+     * The row's own handler runs first; the drawer closes 90 ms later, never before, so navigation is
+     * not cancelled by the remount. Only the desktop-styled theme needs this — the marker rows exist
+     * only when it is loaded, and the core sidebar keeps its own behaviour without them.
+     */
+    function installDrawerAutoClose() {
+      if (window.__dshDrawerAutoClose) return;
+      window.__dshDrawerAutoClose = true;
+      const ROW = '[data-dsh-claude-part~="session-row"], [data-dsh-claude-part~="new-session"], [data-dsh-claude-part~="panel-row"]';
+      document.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target === null || target.closest(ROW) === null) return;
+        if (!document.documentElement.hasAttribute("data-dsh-mobile-form")) return;
+        const toggle = document.querySelector("[data-dsh-sidebar-toggle]");
+        if (toggle === null || toggle.getAttribute("aria-expanded") !== "true") return;
+        window.setTimeout(() => {
+          // Re-query: opening a session re-renders the header, so the node captured above is gone by
+          // the time the drawer should close.
+          const current = document.querySelector("[data-dsh-sidebar-toggle]");
+          if (current !== null && current.getAttribute("aria-expanded") === "true") current.click();
+        }, 90);
+      }, true);
+    }
+
     /**
      * Use the Android speech recognizer for the composer microphone. The experimental DSH voice
      * plugin records PCM and sends it to a host transcription backend; on a phone that path can
