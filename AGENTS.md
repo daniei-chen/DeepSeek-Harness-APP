@@ -17,8 +17,8 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.17**, `versionCode` **50117**, `DeepSeek-Harness-1.1.17-personal.24.apk`
-- Host plugin **0.1.31**, `dsh-android-deepseek-harness-app-plugin-0.1.31.tgz`
+- APK **1.1.18**, `versionCode` **50118**, `DeepSeek-Harness-1.1.18-personal.25.apk`
+- Host plugin **0.1.32**, `dsh-android-deepseek-harness-app-plugin-0.1.32.tgz`
 - DSH tested against `0.2.1`
 
 1.1.17 fixes the theme's vertical rhythm on the phone. `dsh-claude-style` reserves a 65 px title row
@@ -127,7 +127,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.17 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.18 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

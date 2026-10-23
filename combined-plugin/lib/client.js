@@ -270,24 +270,14 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
 }
 
 /* Vertical rhythm, measured on the phone after the 0.1.30 header fix (2026-10-23, 393×852):
-   the header still reserved a 65 px title row for the 对话/轨迹 strip the phone hides — a 34 px row of
-   icons floated in the middle of a 76 px band, 37 px of empty header above the conversation — and the
-   composer card sat 8 px off the bottom edge, on the gesture pill. Both are the theme's desktop
-   spacing; the phone form does not have the room for either. Rows are pinned (auto 0) rather than
-   spilling, and the composer gets a real gap over the navigation bar. */
-html[data-dsh-mobile-form] header[data-dsh-claude-part~="conversation-header"] {
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  grid-template-rows: auto 0px !important;
-  min-height: 0 !important;
-  height: auto !important;
-  align-content: start !important;
-}
-html[data-dsh-mobile-form] header [data-dsh-claude-part~="title-row"] {
-  height: 34px !important;
-  min-height: 34px !important;
-  max-height: 34px !important;
-}
+   the composer card sat 8 px off the bottom edge, on the gesture pill; the phone form gives it a real
+   gap over the navigation bar.
+   0.1.31 also pinned the header rows (grid-template-rows: auto 0px, height: auto) to shave the empty
+   band above the conversation. It worked in isolation, but dsh-claude-style computes the page box
+   (--dsh-claude-page-height / --dsh-claude-page-width) from the header it rendered: changing that
+   height left the hero page taller than the viewport, so the composer sat below the fold and the
+   phone showed a home screen with no input box at all. Header geometry is the theme's to own — the
+   rules are gone. */
 html[data-dsh-mobile-form] body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"] {
   padding-bottom: 12px !important;
 }
@@ -315,7 +305,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.31";
+    const PLUGIN_VERSION = "0.1.32";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
