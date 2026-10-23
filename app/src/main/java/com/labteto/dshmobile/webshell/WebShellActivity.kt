@@ -3484,6 +3484,10 @@ class WebShellActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         recordPageEvent("resume")
+        // Coming back to the foreground is the one moment Android allows a foreground service to be
+        // started. If the connection reconnected while the app was in the background, the start was
+        // refused there and the ongoing notification never appeared.
+        runCatching { connectionManager.maybeStartService(force = true) }
         if (::webView.isInitialized) {
             webView.onResume()
             // Returning from the background is the other moment a stale surface shows up.
@@ -3632,3 +3636,4 @@ class WebShellActivity : AppCompatActivity() {
             "(function(){try{return !!(window.__dshBack && window.__dshBack());}catch(e){return false;}})()"
     }
 }
+

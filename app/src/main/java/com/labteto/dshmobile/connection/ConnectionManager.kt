@@ -153,6 +153,14 @@ class ConnectionManager @Inject constructor(
     /** A caller arrived while a cycle was running; the cycle runs one more pass for it. */
     private var rebuildPending = false
 
+    /** Whether the foreground service is believed to be up. */
+    @Volatile
+    private var serviceRunning = false
+
+    /** A start was refused (background), so the next foreground moment should try again. */
+    @Volatile
+    private var serviceStartDeferred = false
+
     /**
      * The sink set for the loop identified by [id].
      *
@@ -169,6 +177,11 @@ class ConnectionManager @Inject constructor(
 
         override fun onConnected(generation: HostGeneration) {
             if (loopToken !== id) return
+            // Nothing below may throw: this runs inside the connection loop's own coroutine, and an
+            // exception here ends the loop — the socket dies, the notification never appears and the
+            // user sees the app go quiet in the background. Every step that can fail (a DataStore
+            // read, a foreground-service start Android refuses) is allowed to fail on its own.
+            runCatching {
             this@ConnectionManager.generation = generation
             val host = activeHost
             if (host != null) scope.launch { hostsStore.touchHost(host.id) }
@@ -184,7 +197,8 @@ class ConnectionManager @Inject constructor(
                 attempts = 0,
                 hasConnected = true,
             )
-            maybeStartService()
+                maybeStartService()
+            }
         }
 
         override fun onStateChange(state: ConnectionState) {
@@ -536,18 +550,37 @@ class ConnectionManager @Inject constructor(
         )
     }
 
-    private fun maybeStartService() {
-        val settings = runBlockingRead { hostsStore.settingsOnce() }
-        if (settings.keepConnectedInBackground) startService()
+    /**
+     * Bring the foreground service up when the user asked for a background connection.
+     *
+     * Safe to call at any time and from any state: it re-reads the preference, swallows every failure
+     * (Android refuses a background foreground-service start by throwing, and that must not escape
+     * into the connection loop) and remembers the refusal so the next foreground moment can retry.
+     */
+    fun maybeStartService(force: Boolean = false) {
+        // `force` is the foreground path: the process may believe the service is up while Android
+        // killed it under a background restriction, and coming back to the foreground is the one
+        // moment a restart is guaranteed to be allowed.
+        if (serviceRunning && !force) return
+        val settings = runCatching { runBlockingRead { hostsStore.settingsOnce() } }.getOrNull() ?: return
+        if (!settings.keepConnectedInBackground) return
+        startService()
     }
 
     private fun startService() {
         val intent = Intent(context, ConnectionService::class.java)
-        ContextCompat.startForegroundService(context, intent)
+        val started = runCatching { ContextCompat.startForegroundService(context, intent) }.isSuccess
+        serviceRunning = started
+        // A refusal is not an error to report: Android says no whenever the app is in the background
+        // on 12+, which is precisely the state this service exists for. The activity retries on
+        // resume, and the flag makes that retry cheap.
+        if (!started) serviceStartDeferred = true
     }
 
     private fun stopService() {
-        context.stopService(Intent(context, ConnectionService::class.java))
+        runCatching { context.stopService(Intent(context, ConnectionService::class.java)) }
+        serviceRunning = false
+        serviceStartDeferred = false
     }
 
     private fun <T> runBlockingRead(block: suspend () -> T): T =
@@ -620,3 +653,4 @@ class ConnectionManager @Inject constructor(
         )
     }
 }
+

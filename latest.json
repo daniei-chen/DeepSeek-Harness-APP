@@ -1,10 +1,10 @@
 {
-  "version": "1.1.3",
-  "versionCode": 50103,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.3/DeepSeek-Harness-1.1.3-personal.10.apk",
-  "sha256": "328494D9D1BE793A3F2A2516B56F3AED1EC3E2BB35EC02A0C5864EC6539A4681",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.3",
-  "minPluginVersion": "0.1.17",
-  "notes": "Reconnect: no false alarms, no endless loop, 429-aware; model name fully shown with reasoning effort; less streaming-time work",
-  "generatedAt": "2026-10-22T14:40:43.444Z"
+  "version": "1.1.4",
+  "versionCode": 50104,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.4/DeepSeek-Harness-1.1.4-personal.11.apk",
+  "sha256": "BDDF639C5FCBDB24D368A7B1314FC5BB5B0A03A88E82416C7AF2B71ADD052F51",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.4",
+  "minPluginVersion": "0.1.18",
+  "notes": "Background service survives Android's foreground-start restriction; transient API failures retry automatically",
+  "generatedAt": "2026-10-23T00:05:52.482Z"
 }
