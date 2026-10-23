@@ -17,6 +17,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -1991,6 +1992,88 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         }
         dialog.show()
+    }
+
+    /**
+     * A progress card for long native work (an update download), drawn in the shell's own language.
+     *
+     * This used to be a system `AlertDialog`: a dark Material panel with a stock title next to
+     * rounded light cards, which read as a different app. Same card surface, same title/subtitle
+     * sizes, same accent as every other page here.
+     */
+    fun showProgressDialog(
+        dark: Boolean,
+        title: String,
+        initialMessage: String,
+        percentMessage: (Int) -> String,
+    ): ProgressHandle {
+        val colors = Colors(dark)
+        val dialog = Dialog(activity)
+        val root = FrameLayout(activity).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBackground(colors, radiusDp = 20)
+            setPadding(dp(22), dp(20), dp(22), dp(20))
+        }
+        card.addView(
+            TextView(activity).apply {
+                text = title
+                textSize = 17f
+                setTextColor(colors.primary)
+            },
+        )
+        val label = TextView(activity).apply {
+            text = initialMessage
+            textSize = 13f
+            setPadding(0, dp(6), 0, dp(14))
+            setTextColor(colors.secondary)
+        }
+        card.addView(label)
+        val bar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 0
+            isIndeterminate = true
+            progressTintList = android.content.res.ColorStateList.valueOf(ACCENT)
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(ACCENT)
+        }
+        card.addView(bar, matchWidth())
+        root.addView(
+            card,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER,
+            ),
+        )
+        dialog.setCancelable(false)
+        show(dialog, root, gravity = Gravity.CENTER)
+        return ProgressHandle(dialog) { percent ->
+            if (percent < 0) {
+                bar.isIndeterminate = true
+                label.text = initialMessage
+            } else {
+                bar.isIndeterminate = false
+                bar.progress = percent
+                label.text = percentMessage(percent)
+            }
+        }
+    }
+
+    /** Live handle for [showProgressDialog]; every call is safe after the dialog was dismissed. */
+    inner class ProgressHandle(
+        private val dialog: Dialog,
+        private val render: (Int) -> Unit,
+    ) {
+        val isShowing: Boolean get() = dialog.isShowing
+
+        /** Percent `0..100`, or a negative value for "still working, length unknown". */
+        fun setPercent(percent: Int) {
+            if (dialog.isShowing) render(percent)
+        }
+
+        fun dismiss() {
+            if (dialog.isShowing) dialog.dismiss()
+        }
     }
 
     private fun cardBackground(colors: Colors, radiusDp: Int): GradientDrawable = GradientDrawable().apply {
