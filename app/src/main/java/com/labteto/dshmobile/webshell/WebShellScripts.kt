@@ -399,7 +399,29 @@ internal object WebShellScripts {
               ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts +
               ' autoRetry=' + (window.__dshAutoReconnect && window.__dshAutoReconnect.attempts || 0) +
               ' scrollMin=' + (s.scrollMin || 0) + '@' + (s.scrollSamples || 0) +
-              ' longTask=' + (s.longTasks || 0) + '/' + (s.longMs || 0) + 'ms';
+              ' longTask=' + (s.longTasks || 0) + '/' + (s.longMs || 0) + 'ms' +
+              ' slowRes=' + (function () {
+                // `onPageFinished` waits for every image, script and stylesheet, so a launch whose
+                // DOM was ready in 0.6 s but finished in 6 s is one slow sub-resource, not a slow
+                // page. Resource timing names it; the resolution is a round number, which is all a
+                // reader needs to decide whether to chase it.
+                try {
+                  var entries = performance.getEntriesByType('resource') || [];
+                  var worst = [];
+                  for (var i = 0; i < entries.length; i++) {
+                    if (entries[i].duration >= 300) { worst.push(entries[i]); }
+                  }
+                  worst.sort(function (a, b) { return b.duration - a.duration; });
+                  var out = [];
+                  for (var k = 0; k < worst.length && k < 3; k++) {
+                    var name = String(worst[k].name || '').split('?')[0].slice(-40);
+                    out.push(name + ' ' + Math.round(worst[k].duration) + 'ms');
+                  }
+                  return out.length ? out.join(' , ') : 'none';
+                } catch (e) {
+                  return '?';
+                }
+              })();
           };
           window.__dshShellNetwork = function (seconds) {
             var since = Date.now() - (seconds || 120) * 1000;

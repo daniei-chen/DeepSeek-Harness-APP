@@ -17,10 +17,15 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.13**, `versionCode` **50113**, `DeepSeek-Harness-1.1.13-personal.20.apk`
-- Host plugin **0.1.27**, `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz`
+- APK **1.1.14**, `versionCode` **50114**, `DeepSeek-Harness-1.1.14-personal.21.apk`
+- Host plugin **0.1.28**, `dsh-android-deepseek-harness-app-plugin-0.1.28.tgz`
 - DSH tested against `0.2.1`
 
+1.1.14 packs the composer's stats dock and names slow sub-resources. The dock lays its children out
+as equal grid columns in some builds, so `flex-start` alone left the three readings a thumb apart; it
+is forced to flex with `width: auto` children now. Page health also gains `slowRes=`, the three
+slowest images/scripts/stylesheets above 300 ms — `onPageFinished` waits for those, so a launch whose
+DOM was ready at 0.6 s but finished at 5.9 s is one slow resource, not a slow page.
 1.1.13 fixes how diagnostics samples. The page-health block used to be taken once, 900 ms after a
 document loaded, so a report opened after real use described the page as it was at start-up — the one
 moment it is least useful. It now samples on open (one `evaluateJavascript`) and then renders. The
@@ -105,7 +110,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.13 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.14 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
