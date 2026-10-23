@@ -1,10 +1,10 @@
 {
-  "version": "1.1.10",
-  "versionCode": 50110,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.10/DeepSeek-Harness-1.1.10-personal.17.apk",
-  "sha256": "7049B4D476EE0EB21B61EF2C53D507125DA3795B243EA7A40D370D14EA3FB439",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.10",
+  "version": "1.1.11",
+  "versionCode": 50111,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.11/DeepSeek-Harness-1.1.11-personal.18.apk",
+  "sha256": "7F827FFCD4973A6A3BC8A2A124FF86E384A020B55C0D6B0AF2212F4576E6DC3A",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.11",
   "minPluginVersion": "0.1.27",
-  "notes": "Upload progress, a download button that actually saves, scroll-fps sampling, an error page that lists your last sessions",
-  "generatedAt": "2026-10-23T08:30:00.000Z"
+  "notes": "Startup timings in Diagnostics, so a slow launch can be attributed instead of guessed",
+  "generatedAt": "2026-10-23T08:55:00.000Z"
 }

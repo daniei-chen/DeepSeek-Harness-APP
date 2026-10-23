@@ -17,6 +17,33 @@ internal object WebShellScripts {
     const val BACK_BRIDGE = "dshBackBridge"
 
     /**
+     * The page's own start-up numbers, as one plain string.
+     *
+     * `ttfb` is the request's wait before the first byte; `fcp` is the first contentful paint; `dcl`
+     * is the document finishing its own script. The shell records its side separately, so the two
+     * together say which stage a slow start was spent in instead of inviting a guess. Anything the
+     * browser does not report comes back as `?`, never as a fabricated zero.
+     */
+    val PAGE_TIMING: String = """
+        (function () {
+          try {
+            var nav = performance.getEntriesByType('navigation')[0];
+            if (!nav) { return ''; }
+            var fcp = 0;
+            var paints = performance.getEntriesByType('paint') || [];
+            for (var i = 0; i < paints.length; i++) {
+              if (paints[i].name === 'first-contentful-paint') { fcp = paints[i].startTime; }
+            }
+            return 'ttfb=' + Math.round(nav.responseStart) +
+              ' fcp=' + (fcp ? Math.round(fcp) : '?') +
+              ' dcl=' + Math.round(nav.domContentLoadedEventEnd);
+          } catch (e) {
+            return '';
+          }
+        })()
+    """.trimIndent()
+
+    /**
      * Idempotent DOM patches.
      *
      * - A single-window WebView drops `window.open` / `target=_blank`, so both are turned into a

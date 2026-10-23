@@ -241,6 +241,19 @@ class WebShellActivity : AppCompatActivity() {
      */
     private var nativeNavigationAt = 0L
 
+    /**
+     * The two moments after [nativeNavigationAt] that a person actually feels: the first frame the
+     * page committed to the screen, and the point the document reported itself finished.
+     *
+     * Without these the only answer to "why is it slow" was a guess. The page's own timings are
+     * read separately (see [pageStartup]) because they separate network wait from script work.
+     */
+    private var firstPaintAt = 0L
+    private var domReadyAt = 0L
+
+    /** `ttfb=… fcp=… dcl=…` from the page's PerformanceNavigationTiming, when it reported one. */
+    private var pageStartup: String? = null
+
     /** Main-frame loads with no shell action behind them. */
     private var unattributedReloads = 0
 
@@ -784,6 +797,7 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageCommitVisible(view: WebView, url: String?) {
             super.onPageCommitVisible(view, url)
+            if (firstPaintAt == 0L) firstPaintAt = SystemClock.elapsedRealtime()
             markPageReady()
             hideError()
             injectPageScripts()
@@ -792,6 +806,8 @@ class WebShellActivity : AppCompatActivity() {
 
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
+            if (domReadyAt == 0L) domReadyAt = SystemClock.elapsedRealtime()
+            readPageStartup()
             recordPageEvent("page finished")
             normalizeRelayDeviceUrl(url)
             val reloadLoop = recordPageLoad(url)
@@ -1064,7 +1080,26 @@ class WebShellActivity : AppCompatActivity() {
     /** Every main-frame load the shell decides on goes through here, so it can be attributed. */
     private fun loadShellUrl(url: String) {
         nativeNavigationAt = SystemClock.elapsedRealtime()
+        firstPaintAt = 0L
+        domReadyAt = 0L
+        pageStartup = null
         webView.loadUrl(url)
+    }
+
+    /**
+     * What start-up cost, split by the stage that spent it.
+     *
+     * `first` is native navigation → first committed frame (everything before the page is visible),
+     * `ready` is → `onPageFinished`. The page's own numbers follow when it can report them: `fcp`
+     * near `first` means the wait was the document and its first paint; a large gap between `fcp`
+     * and `dcl` means script work. Without this split "make it faster" is guesswork.
+     */
+    private fun startupSummary(): String {
+        if (nativeNavigationAt == 0L) return "—"
+        val first = if (firstPaintAt > 0) "${firstPaintAt - nativeNavigationAt}ms" else "—"
+        val ready = if (domReadyAt > 0) "${domReadyAt - nativeNavigationAt}ms" else "—"
+        val page = pageStartup?.takeIf { it.isNotBlank() }
+        return "first=$first ready=$ready" + (if (page != null) " $page" else "")
     }
 
     private fun injectPageScripts() {
@@ -1075,6 +1110,21 @@ class WebShellActivity : AppCompatActivity() {
         sentInsets = null
         applyInsetsToPage(force = true)
         applyGlassCompat()
+    }
+
+    /**
+     * Ask the page for its own navigation timings.
+     *
+     * `onPageFinished` is the first moment the entry exists, and it separates the two things the
+     * shell cannot: how long the request waited (`ttfb`) from how long the script took to paint
+     * (`fcp` → `dcl`). The value is a plain string, so nothing has to be unescaped on either side.
+     */
+    private fun readPageStartup() {
+        if (!::webView.isInitialized) return
+        webView.evaluateJavascript(WebShellScripts.PAGE_TIMING) { value ->
+            val text = value?.trim()?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != "null" }
+            if (text != null && pageStartup == null) pageStartup = text
+        }
     }
 
     /** Re-evaluate the page for a glass theme that breaks fixed positioning. */
@@ -1759,7 +1809,8 @@ class WebShellActivity : AppCompatActivity() {
             connectionManager.state.value.phase.name.lowercase(),
             webViewVersion,
             "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-        ) + "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary()) +
+        ) + "\n" + getString(R.string.shell_diagnostics_startup, startupSummary()) +
+            "\n" + getString(R.string.shell_diagnostics_layout, layoutSummary()) +
             "\n" + getString(R.string.shell_diagnostics_self_reloads, unattributedReloads) +
             (healthText?.let { sample ->
                 val age = ((SystemClock.elapsedRealtime() - healthAt) / 1000).coerceAtLeast(0)

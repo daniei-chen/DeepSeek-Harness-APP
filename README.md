@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.10-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.11-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.11：想知道启动慢在哪，先把它量出来
+
+| 问题 | 修法 |
+| --- | --- |
+| 想优化启动，但没人知道时间花在哪 | 诊断新增一行**启动耗时**：`first=640ms ready=1850ms ttfb=120 fcp=690 dcl=2100`。前两个是原生侧（点开 → 首帧、→ DOM 就绪），后三个是页面自己的（请求等到首字节、首次内容绘制、脚本跑完）。哪一段大，就说明问题在哪一段。 |
+
+**为什么不做"先渲染骨架、再拉数据替换"**：这在 SPA + WebView 里是**两次渲染**——骨架画一遍、真页面再画一遍，WebView 的合成器要重建，而且替换会打断 React 自己的挂载（正是前面几版花力气修掉的"乱刷新"来源）。现在真正省时间的是暖启动时用 OkHttp **预取主文档**（已有，350ms 预算内直接交给 WebView，省一次往返）。
 
 ---
 
@@ -252,7 +262,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.10-personal.17.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.11-personal.18.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -279,7 +289,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.10**（`versionCode 50110`） | `DeepSeek-Harness-1.1.10-personal.17.apk` | `7049B4D476EE0EB21B61EF2C53D507125DA3795B243EA7A40D370D14EA3FB439` |
+| App | **1.1.11**（`versionCode 50111`） | `DeepSeek-Harness-1.1.11-personal.18.apk` | `7F827FFCD4973A6A3BC8A2A124FF86E384A020B55C0D6B0AF2212F4576E6DC3A` |
 | 主机插件 | **0.1.27** | `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
@@ -292,7 +302,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.10 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.11 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
