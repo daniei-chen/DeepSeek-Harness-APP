@@ -65,6 +65,35 @@ html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model
   text-overflow: clip !important;
   white-space: nowrap !important;
 }
+/* Reasoning-effort chip (dsh-codex-power-slider) on a phone.
+   That plugin caps the chip at min(360px, 45cqw) and makes the effort text the first thing to shrink,
+   so on a 360dp screen the model name ellipsised ("DeepSeek-V4.1-F…") and the reasoning effort
+   vanished — the two readings the chip exists to show. The mobile layer gives it the row's real width
+   and pins the effort: the name still ellipsises if the row is genuinely too narrow, but only then.
+   html[data-dsh-mobile-form] keeps all of this off the desktop client. */
+html[data-dsh-mobile-form] .dshcps-chip {
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+html[data-dsh-mobile-form] .dshcps-chipLabel {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+html[data-dsh-mobile-form] .dshcps-chipEffort {
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+/* With the effort pinned, an over-wide name would push the send button off the row: let the name be
+   the flexible half instead. */
+html[data-dsh-mobile-form] .dshcps-chipLabel {
+  flex: 1 1 auto !important;
+}
+
 /* Device chip: the one header control the shell owns. A quiet pill, so it reads as chrome rather
    than as another page action; hidden until the shell reports a saved device. */
 .dsh-device-chip {
@@ -215,7 +244,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.19";
+    const PLUGIN_VERSION = "0.1.20";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -6816,3 +6845,4 @@ window.__ModuleLoader__.load({
     return { apply, inject: ["slots"] };
   }
 });
+
