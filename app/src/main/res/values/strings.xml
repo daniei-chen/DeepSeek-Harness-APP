@@ -889,6 +889,8 @@
     <string name="shell_cockpit_forked">Fork created</string>
     <string name="shell_settings_manage_devices">Devices</string>
     <string name="shell_settings_manage_devices_hint">Add, rename, delete or switch this device</string>
+    <string name="shell_settings_more_connection">More connection settings</string>
+    <string name="shell_settings_devices_count">%1$d devices</string>
     <string name="shell_settings_scan_qr">Scan QR code</string>
     <string name="shell_settings_scan_qr_hint">Scan the QR on the computer at https://computer-ip:3443/relay/pair</string>
     <string name="shell_scan_qr_prompt">Point at the QR code on your computer</string>

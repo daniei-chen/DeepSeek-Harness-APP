@@ -1361,6 +1361,7 @@ class WebShellActivity : AppCompatActivity() {
         chrome.showSettingsHome(
             dark = pageDark,
             currentDeviceName = currentName,
+            deviceCount = devices.size,
             versionName = versionName,
             pluginVersion = pluginVersion,
             simpleMode = settingsNow().simpleMode,
@@ -1370,7 +1371,7 @@ class WebShellActivity : AppCompatActivity() {
             backgroundEnabled = settingsNow().keepConnectedInBackground,
             ntfyEnabled = NtfyConfig.load(this) != null,
             linkHandlerEnabled = isLinkHandlerEnabled(),
-            onConnection = { showConnectionPage() },
+            onConnection = { showDeviceManager() },
             onRemote = { showRemoteAccess() },
             onInbox = { showInbox() },
             onMobileSetup = { showMobileSetupDialog() },
@@ -1591,7 +1592,6 @@ class WebShellActivity : AppCompatActivity() {
         chrome.showConnectionPage(
             dark = pageDark,
             simpleMode = simple,
-            onManageDevices = { showDeviceManager() },
             onScanQr = { openQrScanner() },
             onPairCode = { showPairingCodeDialog() },
             onScanLan = { scanLan() },
@@ -1608,7 +1608,7 @@ class WebShellActivity : AppCompatActivity() {
                     showConnectionPage()
                 }
             },
-            onBack = { showSettings() },
+            onBack = { showDeviceManager() },
         )
     }
 
@@ -2847,6 +2847,7 @@ class WebShellActivity : AppCompatActivity() {
             onRename = { device -> showRenameDeviceDialog(device) },
             onDelete = { device -> deleteDevice(device) },
             onAdd = { showAddDeviceDialog() },
+            onMore = { showConnectionPage() },
             onRefresh = { reloadPage() },
             onExit = { finishAffinity() },
         )

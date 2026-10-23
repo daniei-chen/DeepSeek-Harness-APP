@@ -101,45 +101,6 @@ html[data-dsh-mobile-form] .dshcps-chipLabel {
   flex: 0 1 auto !important;
 }
 
-/* Device chip: the one header control the shell owns. A quiet pill, so it reads as chrome rather
-   than as another page action; hidden until the shell reports a saved device. */
-.dsh-device-chip {
-  display: none;
-  align-items: center;
-  gap: 4px;
-  max-width: 40vw;
-  margin: 0 6px;
-  padding: 3px 9px;
-  border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.35));
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-base, transparent);
-  color: var(--dsw-alias-label-primary, inherit);
-  font: inherit;
-  font-size: 11px;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-.dsh-device-chip[data-ready="1"] { display: inline-flex; }
-.dsh-device-chip:active { opacity: 0.7; }
-.dsh-device-chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #3dd68c;
-  flex: none;
-}
-/* No header to attach to: float clear of the safe area instead of disappearing. */
-.dsh-device-chip[data-floating="1"] {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 6px);
-  left: 8px;
-  z-index: 40;
-  backdrop-filter: blur(8px);
-}
-
 /* Stats dock: two short readings must sit side by side, never overlap. */
 html[data-dsh-mobile-form] [data-slot="conversation.composer.dock"] {
   flex-wrap: nowrap !important;
@@ -251,7 +212,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.23";
+    const PLUGIN_VERSION = "0.1.24";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -494,7 +455,6 @@ html[data-dsh-glass="off"] body::after {
         window.setTimeout(observe, 600);
         compactStats();
       });
-      installDeviceChip();
       placeEffortChip();
       installResilientFetch();
       installFileActions();
@@ -737,14 +697,6 @@ html[data-dsh-glass="off"] body::after {
      * the nested row labels; the host route confines them to its configured workspace roots.
      */
     /**
-     * A device chip in the page header.
-     *
-     * Switching devices lives three taps deep in the app (设置 → 连接 → 设备管理), which is a lot for
-     * the one setting people change mid-session. The chip shows the active device's name and opens
-     * the same native manager in one tap. It is re-attached by the decorating pass, like the file
-     * tools, so a header re-render cannot lose it.
-     */
-    /**
      * Put the reasoning-effort chip in the same row as the send button.
      *
      * dsh-codex-power-slider mounts that chip in the composer toolbar's left slot, and send lives in a
@@ -767,48 +719,6 @@ html[data-dsh-glass="off"] body::after {
       try {
         row.insertBefore(chip, send);
       } catch (e) {}
-    };
-
-    const installDeviceChip = () => {
-      const bridge = window.DshShellBridge;
-      if (!bridge || typeof bridge.deviceSummary !== "function") return;
-      let summary = null;
-      try {
-        summary = JSON.parse(bridge.deviceSummary() || "{}");
-      } catch (e) {
-        return;
-      }
-      if (!summary || !summary.count) return;
-      const header = document.querySelector("header");
-      const host = header || document.body;
-      if (!host) return;
-      let chip = host.querySelector(".dsh-device-chip");
-      if (chip === null) {
-        chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "dsh-device-chip";
-        chip.title = "切换设备 / switch device";
-        chip.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          try {
-            bridge.openDevices();
-          } catch (e) {}
-        });
-        if (header === null) chip.dataset.floating = "1";
-        host.appendChild(chip);
-      }
-      const label = summary.name || "设备";
-      if (chip.dataset.label !== label) {
-        chip.dataset.label = label;
-        chip.textContent = "";
-        const dot = document.createElement("span");
-        dot.className = "dsh-device-chip-dot";
-        const text = document.createElement("span");
-        text.textContent = label;
-        chip.append(dot, text);
-      }
-      chip.dataset.ready = "1";
     };
 
     function installFileActions() {
@@ -1145,7 +1055,6 @@ html[data-dsh-glass="off"] body::after {
       let panelSeenAt = 0;
       const decorate = () => {
         if (document.visibilityState === "hidden") return;
-        installDeviceChip();
         placeEffortChip();
         const root = rootPath();
         if (root === "") {

@@ -347,6 +347,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     fun showSettingsHome(
         dark: Boolean,
         currentDeviceName: String?,
+        deviceCount: Int,
         versionName: String,
         pluginVersion: String?,
         simpleMode: Boolean,
@@ -401,9 +402,13 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
                 colors = colors,
                 iconRes = R.drawable.ic_shell_device,
                 title = activity.getString(R.string.shell_settings_section_connection),
-                subtitle = currentDeviceName?.let { activity.getString(R.string.shell_settings_current_device, it) }
-                    ?: activity.getString(R.string.shell_settings_connection_hint),
+                subtitle = currentDeviceName?.let {
+                    activity.getString(R.string.shell_settings_current_device, it) +
+                        if (deviceCount > 1) " · " + activity.getString(R.string.shell_settings_devices_count, deviceCount) else ""
+                } ?: activity.getString(R.string.shell_settings_connection_hint),
             ) {
+                // Devices are the only thing this row is for, so it opens the manager itself:
+                // 设置 → 连接 → 设备 was one tap too many for the one setting people change.
                 dialog.dismiss()
                 onConnection()
             },
@@ -550,7 +555,6 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
     fun showConnectionPage(
         dark: Boolean,
         simpleMode: Boolean,
-        onManageDevices: () -> Unit,
         onScanQr: () -> Unit,
         onPairCode: () -> Unit,
         onScanLan: () -> Unit,
@@ -571,13 +575,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
             background = cardBackground(colors, radiusDp = 20)
             setPadding(dp(8), dp(10), dp(8), dp(8))
         }
-        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_section_connection)) { dialog.dismiss(); onBack() })
-        card.addView(
-            settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_manage_devices), activity.getString(R.string.shell_settings_manage_devices_hint)) {
-                dialog.dismiss()
-                onManageDevices()
-            },
-        )
+        card.addView(pageHeader(colors, activity.getString(R.string.shell_settings_more_connection)) { dialog.dismiss(); onBack() })
         if (!simpleMode) {
             card.addView(
                 settingsRow(colors, R.drawable.ic_shell_device, activity.getString(R.string.shell_settings_scan_qr), activity.getString(R.string.shell_settings_scan_qr_hint)) {
@@ -1735,6 +1733,7 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         onRename: (ShellDevice) -> Unit,
         onDelete: (ShellDevice) -> Unit,
         onAdd: () -> Unit,
+        onMore: () -> Unit,
         onRefresh: () -> Unit,
         onExit: () -> Unit,
     ) {
@@ -1824,6 +1823,13 @@ internal class WebShellChrome(private val activity: AppCompatActivity) {
         }
         card.addView(scroll, matchWidth())
 
+        card.addView(divider(colors))
+        card.addView(
+            menuRow(colors, R.drawable.ic_shell_settings, activity.getString(R.string.shell_settings_more_connection)) {
+                dialog.dismiss()
+                onMore()
+            },
+        )
         card.addView(divider(colors))
         card.addView(
             menuRow(colors, R.drawable.ic_shell_exit, activity.getString(R.string.device_exit), destructive = true) {

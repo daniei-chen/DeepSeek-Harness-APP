@@ -887,6 +887,8 @@
     <string name="shell_cockpit_forked">已创建 Fork</string>
     <string name="shell_settings_manage_devices">设备管理</string>
     <string name="shell_settings_manage_devices_hint">添加、改名、删除或切换设备</string>
+    <string name="shell_settings_more_connection">更多连接设置</string>
+    <string name="shell_settings_devices_count">%1$d 台设备</string>
     <string name="shell_settings_scan_qr">扫码连接</string>
     <string name="shell_settings_scan_qr_hint">扫描电脑上 https://电脑IP:3443/relay/pair 页面里的二维码</string>
     <string name="shell_scan_qr_prompt">对准电脑上的二维码</string>
