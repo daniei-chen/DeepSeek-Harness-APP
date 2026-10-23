@@ -101,15 +101,28 @@ html[data-dsh-mobile-form] .dshcps-chipLabel {
   flex: 0 1 auto !important;
 }
 
-/* Stats dock: two short readings must sit side by side, never overlap. */
+/* Stats dock: the readings belong together on the left, not spread across the row.
+   flex-start alone was not enough — the dock lays its children out as a grid with equal columns in
+   some builds, so each reading kept a third of the width and the three numbers ended up a thumb
+   apart. Flex plus auto width on the children is what packs them. */
 html[data-dsh-mobile-form] [data-slot="conversation.composer.dock"] {
+  display: flex !important;
   flex-wrap: nowrap !important;
   justify-content: flex-start !important;
+  align-items: center !important;
   gap: 10px !important;
   max-width: 100% !important;
 }
+html[data-dsh-mobile-form] [data-slot="conversation.composer.dock"] > * {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
 html[data-dsh-mobile-form] [data-composer-stat] {
   flex: 0 0 auto !important;
+  width: auto !important;
   max-width: 45vw !important;
   font-variant-numeric: tabular-nums;
 }
@@ -212,7 +225,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.27";
+    const PLUGIN_VERSION = "0.1.28";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;

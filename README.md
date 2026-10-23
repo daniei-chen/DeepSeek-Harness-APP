@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.13-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.14-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,15 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.14：底栏数字靠拢，外加"最慢资源"一目了然
+
+| 问题 | 修法 |
+| --- | --- |
+| 底部 `198 tok/s`、`2909M tok · 99%`、`37%` 三个读数隔着一个拇指远 | 那个 dock 在某些版本里按**网格等宽列**排版，所以每个读数都占 1/3 行宽；只加 `justify-content: flex-start` 没用。现在强制 `display: flex` + 子项 `width: auto`，三个读数会挤在左边、间距 10px。 |
+| 启动 `first=631ms` 但 `ready=5921ms`，6 秒才 finished | 页面健康多了 `slowRes=`：列出最慢的三个**子资源**（图片/脚本/样式表）。`dcl` 早就好了却迟迟不 finished，就是某个资源在拖，这一项直接点名。 |
 
 ---
 
@@ -279,7 +288,7 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.13-personal.20.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.14-personal.21.apk`
 
 ### 3. 第一次连接（简单模式）
 
@@ -306,8 +315,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.13**（`versionCode 50113`） | `DeepSeek-Harness-1.1.13-personal.20.apk` | `7AA5CE607B9920FCA486FE52F49BA560047362DDC6AD1530356265D74C599901` |
-| 主机插件 | **0.1.27** | `dsh-android-deepseek-harness-app-plugin-0.1.27.tgz` | 见 Release 页面 |
+| App | **1.1.14**（`versionCode 50114`） | `DeepSeek-Harness-1.1.14-personal.21.apk` | `CA2F96BA6C4BB6458DCF59AE12CCEB25C9EF0EE6BF0789E91CF9762FB5134E1B` |
+| 主机插件 | **0.1.28** | `dsh-android-deepseek-harness-app-plugin-0.1.28.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -319,7 +328,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.13 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.14 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：
