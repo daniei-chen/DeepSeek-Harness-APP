@@ -8,7 +8,7 @@
 
 手机是壳，界面是官方 DSH；原生层补上浏览器给不了的能力。
 
-[![Release](https://img.shields.io/badge/release-1.1.6-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
+[![Release](https://img.shields.io/badge/release-1.1.7-0969da?style=flat-square)](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3dd68c?style=flat-square)](#下载)
 [![DSH](https://img.shields.io/badge/DSH-0.2.1-3964fe?style=flat-square)](#架构)
 [![License](https://img.shields.io/badge/license-MIT-24292f?style=flat-square)](LICENSE)
@@ -35,6 +35,16 @@
 | **分享进来，通知里直接回** | 任何 app 都能把文字/链接分享进来；完成和提问通知带回复框 |
 
 > ⚠️ 这是一个**非官方**项目，与 DeepSeek 官方无关。「DeepSeek Harness」与鲸鱼标识归其各自所有者。
+
+---
+
+## 1.1.7：设备管理收进设置，去掉重复入口
+
+| 问题 | 修法 |
+| --- | --- |
+| 换个设备要点三层（设置 → 连接 → 设备管理） | 设置第一屏的「连接」**直接打开设备管理**：设备列表、切换、改名、删除、添加都在这一页；副标题顺带显示「当前：家 · 2 台设备」。 |
+| 页面顶栏又多一个设备按钮 | 移除 1.1.6 加的那个顶栏设备药丸，设备入口只剩设置一处。 |
+| 扫码 / 配对码 / 局域网扫描没地方去了 | 收进设备管理底部的「更多连接设置」——层级没有变深，只是换了个门。 |
 
 ---
 
@@ -210,16 +220,16 @@ node setup/dsh-mobile-setup.mjs pair
 ### 2. 手机端
 
 - 下载 APK：[最新 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
-- 或：`adb install -r DeepSeek-Harness-1.1.6-personal.13.apk`
+- 或：`adb install -r DeepSeek-Harness-1.1.7-personal.14.apk`
 
 ### 3. 第一次连接（简单模式）
 
-1. 打开 App → **设置 → 连接 → 管理设备 → 添加设备**
+1. 打开 App → **设置 → 连接 → 添加设备**
 2. 填你自己的地址，例如 `https://192.168.2.13:3443` 或 `https://dsh.example.com`
 3. 完成一次 DSH 登录 / 中继密码
 4. 以后启动直接进
 
-需要扫码/配对码/局域网扫描时，在连接页最下面点「显示高级连接方式」。
+「连接」打开的就是设备管理：切换、改名、删除都在那一页。需要扫码/配对码/局域网扫描时，点那一页最下面的「更多连接设置」。
 
 ---
 
@@ -237,8 +247,8 @@ node setup/dsh-mobile-setup.mjs pair
 
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
-| App | **1.1.6**（`versionCode 50106`） | `DeepSeek-Harness-1.1.6-personal.13.apk` | `2A73279E9A5F2D11148410430ECDC20412423AF17F8B7D2CE39D045200656A2D` |
-| 主机插件 | **0.1.13** | `dsh-android-deepseek-harness-app-plugin-0.1.17.tgz` | 见 Release 页面 |
+| App | **1.1.7**（`versionCode 50107`） | `DeepSeek-Harness-1.1.7-personal.14.apk` | `304FE820C257DB5A01274629D9B7A777122F4535944408D7B7AD01F2B3A662A1` |
+| 主机插件 | **0.1.24** | `dsh-android-deepseek-harness-app-plugin-0.1.24.tgz` | 见 Release 页面 |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
@@ -250,7 +260,7 @@ node setup/dsh-mobile-setup.mjs pair
 
 ```bash
 ./gradlew :app:testDebugUnitTest     # 单元测试
-DSH_VERSION_NAME=1.1.6 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.7 ./gradlew :app:assembleRelease
 ```
 
 签名用环境变量（不传则产出未签名包）：

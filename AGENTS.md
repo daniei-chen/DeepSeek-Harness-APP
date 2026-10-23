@@ -15,12 +15,15 @@ Read **[docs/INSTALL_FOR_AGENTS.md](docs/INSTALL_FOR_AGENTS.md)** and follow it 
 It contains the exact versions, hashes, commands, verification steps and troubleshooting table for
 both halves (host plugin + APK). Do not improvise an install from the source tree.
 
-Current release (2026-10-22):
+Current release (2026-10-23):
 
-- APK **1.1.6**, `versionCode` **50106**, `DeepSeek-Harness-1.1.6-personal.13.apk`
-- Host plugin **0.1.19**, `dsh-android-deepseek-harness-app-plugin-0.1.19.tgz`
+- APK **1.1.7**, `versionCode` **50107**, `DeepSeek-Harness-1.1.7-personal.14.apk`
+- Host plugin **0.1.24**, `dsh-android-deepseek-harness-app-plugin-0.1.24.tgz`
 - DSH tested against `0.2.1`
 
+1.1.7 collapses the device entry points. Settings → 连接 opens the device manager itself (list,
+switch, rename, delete, add) and the old connection page moved to 「更多连接设置」 at the bottom of
+that dialog; the header device pill added in 1.1.6 is gone, so devices live in exactly one place.
 1.1.3 is about the connection and the composer's last two readings: a failed generation is no longer reported until it has lasted, a run of failures stops retrying instead of looping forever, HTTP 429 pauses reconnecting for a minute instead of hammering the limiter, the model trigger shows the full name plus its reasoning effort, and the model label is one line with ellipsis only as a fallback. 1.1.2 fixed the settings sheet; 1.1.1 was the stability pass: the host plugin had been pinned to 0.1.7 (whose client still ran a
 two-second stats poll), `mobile-web-plugin/` and `host-plugin/` are deleted, and the shell no longer
 dispatches a synthetic `resize` or repaints its theme without a diff. If "it refreshes by itself"
@@ -71,7 +74,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.6 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.7 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without

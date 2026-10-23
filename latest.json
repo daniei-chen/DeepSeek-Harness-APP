@@ -1,10 +1,10 @@
 {
-  "version": "1.1.6",
-  "versionCode": 50106,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.6/DeepSeek-Harness-1.1.6-personal.13.apk",
-  "sha256": "2A73279E9A5F2D11148410430ECDC20412423AF17F8B7D2CE39D045200656A2D",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.6",
-  "minPluginVersion": "0.1.19",
-  "notes": "Device chip in the page header; simpler settings in simple mode",
-  "generatedAt": "2026-10-23T00:25:50.016Z"
+  "version": "1.1.7",
+  "versionCode": 50107,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.7/DeepSeek-Harness-1.1.7-personal.14.apk",
+  "sha256": "304FE820C257DB5A01274629D9B7A777122F4535944408D7B7AD01F2B3A662A1",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.7",
+  "minPluginVersion": "0.1.24",
+  "notes": "Settings -> Connection opens the device manager directly; the header device pill is gone",
+  "generatedAt": "2026-10-23T03:40:00.000Z"
 }
