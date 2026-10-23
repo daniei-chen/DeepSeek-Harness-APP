@@ -17,10 +17,14 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.8**, `versionCode` **50108**, `DeepSeek-Harness-1.1.8-personal.15.apk`
-- Host plugin **0.1.25**, `dsh-android-deepseek-harness-app-plugin-0.1.25.tgz`
+- APK **1.1.9**, `versionCode` **50109**, `DeepSeek-Harness-1.1.9-personal.16.apk`
+- Host plugin **0.1.26**, `dsh-android-deepseek-harness-app-plugin-0.1.26.tgz`
 - DSH tested against `0.2.1`
 
+1.1.9 makes the paperclip a one-tap control: the client's own two-row menu (上传附件 / 上传图片) is
+clicked through by text as soon as it mounts, and 上传附件 wins because a file picker can still reach
+photos while an image picker cannot reach documents. The old hook keyed on the trigger's class and on
+`button`/`menuitem` rows; both broke when the menu was re-rendered, so it now watches only the mount.
 1.1.8 makes the shell recover from the one failure the page will not fix by itself: when the client
 paints 「连接异常，刷新重试」and leaves it there, the plugin taps it after 2.6 s — never with a draft in
 the composer, never in the background, at most 3 times per 2 minutes, counted in sessionStorage so a
@@ -78,7 +82,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.8 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.9 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
