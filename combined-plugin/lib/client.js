@@ -72,9 +72,11 @@ html[data-dsh-mobile-form] [data-composer-card] button[aria-label*="Select model
    and pins the effort: the name still ellipsises if the row is genuinely too narrow, but only then.
    html[data-dsh-mobile-form] keeps all of this off the desktop client. */
 html[data-dsh-mobile-form] .dshcps-chip {
-  max-width: none !important;
-  flex: 1 1 auto !important;
+  /* Grow only into space that already exists; never demand the row (that is what wrapped it). */
+  flex: 0 1 auto !important;
   min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 2px 8px !important;
 }
 html[data-dsh-mobile-form] .dshcps-chipLabel {
   min-width: 0 !important;
@@ -91,7 +93,7 @@ html[data-dsh-mobile-form] .dshcps-chipEffort {
 /* With the effort pinned, an over-wide name would push the send button off the row: let the name be
    the flexible half instead. */
 html[data-dsh-mobile-form] .dshcps-chipLabel {
-  flex: 1 1 auto !important;
+  flex: 0 1 auto !important;
 }
 
 /* Device chip: the one header control the shell owns. A quiet pill, so it reads as chrome rather
@@ -244,7 +246,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.20";
+    const PLUGIN_VERSION = "0.1.21";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
