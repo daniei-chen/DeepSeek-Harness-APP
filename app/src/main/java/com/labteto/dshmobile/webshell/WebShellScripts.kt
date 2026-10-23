@@ -314,6 +314,7 @@ internal object WebShellScripts {
             return 'up=' + Math.round((Date.now() - startedAt) / 1000) + 's' +
               ' sync=' + s.syncs + ' layoutWrite=' + (s.layoutWrites || 0) +
               ' rootFix=' + s.rootFixes + ' composerRemount=' + s.remounts +
+              ' autoRetry=' + (window.__dshAutoReconnect && window.__dshAutoReconnect.attempts || 0) +
               ' longTask=' + (s.longTasks || 0) + '/' + (s.longMs || 0) + 'ms';
           };
           window.__dshShellNetwork = function (seconds) {

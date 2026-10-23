@@ -1,10 +1,10 @@
 {
-  "version": "1.1.7",
-  "versionCode": 50107,
-  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.7/DeepSeek-Harness-1.1.7-personal.14.apk",
-  "sha256": "304FE820C257DB5A01274629D9B7A777122F4535944408D7B7AD01F2B3A662A1",
-  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.7",
-  "minPluginVersion": "0.1.24",
-  "notes": "Settings -> Connection opens the device manager directly; the header device pill is gone",
-  "generatedAt": "2026-10-23T03:40:00.000Z"
+  "version": "1.1.8",
+  "versionCode": 50108,
+  "apk": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.8/DeepSeek-Harness-1.1.8-personal.15.apk",
+  "sha256": "5C9EF3E4DC5213CACBA0B9C986D1E8370B62BEC37598F95DFC4463FEDEFE6949",
+  "page": "https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/tag/v1.1.8",
+  "minPluginVersion": "0.1.25",
+  "notes": "Automatic reconnect: the shell taps 连接异常，刷新重试 for you once it is really stuck",
+  "generatedAt": "2026-10-23T04:05:00.000Z"
 }

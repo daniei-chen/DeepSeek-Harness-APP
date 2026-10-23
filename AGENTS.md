@@ -17,10 +17,14 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 
 Current release (2026-10-23):
 
-- APK **1.1.7**, `versionCode` **50107**, `DeepSeek-Harness-1.1.7-personal.14.apk`
-- Host plugin **0.1.24**, `dsh-android-deepseek-harness-app-plugin-0.1.24.tgz`
+- APK **1.1.8**, `versionCode` **50108**, `DeepSeek-Harness-1.1.8-personal.15.apk`
+- Host plugin **0.1.25**, `dsh-android-deepseek-harness-app-plugin-0.1.25.tgz`
 - DSH tested against `0.2.1`
 
+1.1.8 makes the shell recover from the one failure the page will not fix by itself: when the client
+paints 「连接异常，刷新重试」and leaves it there, the plugin taps it after 2.6 s — never with a draft in
+the composer, never in the background, at most 3 times per 2 minutes, counted in sessionStorage so a
+reload cannot reset it; the attempt count shows up as `autoRetry=` in the page-health line.
 1.1.7 collapses the device entry points. Settings → 连接 opens the device manager itself (list,
 switch, rename, delete, add) and the old connection page moved to 「更多连接设置」 at the bottom of
 that dialog; the header device pill added in 1.1.6 is gone, so devices live in exactly one place.
@@ -74,7 +78,7 @@ node --test combined-plugin/test/*.test.mjs setup/lib.test.mjs
 ./gradlew :app:testDebugUnitTest
 
 # release APK (versionCode computed from the name)
-DSH_VERSION_NAME=1.1.7 ./gradlew :app:assembleRelease
+DSH_VERSION_NAME=1.1.8 ./gradlew :app:assembleRelease
 ```
 
 Signing uses `DSH_KEYSTORE`, `DSH_KEYSTORE_PASSWORD`, `DSH_KEY_ALIAS`, `DSH_KEY_PASSWORD`; without
