@@ -282,16 +282,26 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] [data-dsh-claude-part~="c
   padding-bottom: 12px !important;
 }
 
+/* The desktop's page zoom must not reach the phone. dsh-claude-style's 页面缩放 preference is an inline
+   "body { zoom: ... }", and the phone form is laid out in fixed pixels: at 125 % the 400 px viewport
+   became a 320 px layout, the safe-area paddings (device pixels from the shell) were reserved 25 % too
+   large, and the fullscreen right panel — upstream sizes it 100vw — rendered 500 px wide on a 400 px
+   screen, hung 100 px off the left edge and clipped every card's left margin. Pinning the body to
+   100 % and the theme's page box to the live viewport makes the phone render the same sheet whatever
+   the desktop is set to, and the same holds for a tablet in the app (the gate is the shell's own UA
+   marker, not the viewport width). 100vh / 100vw are exact once no zoom is applied. */
+html[data-dsh-android-shell] body[data-dsh-claude-style] {
+  zoom: 1 !important;
+  --dsh-claude-page-height: 100vh !important;
+  --dsh-claude-page-width: 100vw !important;
+}
+
 /* The one thing that makes the phone page grow: the app shell uses adjustResize, so opening the
    keyboard shrinks the WebView (890 → 590 px at 400×890). dsh-claude-style then sets its frame height
-   to that new innerHeight as a *length* — but the theme's page zoom (its 页面缩放 preference, an inline
-   "body { zoom: 1.25 }") multiplies every length inside the body, so 590 px of frame renders 738 px on
-   a 590 px viewport: the document becomes 148 px taller than the screen the moment the composer takes
-   focus, the page scrolls under the status bar and every vertical proportion shifts ("一点输入框页面
-   就拉长", and afterwards the page stays scrolled). The frame is the app shell, so pinning it to the
-   zoom-corrected viewport is enough — and it is exactly the height the theme itself chose at rest
-   (890 / 1.25 = 712), so nothing moves while the keyboard is closed. installPageZoomVar() publishes
-   the factor; a page without the preference divides by 1 and keeps its own height. */
+   to that new innerHeight as a *length*; any page zoom left on the body would multiply it (590 px of
+   frame rendering 738 px on a 590 px viewport, which is how the page got 148 px taller the moment the
+   composer took focus). The zoom is pinned to 100 % above, and this keeps the frame itself tied to the
+   viewport so no later theme pass can grow the document. installPageZoomVar() publishes the factor. */
 html[data-dsh-mobile-form] [data-dsh-frame] {
   height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
   max-height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
@@ -320,7 +330,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.35";
+    const PLUGIN_VERSION = "0.1.36";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;

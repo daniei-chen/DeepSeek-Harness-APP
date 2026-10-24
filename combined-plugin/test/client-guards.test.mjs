@@ -458,6 +458,16 @@ test("the keyboard cannot stretch the phone page", () => {
     // 590 px viewport: the document grew 148 px the moment the composer took focus and the page
     // scrolled under the status bar. The frame is pinned to the zoom-corrected viewport instead, which
     // is the height the theme itself picked at rest (890 / 1.25 = 712) — nothing moves while closed.
+    // The desktop's page zoom must not reach the phone: this sheet is laid out in fixed px, so at
+    // 125 % the 400 px viewport became 320 px, the device-pixel insets were 25 % too large and the
+    // 100vw right panel rendered 500 px wide. The gate is the shell's UA marker, so a tablet in the
+    // app gets the same treatment as a phone.
+    const zoomPin = sliceBetween("/* The desktop's page zoom must not reach the phone", "/* The one thing");
+    assert.match(zoomPin, /html\[data-dsh-android-shell\] body\[data-dsh-claude-style\] \{\n  zoom: 1 !important;/,
+        "the phone renders at 100 % whatever the desktop's 页面缩放 says");
+    assert.match(zoomPin, /--dsh-claude-page-height: 100vh !important;/);
+    assert.match(zoomPin, /--dsh-claude-page-width: 100vw !important;/);
+
     const css = sliceBetween("/* The one thing that makes the phone page grow", "/* Frosted/glass themes");
     assert.match(css, /\[data-dsh-frame\] \{\n  height: calc\(100vh \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
         "the app frame follows the zoom-corrected viewport, not a raw innerHeight length");
