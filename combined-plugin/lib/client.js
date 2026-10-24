@@ -268,6 +268,19 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
   min-width: 0 !important;
   max-width: 54vw !important;
 }
+/* The phone's model seat carries one decoration the desktop never shows in this state: a small
+   circular swap/expand affordance drawn on top of the label, which is what the user photographed as
+   "模型旁边那个圆圈，压住名字第一个字母". It is chrome — the seat's only content on the phone is the
+   trigger — so any sibling of the trigger is dropped, and the trigger itself paints above decorations
+   that are absolutely positioned inside it. */
+html[data-dsh-android-shell] .dsh-claude-model-seat > :not(.dsh-claude-model-btn) {
+  display: none !important;
+}
+html[data-dsh-android-shell] .dsh-claude-model-seat > .dsh-claude-model-btn {
+  position: relative !important;
+  z-index: 1 !important;
+  overflow: hidden !important;
+}
 
 /* Vertical rhythm, measured on the phone after the 0.1.30 header fix (2026-10-23, 393×852):
    the composer card sat 8 px off the bottom edge, on the gesture pill; the phone form gives it a real
@@ -351,7 +364,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.39";
+    const PLUGIN_VERSION = "0.1.40";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
