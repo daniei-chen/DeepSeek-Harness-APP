@@ -18,10 +18,10 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 Current release (2026-10-24):
 
 - APK **1.1.18**, `versionCode` **50118**, `DeepSeek-Harness-1.1.18-personal.25.apk`
-- Host plugin **0.1.37**, `dsh-android-deepseek-harness-app-plugin-0.1.37.tgz`
+- Host plugin **0.1.39**, `dsh-android-deepseek-harness-app-plugin-0.1.39.tgz`
 - DSH tested against `0.2.1`
 
-0.1.37 makes the phone ignore the desktop's page zoom, and stops the keyboard stretching the page.
+0.1.39 makes the phone ignore the desktop's page zoom, and stops the keyboard stretching the page.
 `dsh-claude-style`'s 页面缩放 preference is an inline `body { zoom: 1.25 }`, and this sheet is laid out
 in fixed pixels: at 125 % the 400 px viewport became a 320 px layout, the safe-area paddings (device
 pixels from the shell) were reserved 25 % too large, and the fullscreen right panel — upstream sizes it
