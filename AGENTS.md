@@ -18,22 +18,26 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 Current release (2026-10-24):
 
 - APK **1.1.18**, `versionCode` **50118**, `DeepSeek-Harness-1.1.18-personal.25.apk`
-- Host plugin **0.1.35**, `dsh-android-deepseek-harness-app-plugin-0.1.35.tgz`
+- Host plugin **0.1.36**, `dsh-android-deepseek-harness-app-plugin-0.1.36.tgz`
 - DSH tested against `0.2.1`
 
-0.1.35 restores the phone to the theme's own layout and fixes the one thing that was really wrong.
-Every layout experiment of the previous day — the pinned header rows (0.1.31/0.1.34), the safe-area
-division and the panel clamp (0.1.33) — is gone: the conversation header is 95 px again and the
-composer sits where `dsh-claude-style` puts it, exactly as in 0.1.32. What is left is the keyboard:
-the shell runs `adjustResize`, so focusing the composer shrinks the WebView (890 → 590 px at
-400×890), and the theme then writes that innerHeight into its frame as a *length* — which its page
-zoom (页面缩放, an inline `body { zoom: 1.25 }`) multiplies by 1.25, so 590 px of frame rendered
-738 px on a 590 px viewport. The document grew 148 px the moment the composer took focus, the page
-scrolled under the status bar, and after typing it stayed scrolled — which is what the user kept
-reporting as 页面拉长 / 变回去 / 顶部有空. The frame is now pinned to `calc(100vh / zoom)`, the height
-the theme itself picked at rest (712 layout px = 890 px on the glass), so nothing moves while the
-keyboard is closed and `scrollHeight == innerHeight` while it is open (738 → 590 px). The factor comes
-from `installPageZoomVar()`, which reads the rendered body; a page without the preference divides by 1.
+0.1.36 makes the phone ignore the desktop's page zoom, and stops the keyboard stretching the page.
+`dsh-claude-style`'s 页面缩放 preference is an inline `body { zoom: 1.25 }`, and this sheet is laid out
+in fixed pixels: at 125 % the 400 px viewport became a 320 px layout, the safe-area paddings (device
+pixels from the shell) were reserved 25 % too large, and the fullscreen right panel — upstream sizes it
+`100vw` — rendered 500 px wide on a 400 px screen, hung 100 px off the left edge and clipped every
+card's left margin. The phone form now pins the body to `zoom: 1` and the theme's page box to
+`100vh`/`100vw`, gated on the shell's own UA marker (`data-dsh-android-shell`), so a phone and a tablet
+in the app render the same sheet whatever the desktop is set to. The keyboard: the shell runs
+`adjustResize`, so focusing the composer shrinks the WebView (890 → 590 px at 400×890); the theme
+writes that innerHeight into its frame as a *length*, and with a zoom left on the body 590 px of frame
+rendered 738 px on a 590 px viewport — the document grew 148 px on focus, the page scrolled under the
+status bar and stayed scrolled after typing (the user's 页面拉长 / 变回去 / 顶部有空). With the zoom
+pinned and the frame tied to `calc(100vh / var(--dsh-phone-zoom, 1))`, `scrollHeight == innerHeight`
+while the keyboard is open (738 → 590). Measured at 400×890 in the app: header 40…80 px on the home
+page and 40…116 on a conversation, composer card 772…846, right panel 0…400, no page scroll anywhere.
+Every earlier layout experiment (pinned header rows 0.1.31/0.1.34, safe-area division and panel clamp
+0.1.33) is gone — the theme's own geometry is back.
 
 1.1.17 fixes the theme's vertical rhythm on the phone. `dsh-claude-style` reserves a 65 px title row
 for the 对话/轨迹 strip the phone hides, so a 34 px row of icons floated in the middle of a 76 px band
