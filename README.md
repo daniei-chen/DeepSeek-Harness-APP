@@ -333,7 +333,7 @@ node setup/dsh-mobile-setup.mjs pair
 | 项目 | 版本 | 文件 | SHA-256 |
 | --- | --- | --- | --- |
 | App | **1.1.18**（`versionCode 50118`） | `DeepSeek-Harness-1.1.18-personal.25.apk` | `11C4B39C4F9AFBE09B16E247656C90A22091C76F6597E39646337BF96C4BE59C` |
-| 主机插件 | **0.1.33** | `dsh-android-deepseek-harness-app-plugin-0.1.33.tgz` | `78F3FF6758085898D042C549AFF50CC0B4ED7EB98DA7D0037942161C35BCC9B6` |
+| 主机插件 | **0.1.34** | `dsh-android-deepseek-harness-app-plugin-0.1.34.tgz` | `E3468D45323FD1D2C4B953E54B127136C9FFD628081FF0DF00513B7CD5B9D6EF` |
 
 - [App Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/latest)
 - [插件 Release](https://github.com/daniei-chen/DeepSeek-Harness-APP/releases)
