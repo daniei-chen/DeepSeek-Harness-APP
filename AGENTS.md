@@ -18,35 +18,22 @@ both halves (host plugin + APK). Do not improvise an install from the source tre
 Current release (2026-10-24):
 
 - APK **1.1.18**, `versionCode` **50118**, `DeepSeek-Harness-1.1.18-personal.25.apk`
-- Host plugin **0.1.34**, `dsh-android-deepseek-harness-app-plugin-0.1.34.tgz`
+- Host plugin **0.1.35**, `dsh-android-deepseek-harness-app-plugin-0.1.35.tgz`
 - DSH tested against `0.2.1`
 
-0.1.34 removes the dead band above every conversation. `dsh-claude-style` reserves its desktop 65 px
-title row for the breadcrumb the phone also shows, and that row holds 28 px of content: at 400×890
-with the theme's 125 % page zoom the header measured 95 px (40…135) for a 35 px row of icons — 40 px
-of empty header above the conversation, which is what the user kept reporting as 顶部留空太多. The
-phone form pins the header rows and shrinks the title row to 38 px, scoped with
-`:has(nav[aria-label="会话层级"])` so the already-compact home page (50 px, no breadcrumb) is left as
-the theme drew it: conversation header 95 → 54 px, breadcrumb still inside at 49…84, composer
-unchanged at 743…835, `--dsh-claude-page-height` unchanged at 712 px, no page scroll. 0.1.31 shipped
-these same rules and 0.1.32 removed them after a phone showed a home screen with no composer at all;
-that was a stale page, not the rules — they measure clean at 125 %, 100 %, 80 % and 150 % zoom, and
-removing them only brought the band back.
-
-0.1.33 fixes what `dsh-claude-style`'s own page zoom did to the phone form. The theme's 页面缩放
-preference is applied as an inline `body { zoom: 1.25 }`, so the phone's 400 px viewport became a
-320 px layout. Zoom scales every fixed length inside `<body>` — including the safe-area paddings the
-shell publishes in device pixels, so the phone reserved 50 px above a 40 px status bar — but it does
-not scale viewport units: upstream sizes the fullscreen right panel `100vw` below 768 px of frame
-width, so the panel came out 500 px wide on a 400 px screen, hung 100 px off the left edge, and cut
-the left margin off every card of 工作区文件 / 新建终端 / 浏览器 / 会话数据诊断. The bundle now
-publishes the factor the page actually uses (`--dsh-phone-zoom`, read from the rendered body) and
-divides both back out; the panel guide also drops its keyboard-shortcut column, which no phone has
-and which squeezed the row text into an ellipsis. Measured at 400×890 with a 125 % page: header top
-50 → 40 px (exactly the status bar), panel 500 px at x = −100 → 400 px at x = 0, guide cards
-x = 11…389. 1.1.18 was the revert in between: it undid 1.1.17's header pinning on the theory that the
-pin pushed the composer below the fold. That theory was wrong (see 0.1.34 above), and the pin is back,
-now scoped to the conversation header.
+0.1.35 restores the phone to the theme's own layout and fixes the one thing that was really wrong.
+Every layout experiment of the previous day — the pinned header rows (0.1.31/0.1.34), the safe-area
+division and the panel clamp (0.1.33) — is gone: the conversation header is 95 px again and the
+composer sits where `dsh-claude-style` puts it, exactly as in 0.1.32. What is left is the keyboard:
+the shell runs `adjustResize`, so focusing the composer shrinks the WebView (890 → 590 px at
+400×890), and the theme then writes that innerHeight into its frame as a *length* — which its page
+zoom (页面缩放, an inline `body { zoom: 1.25 }`) multiplies by 1.25, so 590 px of frame rendered
+738 px on a 590 px viewport. The document grew 148 px the moment the composer took focus, the page
+scrolled under the status bar, and after typing it stayed scrolled — which is what the user kept
+reporting as 页面拉长 / 变回去 / 顶部有空. The frame is now pinned to `calc(100vh / zoom)`, the height
+the theme itself picked at rest (712 layout px = 890 px on the glass), so nothing moves while the
+keyboard is closed and `scrollHeight == innerHeight` while it is open (738 → 590 px). The factor comes
+from `installPageZoomVar()`, which reads the rendered body; a page without the preference divides by 1.
 
 1.1.17 fixes the theme's vertical rhythm on the phone. `dsh-claude-style` reserves a 65 px title row
 for the 对话/轨迹 strip the phone hides, so a 34 px row of icons floated in the middle of a 76 px band

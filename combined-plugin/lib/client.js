@@ -269,64 +269,32 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
   max-width: 54vw !important;
 }
 
-/* The conversation header: the theme reserves its desktop 65 px title row for the breadcrumb the
-   phone also shows, and that row is only 28 px of content. Measured on the phone at 400×890 with the
-   theme's 125 % page zoom (2026-10-24): header 40…135 px, title row 53…134, breadcrumb 76…111 — 95 px
-   of header for a 35 px row of icons, i.e. 40 px of dead air above every conversation. The phone form
-   pins the rows and shrinks the title row to 38 px: header 95 → 54 px, breadcrumb still inside at
-   49…84, composer untouched at 743…835, --dsh-claude-page-height unchanged at 712 px, no page scroll.
-   Scoped with :has() to a header that actually carries the breadcrumb, so the home page (already
-   compact at 50 px, no breadcrumb) is left exactly as the theme drew it.
-   0.1.31 shipped these same rules and 0.1.32 removed them after a phone showed a home screen with no
-   composer at all. That was a stale page: the rules measure clean at 125 %, 100 %, 80 % and 150 %, and
-   removing them only brought the dead band back — which is what "还是老样子" was about. */
-html[data-dsh-mobile-form] header[data-dsh-claude-part~="conversation-header"]:has(nav[aria-label="会话层级"]) {
-  grid-template-rows: auto 0px !important;
-  height: auto !important;
-  min-height: 0 !important;
-  align-content: start !important;
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-}
-html[data-dsh-mobile-form] header:has(nav[aria-label="会话层级"]) [data-dsh-claude-part~="title-row"] {
-  height: 38px !important;
-  min-height: 38px !important;
-  max-height: 38px !important;
-}
+/* Vertical rhythm, measured on the phone after the 0.1.30 header fix (2026-10-23, 393×852):
+   the composer card sat 8 px off the bottom edge, on the gesture pill; the phone form gives it a real
+   gap over the navigation bar.
+   0.1.31 also pinned the header rows (grid-template-rows: auto 0px, height: auto) to shave the empty
+   band above the conversation. It worked in isolation, but dsh-claude-style computes the page box
+   (--dsh-claude-page-height / --dsh-claude-page-width) from the header it rendered: changing that
+   height left the hero page taller than the viewport, so the composer sat below the fold and the
+   phone showed a home screen with no input box at all. Header geometry is the theme's to own — the
+   rules are gone. */
 html[data-dsh-mobile-form] body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"] {
   padding-bottom: 12px !important;
 }
 
-/* dsh-claude-style can scale the whole page: its 页面缩放 preference sets an inline
-   "body { zoom: 1.25 }". Zoom multiplies every fixed length inside <body>, and that includes the
-   safe-area paddings the phone form draws from the shell's --dsh-android-system-top/-bottom — those
-   numbers are device pixels, so at 125 % the phone reserved 50 px above a 40 px status bar. Viewport
-   units, on the other hand, do not scale: upstream sizes the right panel "100vw" below 768 px of
-   frame width, so on a 400 px phone the fullscreen panel rendered 500 px wide, hung 100 px off the
-   left edge and cut every card's left margin away (the 工作区文件 / 新建终端 / 浏览器 list).
-   Dividing both by the factor the page actually uses puts the safe area back on the system bars and
-   the panel back inside the screen. The factor is published as --dsh-phone-zoom by
-   installPageZoomVar(); the 1 fallback leaves a zoomless page (desktop shell, or a theme without
-   the preference) exactly as it was. */
-html[data-dsh-mobile-form] {
-  --dsh-mobile-top-inset: max(
-    env(safe-area-inset-top, 0px),
-    calc(var(--dsh-android-system-top, 0px) / var(--dsh-phone-zoom, 1))
-  );
-}
-html[data-dsh-mobile-form] [data-sidebar-right-panel="fullscreen"] {
-  width: calc(100vw / var(--dsh-phone-zoom, 1)) !important;
-  /* The dock transition offsets the panel by its own width; left at 100vw it would slide the
-     corrected panel in from 100 px beyond the edge. */
-  --dsh-sidebar-width: calc(100vw / var(--dsh-phone-zoom, 1)) !important;
-}
-/* The panel guide (工作区文件 / 新建终端 / 浏览器 / 会话数据诊断) is the desktop launch surface: each
-   row carries its keyboard shortcut, which no phone has, and that column takes the width the row's
-   own title and subtitle need — at 320 px of layout they ellipsised after a few characters
-   ("浏览会话工…"). No shortcut, no column: the rows keep their icons, titles and subtitles. */
-html[data-dsh-mobile-form] [data-dsh-claude-part="panel-guide"] kbd,
-html[data-dsh-mobile-form] [data-dsh-claude-part="panel-guide"] [class*="_keys_"] {
-  display: none !important;
+/* The one thing that makes the phone page grow: the app shell uses adjustResize, so opening the
+   keyboard shrinks the WebView (890 → 590 px at 400×890). dsh-claude-style then sets its frame height
+   to that new innerHeight as a *length* — but the theme's page zoom (its 页面缩放 preference, an inline
+   "body { zoom: 1.25 }") multiplies every length inside the body, so 590 px of frame renders 738 px on
+   a 590 px viewport: the document becomes 148 px taller than the screen the moment the composer takes
+   focus, the page scrolls under the status bar and every vertical proportion shifts ("一点输入框页面
+   就拉长", and afterwards the page stays scrolled). The frame is the app shell, so pinning it to the
+   zoom-corrected viewport is enough — and it is exactly the height the theme itself chose at rest
+   (890 / 1.25 = 712), so nothing moves while the keyboard is closed. installPageZoomVar() publishes
+   the factor; a page without the preference divides by 1 and keeps its own height. */
+html[data-dsh-mobile-form] [data-dsh-frame] {
+  height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
+  max-height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
 }
 /* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
    like filter/contain/perspective, makes the element the containing block of its fixed
@@ -352,7 +320,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.34";
+    const PLUGIN_VERSION = "0.1.35";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -858,18 +826,12 @@ html[data-dsh-glass="off"] body::after {
     }
 
     /**
-     * Publish the page zoom the theme is using, so the sheet can divide it back out.
+     * Publish the page zoom dsh-claude-style applies, so the sheet can divide it back out.
      *
-     * dsh-claude-style 0.18.5 owns a 页面缩放 preference and applies it as an inline `zoom` on <body>
-     * (125 % turns a 400 px viewport into a 320 px layout). Fixed lengths inside that subtree scale
-     * with it; viewport units do not. Two things in the phone form are sensitive to the difference —
-     * the safe-area paddings, which are device pixels handed over by the shell, and the right panel,
-     * which upstream sizes in `100vw`. See the zoom block in the sheet.
-     *
-     * The value arrives with a settings fetch, so the first paint can still be unzoomed: the two
-     * one-shot passes below catch that, and the attribute observer catches every later change of the
-     * preference. It writes only on a real change — a redundant style write on <html> restyles the
-     * document, which is the churn this plugin must not add.
+     * The theme's 页面缩放 preference is an inline `zoom` on <body> (125 % turns the 400 px viewport
+     * into a 320 px layout). The page box it computes is in *layout* px, so the sheet can only express
+     * "the viewport height" as 100vh / zoom. Read the factor from the rendered body, publish it once
+     * per change — a redundant write on <html> restyles the document, which this plugin must not add.
      */
     function installPageZoomVar() {
       if (window.__dshPageZoomVar) return;
