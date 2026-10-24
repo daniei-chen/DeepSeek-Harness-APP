@@ -435,6 +435,33 @@ test("the phone header and composer survive dsh-claude-style", () => {
         "header geometry belongs to the theme; changing it hides the composer");
 });
 
+test("the page zoom dsh-claude-style applies is divided back out of the phone form", () => {
+    // The theme's 页面缩放 preference sets an inline `body { zoom: 1.25 }`. Zoom scales every fixed
+    // length inside <body> — including the device-pixel safe-area insets the shell publishes, so the
+    // phone reserved 50 px for a 40 px status bar — but it does not scale viewport units. Upstream
+    // sizes the fullscreen right panel `100vw`, so on a 400 px phone the panel rendered 500 px wide
+    // and hung 100 px off the left edge, cutting every card's left margin away.
+    const claude = sliceBetween("/* dsh-claude-style on a phone.", "/* Frosted/glass themes");
+    assert.match(claude, /--dsh-mobile-top-inset: max\([\s\S]{0,180}var\(--dsh-android-system-top, 0px\) \/ var\(--dsh-phone-zoom, 1\)/,
+        "the status-bar inset is device pixels; it has to be divided by the page zoom");
+    assert.match(claude, /\[data-sidebar-right-panel="fullscreen"\] \{\n  width: calc\(100vw \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
+        "the fullscreen right panel is sized in 100vw and needs the same correction");
+    assert.match(claude, /--dsh-sidebar-width: calc\(100vw \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
+        "the dock transition offsets by the panel width, so it follows the corrected one");
+    assert.match(claude, /\[data-dsh-claude-part="panel-guide"\] kbd,[\s\S]{0,120}display: none !important;/,
+        "the panel guide's keyboard hints have no phone equivalent and squeeze the row text");
+
+    // The factor is read from the rendered page, never hardcoded: a page without the preference (a
+    // zoomless theme, the desktop shell) falls back to 1 and stays byte-identical.
+    assert.match(source, /installPageZoomVar\(\);/, "the zoom probe must be installed from apply()");
+    const region = sliceBetween("function installPageZoomVar() {", "Use the Android speech recognizer");
+    assert.match(region, /getComputedStyle\(body\)\.zoom/, "the factor comes from the rendered body");
+    assert.match(region, /setProperty\("--dsh-phone-zoom", factor\)/, "the factor is published for the sheet");
+    assert.match(region, /if \(root\.style\.getPropertyValue\("--dsh-phone-zoom"\) !== factor\)/,
+        "no <html> style write unless the factor actually changed");
+    assert.doesNotMatch(region, /setInterval\(/, "no repeating timer");
+});
+
 test("a drawer row that navigates also collapses the phone drawer", () => {
     // The theme paints its own sidebar and never closed the phone drawer: the panel stayed over the
     // conversation it had just opened, until the user tapped beside it.

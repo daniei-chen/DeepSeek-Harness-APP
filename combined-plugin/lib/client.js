@@ -281,6 +281,38 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
 html[data-dsh-mobile-form] body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"] {
   padding-bottom: 12px !important;
 }
+
+/* dsh-claude-style can scale the whole page: its 页面缩放 preference sets an inline
+   "body { zoom: 1.25 }". Zoom multiplies every fixed length inside <body>, and that includes the
+   safe-area paddings the phone form draws from the shell's --dsh-android-system-top/-bottom — those
+   numbers are device pixels, so at 125 % the phone reserved 50 px above a 40 px status bar. Viewport
+   units, on the other hand, do not scale: upstream sizes the right panel "100vw" below 768 px of
+   frame width, so on a 400 px phone the fullscreen panel rendered 500 px wide, hung 100 px off the
+   left edge and cut every card's left margin away (the 工作区文件 / 新建终端 / 浏览器 list).
+   Dividing both by the factor the page actually uses puts the safe area back on the system bars and
+   the panel back inside the screen. The factor is published as --dsh-phone-zoom by
+   installPageZoomVar(); the 1 fallback leaves a zoomless page (desktop shell, or a theme without
+   the preference) exactly as it was. */
+html[data-dsh-mobile-form] {
+  --dsh-mobile-top-inset: max(
+    env(safe-area-inset-top, 0px),
+    calc(var(--dsh-android-system-top, 0px) / var(--dsh-phone-zoom, 1))
+  );
+}
+html[data-dsh-mobile-form] [data-sidebar-right-panel="fullscreen"] {
+  width: calc(100vw / var(--dsh-phone-zoom, 1)) !important;
+  /* The dock transition offsets the panel by its own width; left at 100vw it would slide the
+     corrected panel in from 100 px beyond the edge. */
+  --dsh-sidebar-width: calc(100vw / var(--dsh-phone-zoom, 1)) !important;
+}
+/* The panel guide (工作区文件 / 新建终端 / 浏览器 / 会话数据诊断) is the desktop launch surface: each
+   row carries its keyboard shortcut, which no phone has, and that column takes the width the row's
+   own title and subtitle need — at 320 px of layout they ellipsised after a few characters
+   ("浏览会话工…"). No shortcut, no column: the rows keep their icons, titles and subtitles. */
+html[data-dsh-mobile-form] [data-dsh-claude-part="panel-guide"] kbd,
+html[data-dsh-mobile-form] [data-dsh-claude-part="panel-guide"] [class*="_keys_"] {
+  display: none !important;
+}
 /* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
    like filter/contain/perspective, makes the element the containing block of its fixed
    descendants, so the mobile drawer and dialogs get positioned against the shell instead of the
@@ -305,7 +337,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.32";
+    const PLUGIN_VERSION = "0.1.33";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -555,6 +587,7 @@ html[data-dsh-glass="off"] body::after {
       installFileActions();
       installAttachmentMenuDefault();
       installDrawerAutoClose();
+      installPageZoomVar();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
@@ -807,6 +840,50 @@ html[data-dsh-glass="off"] body::after {
           if (current !== null && current.getAttribute("aria-expanded") === "true") current.click();
         }, 90);
       }, true);
+    }
+
+    /**
+     * Publish the page zoom the theme is using, so the sheet can divide it back out.
+     *
+     * dsh-claude-style 0.18.5 owns a 页面缩放 preference and applies it as an inline `zoom` on <body>
+     * (125 % turns a 400 px viewport into a 320 px layout). Fixed lengths inside that subtree scale
+     * with it; viewport units do not. Two things in the phone form are sensitive to the difference —
+     * the safe-area paddings, which are device pixels handed over by the shell, and the right panel,
+     * which upstream sizes in `100vw`. See the zoom block in the sheet.
+     *
+     * The value arrives with a settings fetch, so the first paint can still be unzoomed: the two
+     * one-shot passes below catch that, and the attribute observer catches every later change of the
+     * preference. It writes only on a real change — a redundant style write on <html> restyles the
+     * document, which is the churn this plugin must not add.
+     */
+    function installPageZoomVar() {
+      if (window.__dshPageZoomVar) return;
+      window.__dshPageZoomVar = true;
+      const root = document.documentElement;
+      const publish = () => {
+        let factor = "1";
+        try {
+          const body = document.body;
+          if (body !== null) {
+            const computed = window.getComputedStyle(body).zoom;
+            const parsed = computed === "" || computed === "normal" ? NaN : parseFloat(computed);
+            factor = String(Number.isFinite(parsed) && parsed > 0 ? parsed : 1);
+          }
+        } catch (e) {}
+        if (root.style.getPropertyValue("--dsh-phone-zoom") !== factor) {
+          root.style.setProperty("--dsh-phone-zoom", factor);
+        }
+      };
+      publish();
+      window.setTimeout(publish, 400);
+      window.setTimeout(publish, 1600);
+      window.addEventListener("resize", publish, { passive: true });
+      document.addEventListener("visibilitychange", publish);
+      try {
+        if (document.body !== null) {
+          new MutationObserver(publish).observe(document.body, { attributes: true, attributeFilter: ["style"] });
+        }
+      } catch (e) {}
     }
 
     /**
