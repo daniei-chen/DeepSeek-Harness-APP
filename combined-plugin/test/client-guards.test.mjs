@@ -426,47 +426,13 @@ test("the phone header and composer survive dsh-claude-style", () => {
     assert.match(claude, /body\[data-dsh-claude-style\] \.dsh-claude-model-seat \{\n  min-width: 0 !important;/,
         "the theme's seat still has to shrink inside the composer row");
 
-    // The theme reserves its desktop 65 px title row for a 28 px breadcrumb: 95 px of header above a
-    // 35 px row of icons, i.e. 40 px of dead air. The phone form pins the rows and shrinks the row, and
-    // `:has()` scopes both to a header that carries the breadcrumb, so the already-compact home page
-    // (50 px, no breadcrumb) is left exactly as the theme drew it.
-    assert.match(claude, /header\[data-dsh-claude-part~="conversation-header"\]:has\(nav\[aria-label="会话层级"\]\) \{\n  grid-template-rows: auto 0px !important;/,
-        "the conversation header keeps a desktop title row the phone does not need");
-    assert.match(claude, /header:has\(nav\[aria-label="会话层级"\]\) \[data-dsh-claude-part~="title-row"\] \{\n  height: 38px !important;/,
-        "the title row shrinks to the row it actually holds");
-    assert.doesNotMatch(claude, /header\[data-dsh-claude-part~="conversation-header"\] \{\n/,
-        "the pin stays scoped; an unscoped rule also hits the home page");
-
-    // Vertical rhythm: the composer card sat 8 px off the bottom edge, on the gesture pill.
+    // Vertical rhythm: the composer card sat 8px off the bottom edge, on the gesture pill. The header
+    // is deliberately NOT touched — dsh-claude-style computes its page box from the header it rendered,
+    // so pinning the rows left the hero page taller than the viewport and the composer below the fold.
     assert.match(claude, /\[data-dsh-claude-part~="composer-stack"\] \{\n  padding-bottom: 12px !important;/,
         "the composer needs a gap over the navigation bar");
-});
-
-test("the page zoom dsh-claude-style applies is divided back out of the phone form", () => {
-    // The theme's 页面缩放 preference sets an inline `body { zoom: 1.25 }`. Zoom scales every fixed
-    // length inside <body> — including the device-pixel safe-area insets the shell publishes, so the
-    // phone reserved 50 px for a 40 px status bar — but it does not scale viewport units. Upstream
-    // sizes the fullscreen right panel `100vw`, so on a 400 px phone the panel rendered 500 px wide
-    // and hung 100 px off the left edge, cutting every card's left margin away.
-    const claude = sliceBetween("/* dsh-claude-style on a phone.", "/* Frosted/glass themes");
-    assert.match(claude, /--dsh-mobile-top-inset: max\([\s\S]{0,180}var\(--dsh-android-system-top, 0px\) \/ var\(--dsh-phone-zoom, 1\)/,
-        "the status-bar inset is device pixels; it has to be divided by the page zoom");
-    assert.match(claude, /\[data-sidebar-right-panel="fullscreen"\] \{\n  width: calc\(100vw \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
-        "the fullscreen right panel is sized in 100vw and needs the same correction");
-    assert.match(claude, /--dsh-sidebar-width: calc\(100vw \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
-        "the dock transition offsets by the panel width, so it follows the corrected one");
-    assert.match(claude, /\[data-dsh-claude-part="panel-guide"\] kbd,[\s\S]{0,120}display: none !important;/,
-        "the panel guide's keyboard hints have no phone equivalent and squeeze the row text");
-
-    // The factor is read from the rendered page, never hardcoded: a page without the preference (a
-    // zoomless theme, the desktop shell) falls back to 1 and stays byte-identical.
-    assert.match(source, /installPageZoomVar\(\);/, "the zoom probe must be installed from apply()");
-    const region = sliceBetween("function installPageZoomVar() {", "Use the Android speech recognizer");
-    assert.match(region, /getComputedStyle\(body\)\.zoom/, "the factor comes from the rendered body");
-    assert.match(region, /setProperty\("--dsh-phone-zoom", factor\)/, "the factor is published for the sheet");
-    assert.match(region, /if \(root\.style\.getPropertyValue\("--dsh-phone-zoom"\) !== factor\)/,
-        "no <html> style write unless the factor actually changed");
-    assert.doesNotMatch(region, /setInterval\(/, "no repeating timer");
+    assert.doesNotMatch(claude, /header\[data-dsh-claude-part~="conversation-header"\][\s\S]{0,200}(grid-template-rows|height: auto)/,
+        "header geometry belongs to the theme; changing it hides the composer");
 });
 
 test("a drawer row that navigates also collapses the phone drawer", () => {
@@ -483,6 +449,30 @@ test("a drawer row that navigates also collapses the phone drawer", () => {
     assert.match(region, /document\.querySelector\("\[data-dsh-sidebar-toggle\]"\)[\s\S]{0,300}current\.click\(\)/,
         "the drawer closes through the shell's own toggle, re-queried after the header re-render");
     assert.match(region, /\}, 90\);/, "the row's own handler runs first, then the drawer closes");
+});
+
+test("the keyboard cannot stretch the phone page", () => {
+    // adjustResize shrinks the WebView when the keyboard opens (890 -> 590 px at 400x890), and
+    // dsh-claude-style then sets its frame height to that innerHeight as a length — which its page
+    // zoom (inline body { zoom: 1.25 }) multiplies by 1.25, so 590 px of frame rendered 738 px on a
+    // 590 px viewport: the document grew 148 px the moment the composer took focus and the page
+    // scrolled under the status bar. The frame is pinned to the zoom-corrected viewport instead, which
+    // is the height the theme itself picked at rest (890 / 1.25 = 712) — nothing moves while closed.
+    const css = sliceBetween("/* The one thing that makes the phone page grow", "/* Frosted/glass themes");
+    assert.match(css, /\[data-dsh-frame\] \{\n  height: calc\(100vh \/ var\(--dsh-phone-zoom, 1\)\) !important;/,
+        "the app frame follows the zoom-corrected viewport, not a raw innerHeight length");
+    assert.match(css, /max-height: calc\(100vh \/ var\(--dsh-phone-zoom, 1\)\) !important;/);
+
+    assert.match(source, /installPageZoomVar\(\);/, "the factor must be installed from apply()");
+    const region = sliceBetween("function installPageZoomVar() {", "Use the Android speech recognizer");
+    assert.match(region, /getComputedStyle\(body\)\.zoom/, "the factor is read from the rendered body");
+    assert.match(region, /if \(root\.style\.getPropertyValue\("--dsh-phone-zoom"\) !== factor\)/,
+        "no <html> style write unless the factor actually changed");
+    assert.doesNotMatch(region, /setInterval\(/, "no repeating timer");
+
+    // The theme's own header geometry stays untouched: the 0.1.31 / 0.1.34 header pinning was reverted.
+    assert.doesNotMatch(source, /conversation-header"\]:has\(/,
+        "the conversation header is the theme's to size; pinning it desyncs the page box");
 });
 
 test("the reported bundle version matches package.json and is new enough for the bridge", () => {
