@@ -320,7 +320,11 @@ html[data-dsh-android-shell] [data-composer-seat] {
   padding-bottom: max(
     env(safe-area-inset-bottom, 0px),
     var(--dsh-android-system-bottom, 0px),
-    var(--dsh-phone-ime, 0px)
+    var(--dsh-phone-ime, 0px),
+    /* The shell reports no navigation-bar inset on this device (measured on the phone: bot=0.00px),
+       so the card stopped 20 px off the bottom edge and the send button sat on the gesture pill. A
+       floor keeps the composer clear of the pill wherever the inset is missing; a real inset wins. */
+    20px
   ) !important;
 }
 /* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
@@ -347,7 +351,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.37";
+    const PLUGIN_VERSION = "0.1.39";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -599,6 +603,8 @@ html[data-dsh-glass="off"] body::after {
       installDrawerAutoClose();
       installPageZoomVar();
       installImeSanity();
+      installGeomReport();
+      installStickToBottom();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
@@ -851,6 +857,115 @@ html[data-dsh-glass="off"] body::after {
           if (current !== null && current.getAttribute("aria-expanded") === "true") current.click();
         }, 90);
       }, true);
+    }
+
+    /**
+     * Report the page's real geometry once per load, to this host only.
+     *
+     * The phone keeps showing offsets that the desktop Chrome at the same 400×890 does not, and every
+     * guess so far cost a release. This beacon answers what nothing else can: what the device itself
+     * thinks its viewport, safe areas, keyboard inset, zoom and composer rect are. It goes to the
+     * page's own origin (path /__dsh-geom), which the desktop tunnel proxy logs on the computer — no
+     * third party, no analytics, and it is removed once the offsets are understood.
+     */
+    function installGeomReport() {
+      if (window.__dshGeomReport) return;
+      window.__dshGeomReport = true;
+      const sent = new Set();
+      const rect = (el) => {
+        if (!el) return "-";
+        const b = el.getBoundingClientRect();
+        return [b.x, b.y, b.width, b.height].map((n) => Math.round(n)).join(",");
+      };
+      const send = (why) => {
+        try {
+          if (sent.has(why)) return;
+          sent.add(why);
+          const root = document.documentElement;
+          const cs = window.getComputedStyle(document.body);
+          const seat = document.querySelector("[data-composer-seat]");
+          const vv = window.visualViewport;
+          const parts = {
+            why,
+            v: PLUGIN_VERSION,
+            iw: window.innerWidth,
+            ih: window.innerHeight,
+            scw: window.screen ? window.screen.width : "-",
+            sch: window.screen ? window.screen.height : "-",
+            dpr: window.devicePixelRatio,
+            vvh: vv ? Math.round(vv.height) : "-",
+            vvOff: vv ? Math.round(vv.offsetTop) : "-",
+            vvScale: vv ? vv.scale : "-",
+            zoom: cs.zoom,
+            pzoom: root.style.getPropertyValue("--dsh-phone-zoom").trim(),
+            top: root.style.getPropertyValue("--dsh-android-system-top").trim(),
+            bot: root.style.getPropertyValue("--dsh-android-system-bottom").trim(),
+            ime: root.style.getPropertyValue("--dsh-android-ime-bottom").trim(),
+            pime: root.style.getPropertyValue("--dsh-phone-ime").trim(),
+            seat: seat ? window.getComputedStyle(seat).paddingBottom : "-",
+            card: rect(document.querySelector("[data-composer-card]")),
+            frame: rect(document.querySelector("[data-dsh-frame]")),
+            ph: cs.getPropertyValue("--dsh-claude-page-height").trim(),
+            pw: cs.getPropertyValue("--dsh-claude-page-width").trim(),
+            docH: document.documentElement.scrollHeight,
+            foc: document.activeElement ? document.activeElement.tagName : "-",
+            pops: document.querySelectorAll("[class*='popover-card']").length,
+            form: root.hasAttribute("data-dsh-mobile-form") ? 1 : 0,
+          };
+          const query = Object.keys(parts)
+            .map((k) => k + "=" + encodeURIComponent(String(parts[k])))
+            .join("&");
+          fetch("/__dsh-geom?" + query, { cache: "no-store", keepalive: true }).catch(() => {});
+        } catch (e) {}
+      };
+      window.setTimeout(() => send("load"), 2500);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") window.setTimeout(() => send("visible"), 1800);
+      });
+      document.addEventListener("focusout", () => window.setTimeout(() => send("blur"), 1200), true);
+    }
+
+    /**
+     * Open a conversation at its newest message.
+     *
+     * A fresh WebView paints the transcript from the top of its own scroller; on the phone that left
+     * the view parked somewhere in the middle of the history, so a streaming row ("深度求索中") and the
+     * newest messages sat above or below the fold and the page looked like things had "moved up". The
+     * desktop client keeps that scroller pinned by itself while it is streaming; this only covers the
+     * moments the WebView starts fresh. It never fights a reader: a scroll gesture within the last ten
+     * seconds wins, and an already-pinned transcript is left alone.
+     */
+    function installStickToBottom() {
+      if (window.__dshStickToBottom) return;
+      window.__dshStickToBottom = true;
+      let lastGesture = 0;
+      const mark = () => { lastGesture = Date.now(); };
+      for (const name of ["touchstart", "touchmove", "wheel", "keydown"]) {
+        document.addEventListener(name, mark, { passive: true, capture: true });
+      }
+      const scroller = () => {
+        for (const el of document.querySelectorAll('[class*="scrollBody"]')) {
+          const style = window.getComputedStyle(el);
+          if ((style.overflowY === "auto" || style.overflowY === "scroll") && el.scrollHeight > el.clientHeight + 8) {
+            return el;
+          }
+        }
+        return null;
+      };
+      const pin = () => {
+        try {
+          if (Date.now() - lastGesture < 10000) return;
+          const el = scroller();
+          if (el === null) return;
+          if (Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 8) return;
+          el.scrollTop = el.scrollHeight;
+        } catch (e) {}
+      };
+      window.setTimeout(pin, 1600);
+      window.setTimeout(pin, 3600);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") window.setTimeout(pin, 1200);
+      });
     }
 
     /**
