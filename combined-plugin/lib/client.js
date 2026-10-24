@@ -306,6 +306,23 @@ html[data-dsh-mobile-form] [data-dsh-frame] {
   height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
   max-height: calc(100vh / var(--dsh-phone-zoom, 1)) !important;
 }
+
+/* The composer seat, and every popover anchored to it (the model picker, the 推理等级 slider), is
+   lifted by padding-bottom: max(safe-area, --dsh-android-system-bottom, --dsh-android-ime-bottom)
+   from the responsive base. The IME value is only correct when the keyboard overlays the page: this
+   shell runs adjustResize, so the WebView already loses the keyboard's height and adding it again
+   lifts the composer ~300 px off the bottom — the input card, its caret and the effort popover then
+   sit in the middle of the screen with dead space below, which is what the phone kept reporting
+   ("输入框在中间/光标位置不对/模型强度设置位置不对"). installImeSanity() publishes --dsh-phone-ime:
+   zero whenever the layout viewport moved with the keyboard, and the shell's value only for the
+   overlay case. */
+html[data-dsh-android-shell] [data-composer-seat] {
+  padding-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--dsh-android-system-bottom, 0px),
+    var(--dsh-phone-ime, 0px)
+  ) !important;
+}
 /* Frosted/glass themes (Bloom and friends) put backdrop-filter on the app shell. That property,
    like filter/contain/perspective, makes the element the containing block of its fixed
    descendants, so the mobile drawer and dialogs get positioned against the shell instead of the
@@ -330,7 +347,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.36";
+    const PLUGIN_VERSION = "0.1.37";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;
@@ -581,6 +598,7 @@ html[data-dsh-glass="off"] body::after {
       installAttachmentMenuDefault();
       installDrawerAutoClose();
       installPageZoomVar();
+      installImeSanity();
       installNativeVoiceBridge();
       installComposerTextBridge();
     }
@@ -833,6 +851,45 @@ html[data-dsh-glass="off"] body::after {
           if (current !== null && current.getAttribute("aria-expanded") === "true") current.click();
         }, 90);
       }, true);
+    }
+
+    /**
+     * Publish the keyboard height the composer may actually use, as --dsh-phone-ime.
+     *
+     * The shell hands over --dsh-android-ime-bottom and the responsive base lifts the composer seat by
+     * it. That is right when the keyboard overlays the page, but this shell resizes the WebView
+     * instead: the layout viewport already lost the keyboard's height, so padding for it again lifts
+     * the input card (with its caret) and every popover anchored to it ~300 px above the bottom, and a
+     * value left behind after the keyboard closes keeps them there. The visual viewport is the fact
+     * that separates the two cases: if it is shorter than the layout viewport the keyboard overlays
+     * and the value is real, otherwise there is nothing to pad for. Writes only on a change, and never
+     * on a timer.
+     */
+    function installImeSanity() {
+      if (window.__dshImeSanity) return;
+      window.__dshImeSanity = true;
+      const root = document.documentElement;
+      const publish = () => {
+        let shellIme = 0;
+        try {
+          shellIme = parseFloat(window.getComputedStyle(root).getPropertyValue("--dsh-android-ime-bottom")) || 0;
+        } catch (e) {}
+        const layout = window.innerHeight;
+        const visual = window.visualViewport ? window.visualViewport.height : layout;
+        const overlaying = layout - visual > 40;
+        const next = (overlaying ? shellIme : 0) + "px";
+        if (root.style.getPropertyValue("--dsh-phone-ime") !== next) {
+          root.style.setProperty("--dsh-phone-ime", next);
+        }
+      };
+      publish();
+      window.addEventListener("resize", publish, { passive: true });
+      window.addEventListener("orientationchange", publish, { passive: true });
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", publish, { passive: true });
+      document.addEventListener("focusin", publish, true);
+      document.addEventListener("focusout", publish, true);
+      window.setTimeout(publish, 300);
+      window.setTimeout(publish, 1200);
     }
 
     /**

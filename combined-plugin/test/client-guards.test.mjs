@@ -473,6 +473,19 @@ test("the keyboard cannot stretch the phone page", () => {
         "the app frame follows the zoom-corrected viewport, not a raw innerHeight length");
     assert.match(css, /max-height: calc\(100vh \/ var\(--dsh-phone-zoom, 1\)\) !important;/);
 
+    // The composer seat: the responsive base lifts it by the shell's IME inset, which is wrong under
+    // adjustResize (the viewport already shrank) and stays wrong after the keyboard closes — the card,
+    // its caret and the effort popover then float ~300 px above the bottom. Only a verified value is
+    // used, published as --dsh-phone-ime.
+    const seatCss = sliceBetween("/* The composer seat, and every popover", "/* Frosted/glass themes");
+    assert.match(seatCss, /\[data-dsh-android-shell\] \[data-composer-seat\] \{\n  padding-bottom: max\(/);
+    assert.match(seatCss, /var\(--dsh-phone-ime, 0px\)/);
+    assert.match(source, /installImeSanity\(\);/, "the IME check must be installed from apply()");
+    const imeRegion = sliceBetween("function installImeSanity() {", "function installPageZoomVar() {");
+    assert.match(imeRegion, /const overlaying = layout - visual > 40;/, "the visual viewport says whether a keyboard overlays");
+    assert.match(imeRegion, /\(overlaying \? shellIme : 0\) \+ "px"/, "only a real overlay may lift the seat");
+    assert.doesNotMatch(imeRegion, /setInterval\(/, "no repeating timer");
+
     assert.match(source, /installPageZoomVar\(\);/, "the factor must be installed from apply()");
     const region = sliceBetween("function installPageZoomVar() {", "Use the Android speech recognizer");
     assert.match(region, /getComputedStyle\(body\)\.zoom/, "the factor is read from the rendered body");
