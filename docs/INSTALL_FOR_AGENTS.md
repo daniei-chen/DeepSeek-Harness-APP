@@ -47,9 +47,9 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 | APK file | `DeepSeek-Harness-1.1.18-personal.25.apk` |
 | APK `versionCode` | **50118** — must be **greater** than the installed one |
 | APK SHA-256 | `11C4B39C4F9AFBE09B16E247656C90A22091C76F6597E39646337BF96C4BE59C` |
-| Host plugin | **0.1.33** |
-| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.33.tgz` |
-| Plugin SHA-256 | `78F3FF6758085898D042C549AFF50CC0B4ED7EB98DA7D0037942161C35BCC9B6` |
+| Host plugin | **0.1.34** |
+| Plugin tarball | `dsh-android-deepseek-harness-app-plugin-0.1.34.tgz` |
+| Plugin SHA-256 | `E3468D45323FD1D2C4B953E54B127136C9FFD628081FF0DF00513B7CD5B9D6EF` |
 | Responsive base (vendor) | `vendor/dsh-android-dsh-client-ui-responsive-0.3.4-dsh021.2.tgz` |
 | DSH tested against | `0.2.1` (desktop profile; `0.2.1-rc.2` also works) |
 | Android | 8.0+ (`minSdk 26`) |
@@ -58,23 +58,23 @@ Then open the app → `设置 → 连接 → 添加设备` → enter the DSH add
 Direct downloads:
 
 - APK: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/v1.1.18/DeepSeek-Harness-1.1.18-personal.25.apk>
-- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.33/dsh-android-deepseek-harness-app-plugin-0.1.33.tgz>
+- Plugin: <https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.34/dsh-android-deepseek-harness-app-plugin-0.1.34.tgz>
 
 Checksums:
 
 ```bash
 sha256sum DeepSeek-Harness-1.1.18-personal.25.apk
 # 11C4B39C4F9AFBE09B16E247656C90A22091C76F6597E39646337BF96C4BE59C
-sha256sum dsh-android-deepseek-harness-app-plugin-0.1.33.tgz
-# 78F3FF6758085898D042C549AFF50CC0B4ED7EB98DA7D0037942161C35BCC9B6
+sha256sum dsh-android-deepseek-harness-app-plugin-0.1.34.tgz
+# E3468D45323FD1D2C4B953E54B127136C9FFD628081FF0DF00513B7CD5B9D6EF
 ```
 
 **1.1.18 self-check.** The app and the plugin are updated separately, so the shell reads the plugin
 version out of the page (`window.__dshMobilePlugin.version`) and compares it with the build it shipped
-against. After installing, the top of 设置 should read `主机插件 0.1.33 · 与本应用同步`. If it says
+against. After installing, the top of 设置 should read `主机插件 0.1.34 · 与本应用同步`. If it says
 `低于 …` or `主机没有在提供手机插件`, the host half is not active: re-run step 2 and **restart DSH**.
 Two features need plugin 0.1.28 or newer — sharing text into the composer, and the notification reply
-field. The phone's adaptation to **dsh-claude-style** needs 0.1.33: its 页面缩放 setting (an inline `body { zoom: 1.25 }`) turned the 400 px viewport into a 320 px layout, which reserved 50 px above a 40 px status bar and pushed the fullscreen right panel 100 px off the left edge; the bundle now divides the shell's insets and the panel width by the factor the page actually uses. 0.1.32 added the rest: the conversation header stops
+field. The phone's per-screen rhythm under **dsh-claude-style** needs 0.1.34 (the conversation header loses 41 px of dead air above it); the theme's page zoom handling arrived in 0.1.33: its 页面缩放 setting (an inline `body { zoom: 1.25 }`) turned the 400 px viewport into a 320 px layout, which reserved 50 px above a 40 px status bar and pushed the fullscreen right panel 100 px off the left edge; the bundle now divides the shell's insets and the panel width by the factor the page actually uses. 0.1.32 added the rest: the conversation header stops
 overlapping, the model name stops printing twice, and picking a session closes the drawer. With an
 older plugin the phone keeps the theme's desktop header.
 
@@ -106,7 +106,7 @@ node setup/dsh-mobile-setup.mjs install \
 
 ```bash
 curl -L -o /tmp/dsh-app-plugin.tgz \
-  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.33/dsh-android-deepseek-harness-app-plugin-0.1.33.tgz
+  https://github.com/daniei-chen/DeepSeek-Harness-APP/releases/download/app-plugin-v0.1.34/dsh-android-deepseek-harness-app-plugin-0.1.34.tgz
 node setup/dsh-mobile-setup.mjs install --profile desktop \
   --app-plugin /tmp/dsh-app-plugin.tgz --file-root "$HOME" --relay-port 3443 --yes
 ```

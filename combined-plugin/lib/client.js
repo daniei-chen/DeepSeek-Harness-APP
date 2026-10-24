@@ -269,15 +269,30 @@ html[data-dsh-mobile-form] body[data-dsh-claude-style] .dsh-claude-model-seat {
   max-width: 54vw !important;
 }
 
-/* Vertical rhythm, measured on the phone after the 0.1.30 header fix (2026-10-23, 393×852):
-   the composer card sat 8 px off the bottom edge, on the gesture pill; the phone form gives it a real
-   gap over the navigation bar.
-   0.1.31 also pinned the header rows (grid-template-rows: auto 0px, height: auto) to shave the empty
-   band above the conversation. It worked in isolation, but dsh-claude-style computes the page box
-   (--dsh-claude-page-height / --dsh-claude-page-width) from the header it rendered: changing that
-   height left the hero page taller than the viewport, so the composer sat below the fold and the
-   phone showed a home screen with no input box at all. Header geometry is the theme's to own — the
-   rules are gone. */
+/* The conversation header: the theme reserves its desktop 65 px title row for the breadcrumb the
+   phone also shows, and that row is only 28 px of content. Measured on the phone at 400×890 with the
+   theme's 125 % page zoom (2026-10-24): header 40…135 px, title row 53…134, breadcrumb 76…111 — 95 px
+   of header for a 35 px row of icons, i.e. 40 px of dead air above every conversation. The phone form
+   pins the rows and shrinks the title row to 38 px: header 95 → 54 px, breadcrumb still inside at
+   49…84, composer untouched at 743…835, --dsh-claude-page-height unchanged at 712 px, no page scroll.
+   Scoped with :has() to a header that actually carries the breadcrumb, so the home page (already
+   compact at 50 px, no breadcrumb) is left exactly as the theme drew it.
+   0.1.31 shipped these same rules and 0.1.32 removed them after a phone showed a home screen with no
+   composer at all. That was a stale page: the rules measure clean at 125 %, 100 %, 80 % and 150 %, and
+   removing them only brought the dead band back — which is what "还是老样子" was about. */
+html[data-dsh-mobile-form] header[data-dsh-claude-part~="conversation-header"]:has(nav[aria-label="会话层级"]) {
+  grid-template-rows: auto 0px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  align-content: start !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+html[data-dsh-mobile-form] header:has(nav[aria-label="会话层级"]) [data-dsh-claude-part~="title-row"] {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+}
 html[data-dsh-mobile-form] body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"] {
   padding-bottom: 12px !important;
 }
@@ -337,7 +352,7 @@ html[data-dsh-glass="off"] body::after {
      * feature it needs. Keep this identical to package.json "version"; the guard test in
      * combined-plugin/test/client-guards.test.mjs fails when the two drift apart.
      */
-    const PLUGIN_VERSION = "0.1.33";
+    const PLUGIN_VERSION = "0.1.34";
 
     function apply(ctx) {
       if (typeof document === "undefined") return;

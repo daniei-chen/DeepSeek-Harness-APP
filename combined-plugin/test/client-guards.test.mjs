@@ -426,13 +426,20 @@ test("the phone header and composer survive dsh-claude-style", () => {
     assert.match(claude, /body\[data-dsh-claude-style\] \.dsh-claude-model-seat \{\n  min-width: 0 !important;/,
         "the theme's seat still has to shrink inside the composer row");
 
-    // Vertical rhythm: the composer card sat 8px off the bottom edge, on the gesture pill. The header
-    // is deliberately NOT touched — dsh-claude-style computes its page box from the header it rendered,
-    // so pinning the rows left the hero page taller than the viewport and the composer below the fold.
+    // The theme reserves its desktop 65 px title row for a 28 px breadcrumb: 95 px of header above a
+    // 35 px row of icons, i.e. 40 px of dead air. The phone form pins the rows and shrinks the row, and
+    // `:has()` scopes both to a header that carries the breadcrumb, so the already-compact home page
+    // (50 px, no breadcrumb) is left exactly as the theme drew it.
+    assert.match(claude, /header\[data-dsh-claude-part~="conversation-header"\]:has\(nav\[aria-label="会话层级"\]\) \{\n  grid-template-rows: auto 0px !important;/,
+        "the conversation header keeps a desktop title row the phone does not need");
+    assert.match(claude, /header:has\(nav\[aria-label="会话层级"\]\) \[data-dsh-claude-part~="title-row"\] \{\n  height: 38px !important;/,
+        "the title row shrinks to the row it actually holds");
+    assert.doesNotMatch(claude, /header\[data-dsh-claude-part~="conversation-header"\] \{\n/,
+        "the pin stays scoped; an unscoped rule also hits the home page");
+
+    // Vertical rhythm: the composer card sat 8 px off the bottom edge, on the gesture pill.
     assert.match(claude, /\[data-dsh-claude-part~="composer-stack"\] \{\n  padding-bottom: 12px !important;/,
         "the composer needs a gap over the navigation bar");
-    assert.doesNotMatch(claude, /header\[data-dsh-claude-part~="conversation-header"\][\s\S]{0,200}(grid-template-rows|height: auto)/,
-        "header geometry belongs to the theme; changing it hides the composer");
 });
 
 test("the page zoom dsh-claude-style applies is divided back out of the phone form", () => {
